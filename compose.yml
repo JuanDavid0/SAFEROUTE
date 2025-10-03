@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  database:
+    image: postgres:15
+    container_name: saferoute-db
+    environment:
+      POSTGRES_DB: saferoute
+      POSTGRES_USER: saferoute_user
+      POSTGRES_PASSWORD: saferoute_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/seed:/docker-entrypoint-initdb.d
+    networks:
+      - saferoute-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../infra/docker/Dockerfile.backend
+    container_name: saferoute-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/saferoute
+      SPRING_DATASOURCE_USERNAME: saferoute_user
+      SPRING_DATASOURCE_PASSWORD: saferoute_password
+    ports:
+      - "8080:8080"
+    depends_on:
+      - database
+    networks:
+      - saferoute-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../infra/docker/Dockerfile.frontend
+    container_name: saferoute-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - saferoute-network
+
+volumes:
+  postgres_data:
+
+networks:
+  saferoute-network:
+    driver: bridge
