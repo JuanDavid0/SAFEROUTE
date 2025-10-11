@@ -7,8 +7,8 @@ spring:
   
   datasource:
     url: jdbc:postgresql://localhost:5432/saferoute
-    username: saferoute_user
-    password: saferoute_password
+    username: postgres
+    password: root123
     driver-class-name: org.postgresql.Driver
   
   jpa:
@@ -40,15 +40,22 @@ logging:
 
 ---
 spring:
-  profiles: docker
-  datasource:
-    url: jdbc:postgresql://database:5432/saferoute
+  jpa:
+    hibernate:
+      ddl-auto: none
+spring.config.activate.on-profile: dev
 
 ---
 spring:
-  profiles: prod
+  datasource:
+    url: jdbc:postgresql://localhost:5432/saferoute
+spring.config.activate.on-profile: docker
+
+---
+spring:
   jpa:
     show-sql: false
   logging:
     level:
       com.saferoute: WARN
+spring.config.activate.on-profile: prod
