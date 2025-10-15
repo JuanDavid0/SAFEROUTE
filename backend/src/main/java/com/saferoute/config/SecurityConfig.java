@@ -60,6 +60,7 @@ public class SecurityConfig {
                         // Endpoints públicos de autenticación - PERMITIR TODO
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/error").permitAll()
+                        .requestMatchers("/solicitudes/**").permitAll()
                         // Cualquier otra ruta requiere autenticación
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthenticationEntryPoint))

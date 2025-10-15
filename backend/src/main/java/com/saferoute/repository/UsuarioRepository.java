@@ -10,6 +10,10 @@ import java.util.Optional;
 public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
     Optional<Usuario> findByCorreo(String correo);
 
+    Optional<Usuario> findByTelefono(String telefono);
+
+    Optional<Usuario> findByCedula(String cedula);
+
     @Query("SELECT u FROM Usuario u " +
             "LEFT JOIN FETCH u.usuarioRoles ur " +
             "LEFT JOIN FETCH ur.rol r " +

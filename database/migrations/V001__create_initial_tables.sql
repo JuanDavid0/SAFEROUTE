@@ -8,7 +8,7 @@ CHECK (VALUE IN ('ADM', 'SAD', 'CLI')); -- ADM: Administrador, SAD: Super Admini
 
 -- Dominio para los estados de una solicitud
 CREATE DOMAIN ESTADO_SOLICITUD_DOM AS VARCHAR(3) NOT NULL
-CHECK (VALUE IN ('PDP', 'PGD')); -- PDP: Pendiente de pago, PGD: Pagada
+CHECK (VALUE IN ('PDP', 'PGD', 'CAN')); -- PDP: Pendiente de pago, PGD: Pagada, CAN: Cancelada
 
 -- Dominio para los estados de un pedido (catálogo)
 CREATE DOMAIN ESTADO_PEDIDO_DOM AS VARCHAR(3) NOT NULL
@@ -83,6 +83,8 @@ CREATE TABLE SOLICITUD (
     id_pedido INTEGER NOT NULL,
     fecha_solicitud DATE NOT NULL DEFAULT CURRENT_DATE,
     estado_solicitud ESTADO_SOLICITUD_DOM DEFAULT 'PDP',
+    direccion_entrega VARCHAR(255) NOT NULL,
+
     CONSTRAINT SOL_FK_ID_CLI FOREIGN KEY (id_cliente)
         REFERENCES USUARIO(id_usuario),
     CONSTRAINT SOL_FK_ID_PED FOREIGN KEY (id_pedido)
@@ -107,6 +109,7 @@ CREATE TABLE SOLICITUD_PRODUCTO (
     id_producto INTEGER NOT NULL,
     cantidad_solicitada INTEGER NOT NULL CHECK (cantidad_solicitada > 0),
     precio NUMERIC(10,2) NOT NULL,
+    modificaciones_restantes INTEGER NOT NULL DEFAULT 3 CHECK (modificaciones_restantes >= 0),
     PRIMARY KEY (id_solicitud, id_producto),
     CONSTRAINT SP_FK_ID_SOL FOREIGN KEY (id_solicitud)
         REFERENCES SOLICITUD(id_solicitud) ON DELETE CASCADE,
