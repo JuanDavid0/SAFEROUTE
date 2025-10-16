@@ -1,7 +1,6 @@
 package com.saferoute.dto;
 
 import java.util.List;
-import java.math.BigDecimal;
 
 public class SolicitudClienteDTO {
     // Datos personales

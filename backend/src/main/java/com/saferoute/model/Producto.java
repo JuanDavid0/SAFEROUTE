@@ -25,6 +25,9 @@ public class Producto {
     @Column(nullable = false)
     private BigDecimal costoUnitario;
 
+    @Column(length = 255)
+    private String urlImagen;
+
     public Integer getIdProducto() {
         return idProducto;
     }
@@ -71,6 +74,14 @@ public class Producto {
 
     public void setCostoUnitario(BigDecimal costoUnitario) {
         this.costoUnitario = costoUnitario;
+    }
+
+    public String getUrlImagen() {
+        return urlImagen;
+    }
+
+    public void setUrlImagen(String urlImagen) {
+        this.urlImagen = urlImagen;
     }
 
 }

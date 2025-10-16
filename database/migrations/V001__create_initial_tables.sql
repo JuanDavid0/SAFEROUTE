@@ -4,15 +4,15 @@
 
 -- Dominio para los tipos de rol en el sistema
 CREATE DOMAIN TIPO_ROL_DOM AS VARCHAR(3) NOT NULL
-CHECK (VALUE IN ('ADM', 'SAD', 'CLI')); -- ADM: Administrador, SAD: Super Administrador, CLI: Cliente
+    CHECK (VALUE IN ('ADM', 'SAD', 'CLI')); -- ADM: Administrador, SAD: Super Administrador, CLI: Cliente
 
 -- Dominio para los estados de una solicitud
 CREATE DOMAIN ESTADO_SOLICITUD_DOM AS VARCHAR(3) NOT NULL
-CHECK (VALUE IN ('PDP', 'PGD', 'CAN')); -- PDP: Pendiente de pago, PGD: Pagada, CAN: Cancelada
+    CHECK (VALUE IN ('PDP', 'PGD', 'CAN')); -- PDP: Pendiente de pago, PGD: Pagada, CAN: Cancelada
 
 -- Dominio para los estados de un pedido (catálogo)
 CREATE DOMAIN ESTADO_PEDIDO_DOM AS VARCHAR(3) NOT NULL
-CHECK (VALUE IN ('CRT', 'ACT', 'CRM', 'CRA', 'PRD', 'RCP', 'RTA', 'ADU', 'ENT')); -- CRT: Creado, ACT: Activo, etc.
+    CHECK (VALUE IN ('CRT', 'ACT', 'CRM', 'CRA', 'PRD', 'RCP', 'RTA', 'ADU', 'ENT'));
 
 -- ======================================================
 -- 2. TABLAS MAESTRAS
@@ -84,7 +84,6 @@ CREATE TABLE SOLICITUD (
     fecha_solicitud DATE NOT NULL DEFAULT CURRENT_DATE,
     estado_solicitud ESTADO_SOLICITUD_DOM DEFAULT 'PDP',
     direccion_entrega VARCHAR(255) NOT NULL,
-
     CONSTRAINT SOL_FK_ID_CLI FOREIGN KEY (id_cliente)
         REFERENCES USUARIO(id_usuario),
     CONSTRAINT SOL_FK_ID_PED FOREIGN KEY (id_pedido)
@@ -101,7 +100,7 @@ CREATE TABLE PRODUCTO_PEDIDO (
         REFERENCES PEDIDO(id_pedido) ON DELETE CASCADE,
     CONSTRAINT PP_FK_ID_PRO FOREIGN KEY (id_producto)
         REFERENCES PRODUCTO(id_producto) ON DELETE CASCADE,
-    /* CONSTRAINT chk_cantidad_max_min CHECK (cantidad_max IS NULL OR cantidad_max >= cantidad_min) */
+    CONSTRAINT chk_cantidad_max_min CHECK (cantidad_max IS NULL OR cantidad_max >= cantidad_min) 
 );
 
 CREATE TABLE SOLICITUD_PRODUCTO (

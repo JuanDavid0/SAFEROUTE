@@ -21,9 +21,20 @@ public class ProductoDTO {
     @DecimalMin(value = "0.00")
     private BigDecimal costoUnitario;
 
+    @NotBlank
+    private String urlImagen;
+
     // Getters y setters
     public void setCostoUnitario(BigDecimal costoUnitario) {
         this.costoUnitario = costoUnitario;
+    }
+
+    public String getUrlImagen() {
+        return urlImagen;
+    }
+
+    public void setUrlImagen(String urlImagen) {
+        this.urlImagen = urlImagen;
     }
 
     public Integer getIdProducto() {

@@ -1,0 +1,2 @@
+-- 1. Agregar url_imagen a PRODUCTO
+ALTER TABLE PRODUCTO ADD COLUMN url_imagen VARCHAR(255);

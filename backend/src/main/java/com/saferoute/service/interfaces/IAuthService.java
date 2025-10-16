@@ -11,8 +11,6 @@ public interface IAuthService {
 
     Usuario registro(RegistroRequest registroRequest);
 
-    void recuperarContrasenia(String correo);
-
     void cambiarContrasenia(CambiarContraseniaRequest request);
 
     Usuario crearAdministrador(RegistroRequest registroRequest, Integer sadUserId);

@@ -2,10 +2,15 @@ package com.saferoute.controller;
 
 import com.saferoute.dto.ProductoDTO;
 import com.saferoute.service.interfaces.IProductoService;
+
 import jakarta.validation.Valid;
+
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/productos")
@@ -44,7 +49,8 @@ public class ProductoController {
 
     @PreAuthorize("hasAnyRole('SAD', 'ADM')")
     @DeleteMapping("/{id}")
-    public void eliminarProducto(@PathVariable Integer id) {
+    public ResponseEntity<Map<String, String>> eliminarProducto(@PathVariable Integer id) {
         productoService.eliminarProducto(id);
+        return ResponseEntity.ok(Map.of("mensaje", "Producto eliminado exitosamente"));
     }
 }

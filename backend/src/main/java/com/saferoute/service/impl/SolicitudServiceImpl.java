@@ -56,14 +56,14 @@ public class SolicitudServiceImpl implements ISolicitudService {
             sp.setSolicitud(solicitud);
             sp.setProducto(producto);
             sp.setCantidadSolicitada(spDTO.getCantidadSolicitada());
-            sp.setPrecio(spDTO.getPrecio());
+            // CALCULAR PRECIO AUTOMÁTICAMENTE del producto
+            sp.setPrecio(producto.getPrecioUnitario());
+            sp.setModificacionesRestantes(3); // Inicializar con 3 modificaciones
             solicitud.getProductos().add(sp);
         }
 
         solicitudRepository.save(solicitud);
-        dto.setIdSolicitud(solicitud.getIdSolicitud());
-        dto.setFechaLimitePago(pedido.getFechaCierre()); // Obtener del pedido
-        return dto;
+        return mapToDTO(solicitud);
     }
 
     @Override
@@ -113,16 +113,40 @@ public class SolicitudServiceImpl implements ISolicitudService {
         if (!solicitud.getEstadoSolicitud().equals(EstadoSolicitudEnum.PDP))
             throw new RuntimeException("Solo se puede modificar solicitudes pendientes de pago");
 
-        // Verificar fecha límite del pedido
-        if (solicitud.getPedido().getFechaCierre() != null &&
-                solicitud.getPedido().getFechaCierre().isBefore(LocalDate.now()))
-            throw new RuntimeException("El pedido ya cerró");
+        // Verificar que no estemos a 5 días o menos del cierre
+        LocalDate fechaCierre = solicitud.getPedido().getFechaCierre();
+        if (fechaCierre != null) {
+            LocalDate fechaLimite = fechaCierre.minusDays(5);
+            if (LocalDate.now().isAfter(fechaLimite)) {
+                throw new RuntimeException("No se pueden realizar modificaciones 5 días antes del cierre del pedido");
+            }
+        }
 
-        if (datos.getNuevaDireccion() != null)
-            solicitud.setDireccionEntrega(datos.getNuevaDireccion());
+        // Modificar dirección de entrega
+        if (datos.getDireccionEntrega() != null) {
+            solicitud.setDireccionEntrega(datos.getDireccionEntrega());
+        }
 
-        // Si hay modificación de cantidad, verificar en el producto
-        if (datos.getNuevaCantidad() != null && !solicitud.getProductos().isEmpty()) {
+        // Modificar productos (nuevo formato con lista)
+        if (datos.getProductos() != null && !datos.getProductos().isEmpty()) {
+            for (SolicitudModificacionDTO.ProductoModificacionDTO prodMod : datos.getProductos()) {
+                // Buscar el producto en la solicitud
+                SolicitudProducto sp = solicitud.getProductos().stream()
+                        .filter(s -> s.getProducto().getIdProducto().equals(prodMod.getIdProducto()))
+                        .findFirst()
+                        .orElseThrow(() -> new RuntimeException("Producto no encontrado en esta solicitud"));
+
+                if (sp.getModificacionesRestantes() <= 0) {
+                    throw new RuntimeException("Se alcanzó el número máximo de modificaciones para el producto "
+                            + sp.getProducto().getNombreProducto());
+                }
+
+                sp.setCantidadSolicitada(prodMod.getCantidadSolicitada());
+                sp.setModificacionesRestantes(sp.getModificacionesRestantes() - 1);
+            }
+        }
+        // Compatibilidad con formato antiguo (un solo producto)
+        else if (datos.getNuevaCantidad() != null && !solicitud.getProductos().isEmpty()) {
             SolicitudProducto sp = solicitud.getProductos().iterator().next();
             if (sp.getModificacionesRestantes() <= 0)
                 throw new RuntimeException("Se alcanzó el número máximo de modificaciones para este producto");
@@ -159,6 +183,33 @@ public class SolicitudServiceImpl implements ISolicitudService {
                 .stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
+    @Override
+    public void cambiarEstado(Integer idSolicitud, String nuevoEstado) {
+        Solicitud solicitud = solicitudRepository.findById(idSolicitud)
+                .orElseThrow(() -> new RuntimeException("Solicitud no encontrada"));
+
+        // Validar estados permitidos
+        if (!nuevoEstado.equals("PGD") && !nuevoEstado.equals("CAN") && !nuevoEstado.equals("PDP")) {
+            throw new RuntimeException("Estado no válido. Solo se permite PGD, PDP o CAN");
+        }
+
+        solicitud.setEstadoSolicitud(EstadoSolicitudEnum.valueOf(nuevoEstado));
+        solicitudRepository.save(solicitud);
+    }
+
+    @Override
+    public List<SolicitudDTO> listarPorPedido(Integer idPedido) {
+        return solicitudRepository.findByPedido_IdPedido(idPedido)
+                .stream().map(this::mapToDTO).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<SolicitudDTO> listarPorPedidoYEstado(Integer idPedido, String estado) {
+        EstadoSolicitudEnum estadoEnum = EstadoSolicitudEnum.valueOf(estado);
+        return solicitudRepository.findByPedido_IdPedidoAndEstadoSolicitud(idPedido, estadoEnum)
+                .stream().map(this::mapToDTO).collect(Collectors.toList());
+    }
+
     private SolicitudDTO mapToDTO(Solicitud solicitud) {
         SolicitudDTO dto = new SolicitudDTO();
         dto.setIdSolicitud(solicitud.getIdSolicitud());
@@ -167,12 +218,15 @@ public class SolicitudServiceImpl implements ISolicitudService {
         dto.setDireccionEntrega(solicitud.getDireccionEntrega());
         dto.setEstadoSolicitud(solicitud.getEstadoSolicitud().name());
         dto.setFechaSolicitud(solicitud.getFechaSolicitud());
-        dto.setFechaLimitePago(solicitud.getPedido().getFechaCierre()); // Obtener del pedido
+        // Incluir fechaLimitePago desde la fecha_cierre del pedido
+        dto.setFechaLimitePago(solicitud.getPedido().getFechaCierre());
         dto.setProductos(solicitud.getProductos().stream().map(sp -> {
             SolicitudProductoDTO spDTO = new SolicitudProductoDTO();
             spDTO.setIdProducto(sp.getProducto().getIdProducto());
             spDTO.setCantidadSolicitada(sp.getCantidadSolicitada());
-            spDTO.setPrecio(sp.getPrecio());
+            // Calcular precio total: cantidad * precio unitario
+            spDTO.setPrecio(sp.getPrecio().multiply(java.math.BigDecimal.valueOf(sp.getCantidadSolicitada())));
+            spDTO.setModificacionesRestantes(sp.getModificacionesRestantes());
             return spDTO;
         }).collect(Collectors.toList()));
         return dto;

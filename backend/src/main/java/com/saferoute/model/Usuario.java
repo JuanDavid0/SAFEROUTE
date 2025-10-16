@@ -1,5 +1,6 @@
 package com.saferoute.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.util.HashSet;
 import java.util.Set;
@@ -32,9 +33,11 @@ public class Usuario {
     @Column(name = "direccion", length = 150, nullable = false)
     private String direccion;
 
+    @JsonIgnore
     @Column(name = "contrasenia", length = 512)
     private String contrasenia;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "usuario", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = false)
     private Set<UsuarioRol> usuarioRoles = new HashSet<>();
 

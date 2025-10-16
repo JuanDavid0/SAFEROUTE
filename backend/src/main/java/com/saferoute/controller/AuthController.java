@@ -37,13 +37,6 @@ public class AuthController {
         return ResponseEntity.ok(usuario);
     }
 
-    @PostMapping("/recuperar-contrasenia")
-    public ResponseEntity<Map<String, String>> recuperarContrasenia(@RequestBody Map<String, String> request) {
-        String correo = request.get("correo");
-        authService.recuperarContrasenia(correo);
-        return ResponseEntity.ok(Map.of("mensaje", "Se ha enviado un enlace de recuperación a su correo electrónico"));
-    }
-
     @PostMapping("/cambiar-contrasenia")
     public ResponseEntity<Map<String, String>> cambiarContrasenia(
             @Valid @RequestBody CambiarContraseniaRequest request) {

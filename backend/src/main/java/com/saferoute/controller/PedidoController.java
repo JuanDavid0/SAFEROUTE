@@ -1,6 +1,7 @@
 package com.saferoute.controller;
 
 import com.saferoute.dto.PedidoDTO;
+import com.saferoute.dto.ProductoPedidoDTO;
 import com.saferoute.service.interfaces.IPedidoService;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -36,6 +37,12 @@ public class PedidoController {
     }
 
     @PreAuthorize("hasAnyRole('SAD', 'ADM')")
+    @PutMapping("/{idPedido}")
+    public PedidoDTO actualizarPedido(@PathVariable Integer idPedido, @Valid @RequestBody PedidoDTO dto) {
+        return pedidoService.actualizarPedido(idPedido, dto);
+    }
+
+    @PreAuthorize("hasAnyRole('SAD', 'ADM')")
     @PutMapping("/{idPedido}/estado/{estado}")
     public PedidoDTO actualizarEstado(@PathVariable Integer idPedido, @PathVariable String estado) {
         return pedidoService.actualizarEstado(idPedido, estado);
@@ -43,7 +50,30 @@ public class PedidoController {
 
     @PreAuthorize("hasAnyRole('SAD', 'ADM')")
     @DeleteMapping("/{idPedido}")
-    public void cancelarPedido(@PathVariable Integer idPedido) {
+    public java.util.Map<String, String> cancelarPedido(@PathVariable Integer idPedido) {
         pedidoService.cancelarPedido(idPedido);
+        return java.util.Map.of("mensaje", "Pedido cancelado exitosamente (estado cambiado a CRM)");
+    }
+
+    // ========== GESTIÓN DE PRODUCTOS DEL PEDIDO ==========
+
+    @PreAuthorize("hasAnyRole('SAD', 'ADM')")
+    @PostMapping("/{idPedido}/productos")
+    public PedidoDTO agregarProducto(@PathVariable Integer idPedido,
+            @Valid @RequestBody ProductoPedidoDTO productoDTO) {
+        return pedidoService.agregarProducto(idPedido, productoDTO);
+    }
+
+    @PreAuthorize("hasAnyRole('SAD', 'ADM')")
+    @DeleteMapping("/{idPedido}/productos/{idProducto}")
+    public PedidoDTO eliminarProducto(@PathVariable Integer idPedido, @PathVariable Integer idProducto) {
+        return pedidoService.eliminarProducto(idPedido, idProducto);
+    }
+
+    @PreAuthorize("hasAnyRole('SAD', 'ADM')")
+    @PutMapping("/{idPedido}/productos/{idProducto}")
+    public PedidoDTO modificarProducto(@PathVariable Integer idPedido, @PathVariable Integer idProducto,
+            @Valid @RequestBody ProductoPedidoDTO productoDTO) {
+        return pedidoService.modificarProducto(idPedido, idProducto, productoDTO);
     }
 }

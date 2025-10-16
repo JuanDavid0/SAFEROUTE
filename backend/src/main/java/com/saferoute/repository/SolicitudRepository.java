@@ -13,4 +13,8 @@ public interface SolicitudRepository extends JpaRepository<Solicitud, Integer> {
     List<Solicitud> findByEstadoSolicitud(EstadoSolicitudEnum estado);
 
     List<Solicitud> findByPedidoFechaCierreBeforeAndEstadoSolicitud(LocalDate fecha, EstadoSolicitudEnum estado);
+
+    List<Solicitud> findByPedido_IdPedido(Integer idPedido);
+    
+    List<Solicitud> findByPedido_IdPedidoAndEstadoSolicitud(Integer idPedido, EstadoSolicitudEnum estado);
 }

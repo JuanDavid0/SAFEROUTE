@@ -27,6 +27,7 @@ public class ProductoServiceImpl implements IProductoService {
         producto.setDescripcionProducto(dto.getDescripcionProducto());
         producto.setPrecioUnitario(dto.getPrecioUnitario());
         producto.setCostoUnitario(dto.getCostoUnitario());
+        producto.setUrlImagen(dto.getUrlImagen());
         productoRepository.save(producto);
         dto.setIdProducto(producto.getIdProducto());
         return dto;
@@ -36,12 +37,35 @@ public class ProductoServiceImpl implements IProductoService {
     public ProductoDTO actualizarProducto(Integer id, ProductoDTO dto) {
         Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
-        producto.setNombreProducto(dto.getNombreProducto());
-        producto.setTipoProducto(dto.getTipoProducto());
-        producto.setDescripcionProducto(dto.getDescripcionProducto());
-        producto.setPrecioUnitario(dto.getPrecioUnitario());
-        producto.setCostoUnitario(dto.getCostoUnitario());
-        productoRepository.save(producto);
+
+        // Actualización parcial - solo campos no nulos
+        if (dto.getNombreProducto() != null) {
+            producto.setNombreProducto(dto.getNombreProducto());
+            dto.setNombreProducto(producto.getNombreProducto());
+        }
+        if (dto.getTipoProducto() != null) {
+            producto.setTipoProducto(dto.getTipoProducto());
+            dto.setTipoProducto(producto.getTipoProducto());
+        }
+        if (dto.getDescripcionProducto() != null) {
+            producto.setDescripcionProducto(dto.getDescripcionProducto());
+            dto.setDescripcionProducto(producto.getDescripcionProducto());
+        }
+        if (dto.getPrecioUnitario() != null) {
+            producto.setPrecioUnitario(dto.getPrecioUnitario());
+            dto.setPrecioUnitario(producto.getPrecioUnitario());
+        }
+        if (dto.getCostoUnitario() != null) {
+            producto.setCostoUnitario(dto.getCostoUnitario());
+            dto.setCostoUnitario(producto.getCostoUnitario());
+        }
+        if (dto.getUrlImagen() != null) {
+            producto.setUrlImagen(dto.getUrlImagen());
+
+        }
+
+        producto = productoRepository.save(producto);
+        dto.setIdProducto(producto.getIdProducto());
         return dto;
     }
 
@@ -60,6 +84,7 @@ public class ProductoServiceImpl implements IProductoService {
             dto.setDescripcionProducto(p.getDescripcionProducto());
             dto.setPrecioUnitario(p.getPrecioUnitario());
             dto.setCostoUnitario(p.getCostoUnitario());
+            dto.setUrlImagen(p.getUrlImagen());
             return dto;
         }).collect(Collectors.toList());
     }
@@ -75,6 +100,7 @@ public class ProductoServiceImpl implements IProductoService {
         dto.setDescripcionProducto(p.getDescripcionProducto());
         dto.setPrecioUnitario(p.getPrecioUnitario());
         dto.setCostoUnitario(p.getCostoUnitario());
+        dto.setUrlImagen(p.getUrlImagen());
         return dto;
     }
 }

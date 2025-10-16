@@ -51,7 +51,14 @@ public class AuthServiceImpl implements IAuthService {
                 new UsernamePasswordAuthenticationToken(
                         loginRequest.getCorreo(), loginRequest.getContrasenia()));
         String token = jwtTokenProvider.generateToken(authentication);
-        return new JwtResponse(token);
+
+        // Obtener el rol del usuario
+        String rol = authentication.getAuthorities().stream()
+                .findFirst()
+                .map(auth -> auth.getAuthority().replace("ROLE_", ""))
+                .orElse("CLI");
+
+        return new JwtResponse(token, rol);
     }
 
     @Override
@@ -69,7 +76,12 @@ public class AuthServiceImpl implements IAuthService {
         usuario.setTelefono(registroRequest.getTelefono());
         usuario.setCedula(registroRequest.getCedula());
         usuario.setDireccion(registroRequest.getDireccion());
-        usuario.setContrasenia(passwordEncoder.encode(registroRequest.getContrasenia()));
+        if (registroRequest.getContrasenia() != null && !registroRequest.getContrasenia().isEmpty()) {
+            usuario.setContrasenia(passwordEncoder.encode(registroRequest.getContrasenia()));
+        } else {
+            String noPassword = "";
+            usuario.setContrasenia(passwordEncoder.encode(noPassword));
+        }
 
         // Guardar usuario
         Usuario usuarioGuardado = usuarioRepository.save(usuario);
@@ -90,16 +102,6 @@ public class AuthServiceImpl implements IAuthService {
         return usuarioGuardado;
     }
 
-    @Override
-    public void recuperarContrasenia(String correo) {
-        // Verificar que el usuario existe
-        usuarioRepository.findByCorreo(correo)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-
-        // TODO: Implementar lógica de envío de correo para recuperación de contraseña
-        // Esto requeriría configuración de email service
-        System.out.println("Enviando correo de recuperación a: " + correo);
-    }
 
     @Override
     public void cambiarContrasenia(CambiarContraseniaRequest request) {
