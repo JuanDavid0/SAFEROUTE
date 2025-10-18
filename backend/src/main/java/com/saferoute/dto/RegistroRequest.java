@@ -1,29 +1,26 @@
 package com.saferoute.dto;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public class RegistroRequest {
     @NotBlank(message = "Los nombres son obligatorios")
     @Size(max = 100, message = "Los nombres no pueden exceder 100 caracteres")
+    @Pattern(regexp = "^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]+$", message = "Los nombres solo pueden contener letras y espacios")
     private String nombres;
 
     @NotBlank(message = "Los apellidos son obligatorios")
     @Size(max = 100, message = "Los apellidos no pueden exceder 100 caracteres")
+    @Pattern(regexp = "^[a-zA-ZáéíóúÁÉÍÓÚñÑ ]+$", message = "Los apellidos solo pueden contener letras y espacios")
     private String apellidos;
 
-    @NotBlank(message = "El correo es obligatorio")
-    @Email(message = "El correo debe tener un formato válido")
-    @Size(max = 100, message = "El correo no puede exceder 100 caracteres")
-    private String correo;
-
     @NotBlank(message = "El teléfono es obligatorio")
-    @Size(max = 15, message = "El teléfono no puede exceder 15 caracteres")
+    @Pattern(regexp = "^[0-9]{10}$", message = "El teléfono debe contener exactamente 10 dígitos numéricos")
     private String telefono;
 
     @NotBlank(message = "La cédula es obligatoria")
-    @Size(max = 20, message = "La cédula no puede exceder 20 caracteres")
+    @Pattern(regexp = "^[0-9]{10}$", message = "La cédula debe contener exactamente 10 dígitos numéricos")
     private String cedula;
 
     @NotBlank(message = "La dirección es obligatoria")
@@ -53,14 +50,6 @@ public class RegistroRequest {
 
     public void setApellidos(String apellidos) {
         this.apellidos = apellidos;
-    }
-
-    public String getCorreo() {
-        return correo;
-    }
-
-    public void setCorreo(String correo) {
-        this.correo = correo;
     }
 
     public String getTelefono() {

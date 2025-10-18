@@ -41,9 +41,15 @@ public class ProductoController {
     }
 
     @PreAuthorize("hasAnyRole('SAD', 'ADM')")
+    @GetMapping("/buscar")
+    public ProductoDTO buscarProductoPorNombre(@RequestParam String nombre) {
+        return productoService.buscarProductoPorNombre(nombre);
+    }
+
+    @PreAuthorize("hasAnyRole('SAD', 'ADM')")
     @PutMapping("/{id}")
     public ProductoDTO actualizarProducto(@PathVariable Integer id,
-                                          @Valid @RequestBody ProductoDTO productoDTO) {
+            @Valid @RequestBody ProductoDTO productoDTO) {
         return productoService.actualizarProducto(id, productoDTO);
     }
 

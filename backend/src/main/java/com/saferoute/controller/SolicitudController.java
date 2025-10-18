@@ -4,8 +4,10 @@ import com.saferoute.dto.*;
 import com.saferoute.service.interfaces.ISolicitudService;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/solicitudes")
@@ -34,9 +36,45 @@ public class SolicitudController {
         return solicitudService.modificarSolicitud(idSolicitud, dto);
     }
 
+    /**
+     * Agregar un producto a la solicitud
+     */
+    @PostMapping("/{idSolicitud}/productos")
+    public SolicitudDTO agregarProducto(
+            @PathVariable Integer idSolicitud,
+            @Valid @RequestBody SolicitudProductoDTO productoDTO) {
+        return solicitudService.agregarProducto(idSolicitud, productoDTO);
+    }
+
+    /**
+     * Eliminar un producto de la solicitud
+     */
+    @DeleteMapping("/{idSolicitud}/productos/{idProducto}")
+    public SolicitudDTO eliminarProducto(
+            @PathVariable Integer idSolicitud,
+            @PathVariable Integer idProducto) {
+        return solicitudService.eliminarProducto(idSolicitud, idProducto);
+    }
+
+    /**
+     * Modificar la cantidad de un producto específico en la solicitud
+     */
+    @PutMapping("/{idSolicitud}/productos/{idProducto}")
+    public SolicitudDTO modificarCantidadProducto(
+            @PathVariable Integer idSolicitud,
+            @PathVariable Integer idProducto,
+            @RequestBody Map<String, Integer> body) {
+        Integer nuevaCantidad = body.get("cantidad");
+        if (nuevaCantidad == null || nuevaCantidad <= 0) {
+            throw new RuntimeException("La cantidad debe ser mayor a 0");
+        }
+        return solicitudService.modificarCantidadProducto(idSolicitud, idProducto, nuevaCantidad);
+    }
+
     @DeleteMapping("/{idSolicitud}")
-    public void cancelarSolicitud(@PathVariable Integer idSolicitud) {
+    public ResponseEntity<Map<String, String>> cancelarSolicitud(@PathVariable Integer idSolicitud) {
         solicitudService.cancelarSolicitud(idSolicitud);
+        return ResponseEntity.ok(Map.of("mensaje", "Solicitud cancelada exitosamente"));
     }
 
     @GetMapping("/{idCliente}")
@@ -49,13 +87,13 @@ public class SolicitudController {
      */
     @PutMapping("/{idSolicitud}/estado")
     @PreAuthorize("hasAnyRole('SAD', 'ADM')")
-    public java.util.Map<String, String> cambiarEstadoSolicitud(
+    public ResponseEntity<Map<String, String>> cambiarEstadoSolicitud(
             @PathVariable Integer idSolicitud,
-            @RequestBody java.util.Map<String, String> body) {
+            @RequestBody Map<String, String> body) {
 
         String nuevoEstado = body.get("nuevoEstado"); // "PGD" o "CAN"
         solicitudService.cambiarEstado(idSolicitud, nuevoEstado);
-        return java.util.Map.of("mensaje", "Estado actualizado a " + nuevoEstado);
+        return ResponseEntity.ok(Map.of("mensaje", "Estado actualizado a " + nuevoEstado));
     }
 
     /**

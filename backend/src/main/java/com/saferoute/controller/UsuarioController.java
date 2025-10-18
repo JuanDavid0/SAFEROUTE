@@ -23,7 +23,7 @@ public class UsuarioController {
     }
 
     /**
-     * RF003.2: Eliminar usuario (solo SuperAdministrador)
+     * Eliminar usuario
      */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('SAD')")
@@ -33,7 +33,7 @@ public class UsuarioController {
     }
 
     /**
-     * Listar todos los usuarios (solo SuperAdministrador)
+     * Listar todos los usuarios
      */
     @GetMapping
     @PreAuthorize("hasRole('SAD')")

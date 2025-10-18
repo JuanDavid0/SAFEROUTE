@@ -28,6 +28,9 @@ public class Producto {
     @Column(length = 255)
     private String urlImagen;
 
+    @Column(name = "estado_producto", length = 10, nullable = false)
+    private String estadoProducto = "ACTIVO"; // ACTIVO o INACTIVO
+
     public Integer getIdProducto() {
         return idProducto;
     }
@@ -82,6 +85,14 @@ public class Producto {
 
     public void setUrlImagen(String urlImagen) {
         this.urlImagen = urlImagen;
+    }
+
+    public String getEstadoProducto() {
+        return estadoProducto;
+    }
+
+    public void setEstadoProducto(String estadoProducto) {
+        this.estadoProducto = estadoProducto;
     }
 
 }

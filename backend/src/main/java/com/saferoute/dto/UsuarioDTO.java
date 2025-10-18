@@ -6,7 +6,6 @@ public class UsuarioDTO {
     private Integer idUsuario;
     private String nombres;
     private String apellidos;
-    private String correo;
     private String telefono;
     private String cedula;
     private String direccion;
@@ -35,14 +34,6 @@ public class UsuarioDTO {
 
     public void setApellidos(String apellidos) {
         this.apellidos = apellidos;
-    }
-
-    public String getCorreo() {
-        return correo;
-    }
-
-    public void setCorreo(String correo) {
-        this.correo = correo;
     }
 
     public String getTelefono() {

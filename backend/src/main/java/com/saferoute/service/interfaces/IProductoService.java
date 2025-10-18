@@ -5,8 +5,14 @@ import java.util.List;
 
 public interface IProductoService {
     ProductoDTO crearProducto(ProductoDTO productoDTO);
+
     ProductoDTO actualizarProducto(Integer id, ProductoDTO productoDTO);
+
     void eliminarProducto(Integer id);
+
     List<ProductoDTO> listarProductos();
+
     ProductoDTO obtenerProductoPorId(Integer id);
+
+    ProductoDTO buscarProductoPorNombre(String nombreProducto);
 }

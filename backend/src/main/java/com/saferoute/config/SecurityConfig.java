@@ -57,11 +57,9 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authz -> authz
-                        // Endpoints públicos de autenticación - PERMITIR TODO
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/solicitudes/**").permitAll()
-                        // Cualquier otra ruta requiere autenticación
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .authenticationProvider(authenticationProvider())

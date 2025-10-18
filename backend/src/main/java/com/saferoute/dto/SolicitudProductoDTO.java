@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 
 public class SolicitudProductoDTO {
     private Integer idProducto;
+    private String nombreProducto; // Nuevo: nombre del producto para histórico
     private Integer cantidadSolicitada;
     private BigDecimal precio;
     private Integer modificacionesRestantes;
@@ -14,6 +15,14 @@ public class SolicitudProductoDTO {
 
     public void setIdProducto(Integer idProducto) {
         this.idProducto = idProducto;
+    }
+
+    public String getNombreProducto() {
+        return nombreProducto;
+    }
+
+    public void setNombreProducto(String nombreProducto) {
+        this.nombreProducto = nombreProducto;
     }
 
     public Integer getCantidadSolicitada() {

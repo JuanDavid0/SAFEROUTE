@@ -21,9 +21,6 @@ public class Usuario {
     @Column(name = "apellidos", length = 100, nullable = false)
     private String apellidos;
 
-    @Column(name = "correo", length = 100, nullable = false, unique = true)
-    private String correo;
-
     @Column(name = "telefono", length = 15, nullable = false, unique = true)
     private String telefono;
 
@@ -36,6 +33,9 @@ public class Usuario {
     @JsonIgnore
     @Column(name = "contrasenia", length = 512)
     private String contrasenia;
+
+    @Column(name = "estado_usuario", length = 10, nullable = false)
+    private String estadoUsuario = "ACTIVO"; // ACTIVO o INACTIVO
 
     @JsonIgnore
     @OneToMany(mappedBy = "usuario", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = false)
@@ -68,14 +68,6 @@ public class Usuario {
         this.apellidos = apellidos;
     }
 
-    public String getCorreo() {
-        return correo;
-    }
-
-    public void setCorreo(String correo) {
-        this.correo = correo;
-    }
-
     public String getTelefono() {
         return telefono;
     }
@@ -106,6 +98,14 @@ public class Usuario {
 
     public void setContrasenia(String contrasenia) {
         this.contrasenia = contrasenia;
+    }
+
+    public String getEstadoUsuario() {
+        return estadoUsuario;
+    }
+
+    public void setEstadoUsuario(String estadoUsuario) {
+        this.estadoUsuario = estadoUsuario;
     }
 
     public Set<UsuarioRol> getUsuarioRoles() {

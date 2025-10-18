@@ -1,14 +1,14 @@
 package com.saferoute.dto;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public class CambiarContraseniaRequest {
 
-    @NotBlank(message = "El correo es requerido")
-    @Email(message = "El formato del correo no es válido")
-    private String correo;
+    @NotBlank(message = "La cédula es requerida")
+    @Pattern(regexp = "^[0-9]{10}$", message = "La cédula debe contener exactamente 10 dígitos numéricos")
+    private String cedula;
 
     @NotBlank(message = "La contraseña actual es requerida")
     private String contraseniaActual;
@@ -21,19 +21,19 @@ public class CambiarContraseniaRequest {
     public CambiarContraseniaRequest() {
     }
 
-    public CambiarContraseniaRequest(String correo, String contraseniaActual, String contraseniaNueva) {
-        this.correo = correo;
+    public CambiarContraseniaRequest(String cedula, String contraseniaActual, String contraseniaNueva) {
+        this.cedula = cedula;
         this.contraseniaActual = contraseniaActual;
         this.contraseniaNueva = contraseniaNueva;
     }
 
     // Getters y Setters
-    public String getCorreo() {
-        return correo;
+    public String getCedula() {
+        return cedula;
     }
 
-    public void setCorreo(String correo) {
-        this.correo = correo;
+    public void setCedula(String cedula) {
+        this.cedula = cedula;
     }
 
     public String getContraseniaActual() {

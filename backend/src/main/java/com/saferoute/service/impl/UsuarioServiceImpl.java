@@ -4,6 +4,7 @@ import com.saferoute.dto.UsuarioDTO;
 import com.saferoute.model.Usuario;
 import com.saferoute.repository.UsuarioRepository;
 import com.saferoute.service.interfaces.IUsuarioService;
+import com.saferoute.service.interfaces.ILogService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,9 +15,11 @@ import java.util.stream.Collectors;
 public class UsuarioServiceImpl implements IUsuarioService {
 
     private final UsuarioRepository usuarioRepository;
+    private final ILogService logService;
 
-    public UsuarioServiceImpl(UsuarioRepository usuarioRepository) {
+    public UsuarioServiceImpl(UsuarioRepository usuarioRepository, ILogService logService) {
         this.usuarioRepository = usuarioRepository;
+        this.logService = logService;
     }
 
     @Override
@@ -24,8 +27,23 @@ public class UsuarioServiceImpl implements IUsuarioService {
     public void eliminarUsuario(Integer id) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
-        // TODO: verificar tipo de elimincacion de usuarios soft? 
-        usuarioRepository.delete(usuario);
+
+        // Validar que el usuario sea administrador (ADM)
+        boolean esAdministrador = usuario.getUsuarioRoles().stream()
+                .anyMatch(ur -> "ADM".equals(ur.getRol().getTipoRol()));
+
+        if (!esAdministrador) {
+            throw new RuntimeException("Solo se pueden eliminar usuarios con rol de Administrador (ADM)");
+        }
+
+        // Soft delete - cambiar estado a INACTIVO
+        usuario.setEstadoUsuario("INACTIVO");
+        usuarioRepository.save(usuario);
+
+        // Registrar eliminación (soft delete) de usuario en logs
+        logService.registrarLog(id,
+                "Usuario administrador eliminado (soft delete) - Cédula: " + usuario.getCedula() +
+                        ", Nombres: " + usuario.getNombres() + " " + usuario.getApellidos());
     }
 
     @Override
@@ -47,7 +65,6 @@ public class UsuarioServiceImpl implements IUsuarioService {
         dto.setIdUsuario(usuario.getIdUsuario());
         dto.setNombres(usuario.getNombres());
         dto.setApellidos(usuario.getApellidos());
-        dto.setCorreo(usuario.getCorreo());
         dto.setTelefono(usuario.getTelefono());
         dto.setCedula(usuario.getCedula());
         dto.setDireccion(usuario.getDireccion());

@@ -13,6 +13,7 @@ import com.saferoute.repository.RolRepository;
 import com.saferoute.repository.UsuarioRolRepository;
 import com.saferoute.security.JwtTokenProvider;
 import com.saferoute.service.interfaces.IAuthService;
+import com.saferoute.service.interfaces.ILogService;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -30,26 +31,29 @@ public class AuthServiceImpl implements IAuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
+    private final ILogService logService;
 
     public AuthServiceImpl(UsuarioRepository usuarioRepository,
             RolRepository rolRepository,
             UsuarioRolRepository usuarioRolRepository,
             AuthenticationManager authenticationManager,
             JwtTokenProvider jwtTokenProvider,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            ILogService logService) {
         this.usuarioRepository = usuarioRepository;
         this.rolRepository = rolRepository;
         this.usuarioRolRepository = usuarioRolRepository;
         this.authenticationManager = authenticationManager;
         this.jwtTokenProvider = jwtTokenProvider;
         this.passwordEncoder = passwordEncoder;
+        this.logService = logService;
     }
 
     @Override
     public JwtResponse login(LoginRequest loginRequest) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        loginRequest.getCorreo(), loginRequest.getContrasenia()));
+                        loginRequest.getCedula(), loginRequest.getContrasenia()));
         String token = jwtTokenProvider.generateToken(authentication);
 
         // Obtener el rol del usuario
@@ -58,21 +62,27 @@ public class AuthServiceImpl implements IAuthService {
                 .map(auth -> auth.getAuthority().replace("ROLE_", ""))
                 .orElse("CLI");
 
+        // Registrar login exitoso en logs
+        Usuario usuario = usuarioRepository.findByCedula(loginRequest.getCedula()).orElse(null);
+        if (usuario != null) {
+            logService.registrarLog(usuario.getIdUsuario(),
+                    "Inicio de sesión exitoso - Rol: " + rol);
+        }
+
         return new JwtResponse(token, rol);
     }
 
     @Override
     public Usuario registro(RegistroRequest registroRequest) {
-        // Verificar si el correo ya existe
-        if (usuarioRepository.findByCorreo(registroRequest.getCorreo()).isPresent()) {
-            throw new RuntimeException("El correo electrónico ya está registrado");
+        // Verificar si la cédula ya existe
+        if (usuarioRepository.findByCedula(registroRequest.getCedula()).isPresent()) {
+            throw new RuntimeException("La cédula ya está registrada");
         }
 
         // Crear nuevo usuario
         Usuario usuario = new Usuario();
         usuario.setNombres(registroRequest.getNombres());
         usuario.setApellidos(registroRequest.getApellidos());
-        usuario.setCorreo(registroRequest.getCorreo());
         usuario.setTelefono(registroRequest.getTelefono());
         usuario.setCedula(registroRequest.getCedula());
         usuario.setDireccion(registroRequest.getDireccion());
@@ -99,13 +109,16 @@ public class AuthServiceImpl implements IAuthService {
 
         usuarioRolRepository.save(usuarioRol);
 
+        // Registrar registro de nuevo usuario en logs
+        logService.registrarLog(usuarioGuardado.getIdUsuario(),
+                "Registro de nuevo usuario - Cédula: " + usuarioGuardado.getCedula() + ", Rol: CLI");
+
         return usuarioGuardado;
     }
 
-
     @Override
     public void cambiarContrasenia(CambiarContraseniaRequest request) {
-        Usuario usuario = usuarioRepository.findByCorreo(request.getCorreo())
+        Usuario usuario = usuarioRepository.findByCedula(request.getCedula())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         // Verificar que la contraseña actual sea correcta
@@ -116,6 +129,10 @@ public class AuthServiceImpl implements IAuthService {
         // Cambiar a la nueva contraseña
         usuario.setContrasenia(passwordEncoder.encode(request.getContraseniaNueva()));
         usuarioRepository.save(usuario);
+
+        // Registrar cambio de contraseña en logs
+        logService.registrarLog(usuario.getIdUsuario(),
+                "Cambio de contraseña exitoso - Cédula: " + usuario.getCedula());
     }
 
     @Override
@@ -124,16 +141,15 @@ public class AuthServiceImpl implements IAuthService {
         usuarioRepository.findById(sadUserId)
                 .orElseThrow(() -> new RuntimeException("Usuario SAD no encontrado"));
 
-        // Verificar si el correo ya existe
-        if (usuarioRepository.findByCorreo(registroRequest.getCorreo()).isPresent()) {
-            throw new RuntimeException("El correo electrónico ya está registrado");
+        // Verificar si la cédula ya existe
+        if (usuarioRepository.findByCedula(registroRequest.getCedula()).isPresent()) {
+            throw new RuntimeException("La cédula ya está registrada");
         }
 
         // Crear nuevo administrador
         Usuario administrador = new Usuario();
         administrador.setNombres(registroRequest.getNombres());
         administrador.setApellidos(registroRequest.getApellidos());
-        administrador.setCorreo(registroRequest.getCorreo());
         administrador.setTelefono(registroRequest.getTelefono());
         administrador.setCedula(registroRequest.getCedula());
         administrador.setDireccion(registroRequest.getDireccion());
@@ -154,6 +170,12 @@ public class AuthServiceImpl implements IAuthService {
         usuarioRol.setUsuario(administradorGuardado);
 
         usuarioRolRepository.save(usuarioRol);
+
+        // Registrar creación de administrador en logs
+        logService.registrarLog(sadUserId,
+                "Creación de nuevo administrador - Cédula: " + administradorGuardado.getCedula() +
+                        ", Nombres: " + administradorGuardado.getNombres() + " "
+                        + administradorGuardado.getApellidos());
 
         return administradorGuardado;
     }

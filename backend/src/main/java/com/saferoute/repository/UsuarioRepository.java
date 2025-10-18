@@ -8,8 +8,6 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 
 public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
-    Optional<Usuario> findByCorreo(String correo);
-
     Optional<Usuario> findByTelefono(String telefono);
 
     Optional<Usuario> findByCedula(String cedula);
@@ -17,6 +15,6 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
     @Query("SELECT u FROM Usuario u " +
             "LEFT JOIN FETCH u.usuarioRoles ur " +
             "LEFT JOIN FETCH ur.rol r " +
-            "WHERE u.correo = :correo")
-    Optional<Usuario> findByCorreoWithRoles(@Param("correo") String correo);
+            "WHERE u.cedula = :cedula")
+    Optional<Usuario> findByCedulaWithRoles(@Param("cedula") String cedula);
 }
