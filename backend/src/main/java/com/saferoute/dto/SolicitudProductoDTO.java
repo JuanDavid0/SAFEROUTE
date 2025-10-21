@@ -7,7 +7,6 @@ public class SolicitudProductoDTO {
     private String nombreProducto; // Nuevo: nombre del producto para histórico
     private Integer cantidadSolicitada;
     private BigDecimal precio;
-    private Integer modificacionesRestantes;
 
     public Integer getIdProducto() {
         return idProducto;
@@ -39,13 +38,5 @@ public class SolicitudProductoDTO {
 
     public void setPrecio(BigDecimal precio) {
         this.precio = precio;
-    }
-
-    public Integer getModificacionesRestantes() {
-        return modificacionesRestantes;
-    }
-
-    public void setModificacionesRestantes(Integer modificacionesRestantes) {
-        this.modificacionesRestantes = modificacionesRestantes;
     }
 }

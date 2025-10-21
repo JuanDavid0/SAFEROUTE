@@ -26,9 +26,6 @@ public class SolicitudProducto {
     @Column(nullable = false)
     private BigDecimal precio;
 
-    @Column(nullable = false)
-    private Integer modificacionesRestantes = 3;
-
     // Getters y setters
     public SolicitudProductoId getId() {
         return id;
@@ -68,14 +65,6 @@ public class SolicitudProducto {
 
     public void setPrecio(BigDecimal precio) {
         this.precio = precio;
-    }
-
-    public Integer getModificacionesRestantes() {
-        return modificacionesRestantes;
-    }
-
-    public void setModificacionesRestantes(Integer modificacionesRestantes) {
-        this.modificacionesRestantes = modificacionesRestantes;
     }
 
 }

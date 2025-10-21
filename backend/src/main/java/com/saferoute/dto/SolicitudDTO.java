@@ -12,6 +12,7 @@ public class SolicitudDTO {
     private String direccionEntrega;
     private LocalDate fechaSolicitud;
     private LocalDate fechaLimitePago;
+    private Integer modificacionesRestantes;
     private List<SolicitudProductoDTO> productos;
 
     // Getters y setters
@@ -77,6 +78,14 @@ public class SolicitudDTO {
 
     public void setFechaLimitePago(LocalDate fechaLimitePago) {
         this.fechaLimitePago = fechaLimitePago;
+    }
+
+    public Integer getModificacionesRestantes() {
+        return modificacionesRestantes;
+    }
+
+    public void setModificacionesRestantes(Integer modificacionesRestantes) {
+        this.modificacionesRestantes = modificacionesRestantes;
     }
 
     public List<SolicitudProductoDTO> getProductos() {

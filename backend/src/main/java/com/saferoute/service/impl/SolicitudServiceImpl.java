@@ -61,7 +61,6 @@ public class SolicitudServiceImpl implements ISolicitudService {
             sp.setCantidadSolicitada(spDTO.getCantidadSolicitada());
             // CALCULAR PRECIO AUTOMÁTICAMENTE del producto
             sp.setPrecio(producto.getPrecioUnitario());
-            sp.setModificacionesRestantes(3); // Inicializar con 3 modificaciones
             solicitud.getProductos().add(sp);
         }
 
@@ -129,6 +128,12 @@ public class SolicitudServiceImpl implements ISolicitudService {
             }
         }
 
+        // Verificar modificaciones restantes a nivel de solicitud
+        if (solicitud.getModificacionesRestantes() <= 0) {
+            throw new RuntimeException(
+                    "Se alcanzó el número máximo de modificaciones para esta solicitud (3 modificaciones)");
+        }
+
         // Modificar dirección de entrega
         if (datos.getDireccionEntrega() != null) {
             solicitud.setDireccionEntrega(datos.getDireccionEntrega());
@@ -143,23 +148,17 @@ public class SolicitudServiceImpl implements ISolicitudService {
                         .findFirst()
                         .orElseThrow(() -> new RuntimeException("Producto no encontrado en esta solicitud"));
 
-                if (sp.getModificacionesRestantes() <= 0) {
-                    throw new RuntimeException("Se alcanzó el número máximo de modificaciones para el producto "
-                            + sp.getProducto().getNombreProducto());
-                }
-
                 sp.setCantidadSolicitada(prodMod.getCantidadSolicitada());
-                sp.setModificacionesRestantes(sp.getModificacionesRestantes() - 1);
             }
         }
         // Compatibilidad con formato antiguo (un solo producto)
         else if (datos.getNuevaCantidad() != null && !solicitud.getProductos().isEmpty()) {
             SolicitudProducto sp = solicitud.getProductos().iterator().next();
-            if (sp.getModificacionesRestantes() <= 0)
-                throw new RuntimeException("Se alcanzó el número máximo de modificaciones para este producto");
             sp.setCantidadSolicitada(datos.getNuevaCantidad());
-            sp.setModificacionesRestantes(sp.getModificacionesRestantes() - 1);
         }
+
+        // Decrementar modificaciones restantes a nivel de solicitud
+        solicitud.setModificacionesRestantes(solicitud.getModificacionesRestantes() - 1);
 
         solicitudRepository.save(solicitud);
         return mapToDTO(solicitud);
@@ -184,6 +183,12 @@ public class SolicitudServiceImpl implements ISolicitudService {
             if (LocalDate.now().isAfter(fechaLimite)) {
                 throw new RuntimeException("No se pueden agregar productos 5 días antes del cierre del pedido");
             }
+        }
+
+        // Verificar modificaciones restantes a nivel de solicitud
+        if (solicitud.getModificacionesRestantes() <= 0) {
+            throw new RuntimeException(
+                    "Se alcanzó el número máximo de modificaciones para esta solicitud (3 modificaciones)");
         }
 
         // Verificar que el producto exista
@@ -212,10 +217,20 @@ public class SolicitudServiceImpl implements ISolicitudService {
         sp.setProducto(producto);
         sp.setCantidadSolicitada(productoDTO.getCantidadSolicitada());
         sp.setPrecio(producto.getPrecioUnitario());
-        sp.setModificacionesRestantes(3); // Valor por defecto
 
         solicitud.getProductos().add(sp);
+
+        // Decrementar modificaciones restantes a nivel de solicitud
+        solicitud.setModificacionesRestantes(solicitud.getModificacionesRestantes() - 1);
+
         solicitudRepository.save(solicitud);
+
+        // Registrar log de agregación de producto
+        logService.registrarLog(solicitud.getCliente().getIdUsuario(),
+                "Producto agregado a solicitud - Solicitud ID: " + idSolicitud +
+                        ", Producto: " + producto.getNombreProducto() +
+                        ", Cantidad: " + productoDTO.getCantidadSolicitada() +
+                        ", Modificaciones restantes: " + solicitud.getModificacionesRestantes());
 
         return mapToDTO(solicitud);
     }
@@ -241,6 +256,12 @@ public class SolicitudServiceImpl implements ISolicitudService {
             }
         }
 
+        // Verificar modificaciones restantes a nivel de solicitud
+        if (solicitud.getModificacionesRestantes() <= 0) {
+            throw new RuntimeException(
+                    "Se alcanzó el número máximo de modificaciones para esta solicitud (3 modificaciones)");
+        }
+
         // Verificar que la solicitud tenga al menos 2 productos
         if (solicitud.getProductos().size() <= 1) {
             throw new RuntimeException(
@@ -253,8 +274,19 @@ public class SolicitudServiceImpl implements ISolicitudService {
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado en esta solicitud"));
 
+        String nombreProducto = sp.getProducto().getNombreProducto();
         solicitud.getProductos().remove(sp);
+
+        // Decrementar modificaciones restantes a nivel de solicitud
+        solicitud.setModificacionesRestantes(solicitud.getModificacionesRestantes() - 1);
+
         solicitudRepository.save(solicitud);
+
+        // Registrar log de eliminación de producto
+        logService.registrarLog(solicitud.getCliente().getIdUsuario(),
+                "Producto eliminado de solicitud - Solicitud ID: " + idSolicitud +
+                        ", Producto: " + nombreProducto +
+                        ", Modificaciones restantes: " + solicitud.getModificacionesRestantes());
 
         return mapToDTO(solicitud);
     }
@@ -280,22 +312,23 @@ public class SolicitudServiceImpl implements ISolicitudService {
             }
         }
 
+        // Verificar modificaciones restantes a nivel de solicitud
+        if (solicitud.getModificacionesRestantes() <= 0) {
+            throw new RuntimeException(
+                    "Se alcanzó el número máximo de modificaciones para esta solicitud (3 modificaciones)");
+        }
+
         // Buscar el producto en la solicitud
         SolicitudProducto sp = solicitud.getProductos().stream()
                 .filter(p -> p.getProducto().getIdProducto().equals(idProducto))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado en esta solicitud"));
 
-        // Verificar modificaciones restantes
-        if (sp.getModificacionesRestantes() <= 0) {
-            throw new RuntimeException(
-                    "Se alcanzó el número máximo de modificaciones para el producto " +
-                            sp.getProducto().getNombreProducto());
-        }
-
-        // Actualizar cantidad y decrementar modificaciones
+        // Actualizar cantidad
         sp.setCantidadSolicitada(nuevaCantidad);
-        sp.setModificacionesRestantes(sp.getModificacionesRestantes() - 1);
+
+        // Decrementar modificaciones restantes a nivel de solicitud
+        solicitud.setModificacionesRestantes(solicitud.getModificacionesRestantes() - 1);
 
         solicitudRepository.save(solicitud);
 
@@ -378,13 +411,14 @@ public class SolicitudServiceImpl implements ISolicitudService {
         dto.setFechaSolicitud(solicitud.getFechaSolicitud());
         // Incluir fechaLimitePago desde la fecha_cierre del pedido
         dto.setFechaLimitePago(solicitud.getPedido().getFechaCierre());
+        // Incluir modificaciones restantes a nivel de solicitud
+        dto.setModificacionesRestantes(solicitud.getModificacionesRestantes());
         dto.setProductos(solicitud.getProductos().stream().map(sp -> {
             SolicitudProductoDTO spDTO = new SolicitudProductoDTO();
             spDTO.setIdProducto(sp.getProducto().getIdProducto());
             spDTO.setCantidadSolicitada(sp.getCantidadSolicitada());
             // Calcular precio total: cantidad * precio unitario
             spDTO.setPrecio(sp.getPrecio().multiply(java.math.BigDecimal.valueOf(sp.getCantidadSolicitada())));
-            spDTO.setModificacionesRestantes(sp.getModificacionesRestantes());
             return spDTO;
         }).collect(Collectors.toList()));
         return dto;

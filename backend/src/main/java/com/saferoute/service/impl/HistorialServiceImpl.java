@@ -107,6 +107,8 @@ public class HistorialServiceImpl implements IHistorialService {
         dto.setEstadoSolicitud(solicitud.getEstadoSolicitud().name());
         dto.setDireccionEntrega(solicitud.getDireccionEntrega());
         dto.setFechaSolicitud(solicitud.getFechaSolicitud());
+        // Incluir modificaciones restantes a nivel de solicitud
+        dto.setModificacionesRestantes(solicitud.getModificacionesRestantes());
 
         // Mapear productos de la solicitud
         List<SolicitudProductoDTO> productosDTO = solicitud.getProductos().stream()
@@ -116,7 +118,6 @@ public class HistorialServiceImpl implements IHistorialService {
                     pDTO.setNombreProducto(sp.getProducto().getNombreProducto()); // Incluir nombre del producto
                     pDTO.setCantidadSolicitada(sp.getCantidadSolicitada());
                     pDTO.setPrecio(sp.getPrecio());
-                    pDTO.setModificacionesRestantes(sp.getModificacionesRestantes());
                     return pDTO;
                 })
                 .collect(Collectors.toList());

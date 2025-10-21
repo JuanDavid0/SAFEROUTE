@@ -29,6 +29,24 @@ public class JwtTokenProvider {
                 .compact();
     }
 
+    /**
+     * Genera un token JWT temporal para autenticación OTP
+     * Este token tiene una duración más corta y solo permite operaciones limitadas
+     */
+    public String generateOtpToken(String cedula) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + 3600000); // 1 hora (más corto que el token normal)
+
+        return Jwts.builder()
+                .setSubject(cedula)
+                .claim("roles", "[ROLE_OTP_VERIFIED]")
+                .claim("tokenType", "OTP")
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(secretKey)
+                .compact();
+    }
+
     public String getUsernameFromJWT(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(secretKey)

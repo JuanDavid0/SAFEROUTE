@@ -35,6 +35,9 @@ public class Solicitud {
     @Column(nullable = false)
     private String direccionEntrega;
 
+    @Column(nullable = false)
+    private Integer modificacionesRestantes = 3;
+
     // Getters y setters
     public Integer getIdSolicitud() {
         return idSolicitud;
@@ -90,6 +93,14 @@ public class Solicitud {
 
     public void setDireccionEntrega(String direccionEntrega) {
         this.direccionEntrega = direccionEntrega;
+    }
+
+    public Integer getModificacionesRestantes() {
+        return modificacionesRestantes;
+    }
+
+    public void setModificacionesRestantes(Integer modificacionesRestantes) {
+        this.modificacionesRestantes = modificacionesRestantes;
     }
 
 }
