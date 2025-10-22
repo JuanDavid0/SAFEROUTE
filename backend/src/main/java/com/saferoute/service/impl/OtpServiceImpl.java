@@ -2,6 +2,8 @@ package com.saferoute.service.impl;
 
 import com.saferoute.config.OtpConfig;
 import com.saferoute.dto.OtpResponse;
+import com.saferoute.exception.BusinessException;
+import com.saferoute.exception.ResourceNotFoundException;
 import com.saferoute.model.OtpToken;
 import com.saferoute.model.Usuario;
 import com.saferoute.repository.OtpTokenRepository;
@@ -15,7 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 /**
  * Implementación del servicio de autenticación OTP
@@ -50,118 +51,110 @@ public class OtpServiceImpl implements IOtpService {
 
     @Override
     public OtpResponse solicitarOtp(String cedula) {
-        try {
-            // Buscar usuario por cédula
-            Optional<Usuario> usuarioOpt = usuarioRepository.findByCedula(cedula);
+        // Buscar usuario por cédula
+        Usuario usuario = usuarioRepository.findByCedula(cedula)
+                .orElseThrow(() -> {
+                    logger.warn("Intento de solicitar OTP para cédula no registrada: {}", cedula);
+                    return new ResourceNotFoundException("Usuario", "cédula", cedula);
+                });
 
-            if (usuarioOpt.isEmpty()) {
-                logger.warn("Intento de solicitar OTP para cédula no registrada: {}", cedula);
-                return new OtpResponse(false, "No existe un usuario registrado con esta cédula");
-            }
-
-            Usuario usuario = usuarioOpt.get();
-
-            // Verificar que el usuario esté activo
-            if ("INACTIVO".equals(usuario.getEstadoUsuario())) {
-                logger.warn("Intento de solicitar OTP para usuario inactivo: {}", cedula);
-                return new OtpResponse(false, "El usuario está inactivo");
-            }
-
-            String telefono = usuario.getTelefono();
-            if (telefono == null || telefono.trim().isEmpty()) {
-                logger.error("Usuario {} no tiene número de teléfono registrado", cedula);
-                return new OtpResponse(false, "El usuario no tiene un número de teléfono registrado");
-            }
-
-            // Generar código OTP
-            String codigoOtp = generarCodigoOtp();
-
-            // Calcular fecha de expiración
-            LocalDateTime fechaExpiracion = LocalDateTime.now()
-                    .plusMinutes(otpConfig.getExpirationMinutes());
-
-            // Crear y guardar token OTP
-            OtpToken otpToken = new OtpToken(cedula, telefono, codigoOtp, fechaExpiracion);
-            otpTokenRepository.save(otpToken);
-
-            // Enviar SMS con Twilio
-            boolean smsEnviado = twilioService.enviarSmsOtp(telefono, codigoOtp);
-
-            if (smsEnviado) {
-                logger.info("OTP generado y enviado exitosamente para cédula: {}", cedula);
-                return new OtpResponse(true,
-                        String.format("Código de verificación enviado al número terminado en %s",
-                                telefono.substring(telefono.length() - 4)));
-            } else {
-                logger.error("Error al enviar SMS OTP para cédula: {}", cedula);
-                return new OtpResponse(false,
-                        "Error al enviar el código de verificación. Por favor, inténtalo de nuevo.");
-            }
-
-        } catch (Exception e) {
-            logger.error("Error al solicitar OTP para cédula {}: {}", cedula, e.getMessage());
-            return new OtpResponse(false, "Error al procesar la solicitud: " + e.getMessage());
+        // Verificar que el usuario esté activo
+        if ("INACTIVO".equals(usuario.getEstadoUsuario())) {
+            logger.warn("Intento de solicitar OTP para usuario inactivo: {}", cedula);
+            throw new BusinessException("El usuario está inactivo y no puede recibir códigos OTP", "USER_INACTIVE");
         }
+
+        // Validar teléfono
+        String telefono = usuario.getTelefono();
+        if (telefono == null || telefono.trim().isEmpty()) {
+            logger.error("Usuario {} no tiene número de teléfono registrado", cedula);
+            throw new BusinessException(
+                    "El usuario no tiene un número de teléfono registrado. Contacta al administrador.",
+                    "PHONE_NOT_REGISTERED");
+        }
+
+        // Generar código OTP
+        String codigoOtp = generarCodigoOtp();
+
+        // Calcular fecha de expiración
+        LocalDateTime fechaExpiracion = LocalDateTime.now()
+                .plusMinutes(otpConfig.getExpirationMinutes());
+
+        // Crear y guardar token OTP
+        OtpToken otpToken = new OtpToken(cedula, telefono, codigoOtp, fechaExpiracion);
+        otpTokenRepository.save(otpToken);
+
+        // Enviar SMS con Twilio
+        boolean smsEnviado = twilioService.enviarSmsOtp(telefono, codigoOtp);
+
+        if (!smsEnviado) {
+            logger.error("Error al enviar SMS OTP para cédula: {}", cedula);
+            throw new BusinessException(
+                    "Error al enviar el código de verificación por SMS. Por favor, inténtalo de nuevo.",
+                    "SMS_SEND_FAILED");
+        }
+
+        logger.info("OTP generado y enviado exitosamente para cédula: {}", cedula);
+        return new OtpResponse(true,
+                String.format("Código de verificación enviado al número terminado en %s",
+                        telefono.substring(telefono.length() - 4)));
     }
 
     @Override
     public OtpResponse verificarOtp(String cedula, String codigoOtp) {
-        try {
-            // Buscar el token OTP más reciente y válido para la cédula
-            Optional<OtpToken> tokenOpt = otpTokenRepository
-                    .findFirstByCedulaAndUsadoFalseAndFechaExpiracionAfterOrderByFechaCreacionDesc(
-                            cedula, LocalDateTime.now());
+        // Buscar el token OTP más reciente y válido para la cédula
+        OtpToken token = otpTokenRepository
+                .findFirstByCedulaAndUsadoFalseAndFechaExpiracionAfterOrderByFechaCreacionDesc(
+                        cedula, LocalDateTime.now())
+                .orElseThrow(() -> {
+                    logger.warn("No se encontró un token OTP válido para cédula: {}", cedula);
+                    return new BusinessException(
+                            "No hay un código de verificación válido. Solicita uno nuevo.",
+                            "OTP_NOT_FOUND");
+                });
 
-            if (tokenOpt.isEmpty()) {
-                logger.warn("No se encontró un token OTP válido para cédula: {}", cedula);
-                return new OtpResponse(false, "No hay un código de verificación válido. Solicita uno nuevo.");
-            }
+        // Verificar si ha expirado
+        if (token.haExpirado()) {
+            logger.warn("Token OTP expirado para cédula: {}", cedula);
+            throw new BusinessException(
+                    "El código de verificación ha expirado. Solicita uno nuevo.",
+                    "OTP_EXPIRED");
+        }
 
-            OtpToken token = tokenOpt.get();
-
-            // Verificar si ha expirado
-            if (token.haExpirado()) {
-                logger.warn("Token OTP expirado para cédula: {}", cedula);
-                return new OtpResponse(false, "El código de verificación ha expirado. Solicita uno nuevo.");
-            }
-
-            // Verificar número máximo de intentos
-            if (token.getIntentosFallidos() >= otpConfig.getMaxAttempts()) {
-                logger.warn("Máximo de intentos alcanzado para OTP de cédula: {}", cedula);
-                token.setUsado(true);
-                otpTokenRepository.save(token);
-                return new OtpResponse(false,
-                        "Has excedido el número máximo de intentos. Solicita un nuevo código.");
-            }
-
-            // Verificar el código OTP
-            if (!token.getCodigoOtp().equals(codigoOtp)) {
-                token.incrementarIntentosFallidos();
-                otpTokenRepository.save(token);
-
-                int intentosRestantes = otpConfig.getMaxAttempts() - token.getIntentosFallidos();
-                logger.warn("Código OTP incorrecto para cédula: {}. Intentos restantes: {}",
-                        cedula, intentosRestantes);
-
-                return new OtpResponse(false,
-                        String.format("Código incorrecto. Te quedan %d intento(s).", intentosRestantes));
-            }
-
-            // Código correcto - marcar como verificado y usado
-            token.setVerificado(true);
+        // Verificar número máximo de intentos
+        if (token.getIntentosFallidos() >= otpConfig.getMaxAttempts()) {
+            logger.warn("Máximo de intentos alcanzado para OTP de cédula: {}", cedula);
             token.setUsado(true);
             otpTokenRepository.save(token);
-
-            // Generar token JWT temporal para permitir modificación de solicitud
-            String jwtToken = generarTokenTemporal(cedula);
-
-            logger.info("OTP verificado exitosamente para cédula: {}", cedula);
-            return new OtpResponse(true, "Verificación exitosa", jwtToken);
-
-        } catch (Exception e) {
-            logger.error("Error al verificar OTP para cédula {}: {}", cedula, e.getMessage());
-            return new OtpResponse(false, "Error al verificar el código: " + e.getMessage());
+            throw new BusinessException(
+                    "Has excedido el número máximo de intentos. Solicita un nuevo código.",
+                    "OTP_MAX_ATTEMPTS_REACHED");
         }
+
+        // Verificar el código OTP
+        if (!token.getCodigoOtp().equals(codigoOtp)) {
+            token.incrementarIntentosFallidos();
+            otpTokenRepository.save(token);
+
+            int intentosRestantes = otpConfig.getMaxAttempts() - token.getIntentosFallidos();
+            logger.warn("Código OTP incorrecto para cédula: {}. Intentos restantes: {}",
+                    cedula, intentosRestantes);
+
+            throw new BusinessException(
+                    String.format("Código incorrecto. Te quedan %d intento(s).", intentosRestantes),
+                    "OTP_INVALID");
+        }
+
+        // Código correcto - marcar como verificado y usado
+        token.setVerificado(true);
+        token.setUsado(true);
+        otpTokenRepository.save(token);
+
+        // Generar token JWT temporal para permitir modificación de solicitud
+        String jwtToken = generarTokenTemporal(cedula);
+
+        logger.info("OTP verificado exitosamente para cédula: {}", cedula);
+        return new OtpResponse(true, "Verificación exitosa", jwtToken);
     }
 
     @Override

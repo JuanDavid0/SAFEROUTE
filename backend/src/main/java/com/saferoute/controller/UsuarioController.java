@@ -1,13 +1,13 @@
 package com.saferoute.controller;
 
 import com.saferoute.dto.UsuarioDTO;
+import com.saferoute.dto.response.ApiResponse;
 import com.saferoute.service.interfaces.IUsuarioService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * Controlador para gestión de usuarios (RF003)
@@ -27,9 +27,12 @@ public class UsuarioController {
      */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('SAD')")
-    public ResponseEntity<Map<String, String>> eliminarUsuario(@PathVariable Integer id) {
+    public ResponseEntity<ApiResponse<Void>> eliminarUsuario(@PathVariable Integer id) {
         usuarioService.eliminarUsuario(id);
-        return ResponseEntity.ok(Map.of("mensaje", "Usuario eliminado exitosamente"));
+
+        ApiResponse<Void> response = ApiResponse.success("Usuario eliminado exitosamente");
+
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -37,9 +40,14 @@ public class UsuarioController {
      */
     @GetMapping
     @PreAuthorize("hasRole('SAD')")
-    public ResponseEntity<List<UsuarioDTO>> listarUsuarios() {
+    public ResponseEntity<ApiResponse<List<UsuarioDTO>>> listarUsuarios() {
         List<UsuarioDTO> usuarios = usuarioService.listarTodos();
-        return ResponseEntity.ok(usuarios);
+
+        ApiResponse<List<UsuarioDTO>> response = ApiResponse.success(
+                usuarios,
+                "Se encontraron " + usuarios.size() + " usuario(s)");
+
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -47,8 +55,13 @@ public class UsuarioController {
      */
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('SAD', 'ADM')")
-    public ResponseEntity<UsuarioDTO> obtenerUsuario(@PathVariable Integer id) {
+    public ResponseEntity<ApiResponse<UsuarioDTO>> obtenerUsuario(@PathVariable Integer id) {
         UsuarioDTO usuario = usuarioService.obtenerPorId(id);
-        return ResponseEntity.ok(usuario);
+
+        ApiResponse<UsuarioDTO> response = ApiResponse.success(
+                usuario,
+                "Usuario encontrado");
+
+        return ResponseEntity.ok(response);
     }
 }

@@ -1,6 +1,7 @@
 package com.saferoute.controller;
 
 import com.saferoute.dto.ConsolidacionDTO;
+import com.saferoute.dto.response.ApiResponse;
 import com.saferoute.service.interfaces.IConsolidacionService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -25,10 +26,15 @@ public class ConsolidacionController {
      */
     @PostMapping("/pedido/{idPedido}")
     @PreAuthorize("hasAnyRole('SAD', 'ADM')")
-    public ResponseEntity<ConsolidacionDTO> consolidarPedido(
+    public ResponseEntity<ApiResponse<ConsolidacionDTO>> consolidarPedido(
             @PathVariable Integer idPedido,
             @Valid @RequestBody(required = false) Map<String, Object> opciones) {
         ConsolidacionDTO resultado = consolidacionService.consolidarPedido(idPedido, opciones);
-        return ResponseEntity.ok(resultado);
+
+        ApiResponse<ConsolidacionDTO> response = ApiResponse.success(
+                resultado,
+                "Pedido consolidado exitosamente");
+
+        return ResponseEntity.ok(response);
     }
 }

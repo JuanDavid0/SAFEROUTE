@@ -1,6 +1,7 @@
 package com.saferoute.controller;
 
 import com.saferoute.dto.LogDTO;
+import com.saferoute.dto.response.ApiResponse;
 import com.saferoute.service.interfaces.ILogService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -28,9 +29,14 @@ public class LogController {
      */
     @GetMapping
     @PreAuthorize("hasRole('SAD')")
-    public ResponseEntity<List<LogDTO>> obtenerTodosLosLogs() {
+    public ResponseEntity<ApiResponse<List<LogDTO>>> obtenerTodosLosLogs() {
         List<LogDTO> logs = logService.obtenerTodosLosLogs();
-        return ResponseEntity.ok(logs);
+
+        ApiResponse<List<LogDTO>> response = ApiResponse.success(
+                logs,
+                "Se encontraron " + logs.size() + " log(s) en el sistema");
+
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -38,9 +44,14 @@ public class LogController {
      */
     @GetMapping("/usuario/{idUsuario}")
     @PreAuthorize("hasRole('SAD')")
-    public ResponseEntity<List<LogDTO>> obtenerLogsPorUsuario(@PathVariable Integer idUsuario) {
+    public ResponseEntity<ApiResponse<List<LogDTO>>> obtenerLogsPorUsuario(@PathVariable Integer idUsuario) {
         List<LogDTO> logs = logService.obtenerLogsPorUsuario(idUsuario);
-        return ResponseEntity.ok(logs);
+
+        ApiResponse<List<LogDTO>> response = ApiResponse.success(
+                logs,
+                "Se encontraron " + logs.size() + " log(s) para el usuario con ID " + idUsuario);
+
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -48,10 +59,15 @@ public class LogController {
      */
     @GetMapping("/fecha")
     @PreAuthorize("hasRole('SAD')")
-    public ResponseEntity<List<LogDTO>> obtenerLogsPorFecha(
+    public ResponseEntity<ApiResponse<List<LogDTO>>> obtenerLogsPorFecha(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaInicio,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fechaFin) {
         List<LogDTO> logs = logService.obtenerLogsPorFecha(fechaInicio, fechaFin);
-        return ResponseEntity.ok(logs);
+
+        ApiResponse<List<LogDTO>> response = ApiResponse.success(
+                logs,
+                "Se encontraron " + logs.size() + " log(s) en el rango de fechas especificado");
+
+        return ResponseEntity.ok(response);
     }
 }

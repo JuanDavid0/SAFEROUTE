@@ -3,6 +3,7 @@ package com.saferoute.controller;
 import com.saferoute.dto.OtpResponse;
 import com.saferoute.dto.SolicitarOtpRequest;
 import com.saferoute.dto.VerificarOtpRequest;
+import com.saferoute.dto.response.ApiResponse;
 import com.saferoute.service.interfaces.IOtpService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -30,11 +31,16 @@ public class OtpController {
      * POST /api/auth/otp/solicitar
      * 
      * @param request DTO con la cédula del cliente
-     * @return Respuesta indicando si el OTP fue enviado exitosamente
+     * @return Respuesta estandarizada indicando si el OTP fue enviado exitosamente
      */
     @PostMapping("/solicitar")
-    public ResponseEntity<OtpResponse> solicitarOtp(@Valid @RequestBody SolicitarOtpRequest request) {
-        OtpResponse response = otpService.solicitarOtp(request.getCedula());
+    public ResponseEntity<ApiResponse<OtpResponse>> solicitarOtp(@Valid @RequestBody SolicitarOtpRequest request) {
+        OtpResponse otpResponse = otpService.solicitarOtp(request.getCedula());
+
+        ApiResponse<OtpResponse> response = ApiResponse.success(
+                otpResponse,
+                "Código OTP enviado exitosamente al teléfono registrado");
+
         return ResponseEntity.ok(response);
     }
 
@@ -45,11 +51,17 @@ public class OtpController {
      * POST /api/auth/otp/verificar
      * 
      * @param request DTO con la cédula y el código OTP
-     * @return Respuesta con token JWT temporal si la verificación es exitosa
+     * @return Respuesta estandarizada con token JWT temporal si la verificación es
+     *         exitosa
      */
     @PostMapping("/verificar")
-    public ResponseEntity<OtpResponse> verificarOtp(@Valid @RequestBody VerificarOtpRequest request) {
-        OtpResponse response = otpService.verificarOtp(request.getCedula(), request.getCodigoOtp());
+    public ResponseEntity<ApiResponse<OtpResponse>> verificarOtp(@Valid @RequestBody VerificarOtpRequest request) {
+        OtpResponse otpResponse = otpService.verificarOtp(request.getCedula(), request.getCodigoOtp());
+
+        ApiResponse<OtpResponse> response = ApiResponse.success(
+                otpResponse,
+                "Código OTP verificado correctamente. Token de autorización generado");
+
         return ResponseEntity.ok(response);
     }
 }

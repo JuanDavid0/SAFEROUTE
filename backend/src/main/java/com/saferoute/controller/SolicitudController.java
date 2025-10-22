@@ -1,6 +1,8 @@
 package com.saferoute.controller;
 
 import com.saferoute.dto.*;
+import com.saferoute.dto.response.ApiResponse;
+import com.saferoute.exception.BusinessException;
 import com.saferoute.service.interfaces.ISolicitudService;
 import com.saferoute.service.SolicitudAuthorizationService;
 import com.saferoute.security.JwtTokenProvider;
@@ -36,15 +38,15 @@ public class SolicitudController {
     private String getCedulaFromToken(HttpServletRequest request) {
         String jwt = getJwtFromRequest(request);
         if (jwt == null) {
-            throw new RuntimeException("Token no encontrado. Debe autenticarse vía OTP primero.");
+            throw new BusinessException("Token no encontrado. Debe autenticarse vía OTP primero.", "TOKEN_NOT_FOUND");
         }
 
         if (!jwtTokenProvider.validateToken(jwt)) {
-            throw new RuntimeException("Token inválido o expirado.");
+            throw new BusinessException("Token inválido o expirado.", "TOKEN_INVALID");
         }
 
         if (!jwtTokenProvider.isOtpToken(jwt)) {
-            throw new RuntimeException("Este endpoint requiere autenticación OTP.");
+            throw new BusinessException("Este endpoint requiere autenticación OTP.", "OTP_TOKEN_REQUIRED");
         }
 
         return jwtTokenProvider.getCedulaFromJWT(jwt);
@@ -60,13 +62,28 @@ public class SolicitudController {
 
     @PreAuthorize("hasRole('CLI')")
     @PostMapping("/{idCliente}")
-    public SolicitudDTO crearSolicitud(@PathVariable Integer idCliente, @Valid @RequestBody SolicitudDTO dto) {
-        return solicitudService.crearSolicitud(dto, idCliente);
+    public ResponseEntity<ApiResponse<SolicitudDTO>> crearSolicitud(
+            @PathVariable Integer idCliente,
+            @Valid @RequestBody SolicitudDTO dto) {
+        SolicitudDTO solicitud = solicitudService.crearSolicitud(dto, idCliente);
+
+        ApiResponse<SolicitudDTO> response = ApiResponse.success(
+                solicitud,
+                "Solicitud creada exitosamente");
+
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/public/nueva")
-    public SolicitudDTO crearSolicitudClienteNuevo(@Valid @RequestBody SolicitudClienteDTO dto) {
-        return solicitudService.crearSolicitudClienteNuevo(dto);
+    public ResponseEntity<ApiResponse<SolicitudDTO>> crearSolicitudClienteNuevo(
+            @Valid @RequestBody SolicitudClienteDTO dto) {
+        SolicitudDTO solicitud = solicitudService.crearSolicitudClienteNuevo(dto);
+
+        ApiResponse<SolicitudDTO> response = ApiResponse.success(
+                solicitud,
+                "Solicitud y cliente creados exitosamente");
+
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -74,13 +91,19 @@ public class SolicitudController {
      * Usa la cédula del token para filtrar las solicitudes
      */
     @GetMapping("/mis-solicitudes")
-    public List<SolicitudDTO> listarMisSolicitudes(HttpServletRequest request) {
+    public ResponseEntity<ApiResponse<List<SolicitudDTO>>> listarMisSolicitudes(HttpServletRequest request) {
         String cedula = getCedulaFromToken(request);
-        return solicitudService.listarSolicitudesPorCedula(cedula);
+        List<SolicitudDTO> solicitudes = solicitudService.listarSolicitudesPorCedula(cedula);
+
+        ApiResponse<List<SolicitudDTO>> response = ApiResponse.success(
+                solicitudes,
+                String.format("Se encontraron %d solicitud(es)", solicitudes.size()));
+
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{idSolicitud}/modificar")
-    public SolicitudDTO modificarSolicitud(
+    public ResponseEntity<ApiResponse<SolicitudDTO>> modificarSolicitud(
             @PathVariable Integer idSolicitud,
             @RequestBody SolicitudModificacionDTO dto,
             HttpServletRequest request) {
@@ -88,14 +111,20 @@ public class SolicitudController {
         String cedula = getCedulaFromToken(request);
         authorizationService.validateSolicitudOwnership(idSolicitud, cedula);
 
-        return solicitudService.modificarSolicitud(idSolicitud, dto);
+        SolicitudDTO solicitud = solicitudService.modificarSolicitud(idSolicitud, dto);
+
+        ApiResponse<SolicitudDTO> response = ApiResponse.success(
+                solicitud,
+                "Solicitud modificada exitosamente");
+
+        return ResponseEntity.ok(response);
     }
 
     /**
      * Agregar un producto a la solicitud
      */
     @PostMapping("/{idSolicitud}/productos")
-    public SolicitudDTO agregarProducto(
+    public ResponseEntity<ApiResponse<SolicitudDTO>> agregarProducto(
             @PathVariable Integer idSolicitud,
             @Valid @RequestBody SolicitudProductoDTO productoDTO,
             HttpServletRequest request) {
@@ -103,14 +132,20 @@ public class SolicitudController {
         String cedula = getCedulaFromToken(request);
         authorizationService.validateSolicitudOwnership(idSolicitud, cedula);
 
-        return solicitudService.agregarProducto(idSolicitud, productoDTO);
+        SolicitudDTO solicitud = solicitudService.agregarProducto(idSolicitud, productoDTO);
+
+        ApiResponse<SolicitudDTO> response = ApiResponse.success(
+                solicitud,
+                "Producto agregado exitosamente a la solicitud");
+
+        return ResponseEntity.ok(response);
     }
 
     /**
      * Eliminar un producto de la solicitud
      */
     @DeleteMapping("/{idSolicitud}/productos/{idProducto}")
-    public SolicitudDTO eliminarProducto(
+    public ResponseEntity<ApiResponse<SolicitudDTO>> eliminarProducto(
             @PathVariable Integer idSolicitud,
             @PathVariable Integer idProducto,
             HttpServletRequest request) {
@@ -118,14 +153,20 @@ public class SolicitudController {
         String cedula = getCedulaFromToken(request);
         authorizationService.validateSolicitudOwnership(idSolicitud, cedula);
 
-        return solicitudService.eliminarProducto(idSolicitud, idProducto);
+        SolicitudDTO solicitud = solicitudService.eliminarProducto(idSolicitud, idProducto);
+
+        ApiResponse<SolicitudDTO> response = ApiResponse.success(
+                solicitud,
+                "Producto eliminado exitosamente de la solicitud");
+
+        return ResponseEntity.ok(response);
     }
 
     /**
      * Modificar la cantidad de un producto específico en la solicitud
      */
     @PutMapping("/{idSolicitud}/productos/{idProducto}")
-    public SolicitudDTO modificarCantidadProducto(
+    public ResponseEntity<ApiResponse<SolicitudDTO>> modificarCantidadProducto(
             @PathVariable Integer idSolicitud,
             @PathVariable Integer idProducto,
             @RequestBody Map<String, Integer> body,
@@ -136,20 +177,36 @@ public class SolicitudController {
 
         Integer nuevaCantidad = body.get("cantidad");
         if (nuevaCantidad == null || nuevaCantidad <= 0) {
-            throw new RuntimeException("La cantidad debe ser mayor a 0");
+            throw new BusinessException("La cantidad debe ser mayor a 0", "INVALID_QUANTITY");
         }
-        return solicitudService.modificarCantidadProducto(idSolicitud, idProducto, nuevaCantidad);
+
+        SolicitudDTO solicitud = solicitudService.modificarCantidadProducto(idSolicitud, idProducto, nuevaCantidad);
+
+        ApiResponse<SolicitudDTO> response = ApiResponse.success(
+                solicitud,
+                "Cantidad del producto modificada exitosamente");
+
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{idSolicitud}")
-    public ResponseEntity<Map<String, String>> cancelarSolicitud(@PathVariable Integer idSolicitud) {
+    public ResponseEntity<ApiResponse<Void>> cancelarSolicitud(@PathVariable Integer idSolicitud) {
         solicitudService.cancelarSolicitud(idSolicitud);
-        return ResponseEntity.ok(Map.of("mensaje", "Solicitud cancelada exitosamente"));
+
+        ApiResponse<Void> response = ApiResponse.success("Solicitud cancelada exitosamente");
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{idCliente}")
-    public List<SolicitudDTO> listarSolicitudesCliente(@PathVariable Integer idCliente) {
-        return solicitudService.listarSolicitudesCliente(idCliente);
+    public ResponseEntity<ApiResponse<List<SolicitudDTO>>> listarSolicitudesCliente(@PathVariable Integer idCliente) {
+        List<SolicitudDTO> solicitudes = solicitudService.listarSolicitudesCliente(idCliente);
+
+        ApiResponse<List<SolicitudDTO>> response = ApiResponse.success(
+                solicitudes,
+                String.format("Se encontraron %d solicitud(es) para el cliente", solicitudes.size()));
+
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -157,13 +214,17 @@ public class SolicitudController {
      */
     @PutMapping("/{idSolicitud}/estado")
     @PreAuthorize("hasAnyRole('SAD', 'ADM')")
-    public ResponseEntity<Map<String, String>> cambiarEstadoSolicitud(
+    public ResponseEntity<ApiResponse<Void>> cambiarEstadoSolicitud(
             @PathVariable Integer idSolicitud,
             @RequestBody Map<String, String> body) {
 
         String nuevoEstado = body.get("nuevoEstado"); // "PGD" o "CAN"
         solicitudService.cambiarEstado(idSolicitud, nuevoEstado);
-        return ResponseEntity.ok(Map.of("mensaje", "Estado actualizado a " + nuevoEstado));
+
+        ApiResponse<Void> response = ApiResponse.success(
+                String.format("Estado actualizado a %s", nuevoEstado));
+
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -171,14 +232,23 @@ public class SolicitudController {
      */
     @GetMapping("/pedido/{idPedido}")
     @PreAuthorize("hasAnyRole('SAD', 'ADM')")
-    public List<SolicitudDTO> listarSolicitudesPorPedidoYEstado(
+    public ResponseEntity<ApiResponse<List<SolicitudDTO>>> listarSolicitudesPorPedidoYEstado(
             @PathVariable Integer idPedido,
             @RequestParam(required = false) String estado) {
 
+        List<SolicitudDTO> solicitudes;
+        String mensaje;
+
         if (estado != null) {
-            return solicitudService.listarPorPedidoYEstado(idPedido, estado);
+            solicitudes = solicitudService.listarPorPedidoYEstado(idPedido, estado);
+            mensaje = String.format("Se encontraron %d solicitud(es) con estado %s", solicitudes.size(), estado);
         } else {
-            return solicitudService.listarPorPedido(idPedido);
+            solicitudes = solicitudService.listarPorPedido(idPedido);
+            mensaje = String.format("Se encontraron %d solicitud(es) para el pedido", solicitudes.size());
         }
+
+        ApiResponse<List<SolicitudDTO>> response = ApiResponse.success(solicitudes, mensaje);
+
+        return ResponseEntity.ok(response);
     }
 }

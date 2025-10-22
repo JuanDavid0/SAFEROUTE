@@ -1,6 +1,7 @@
 package com.saferoute.controller;
 
 import com.saferoute.dto.ProductoDTO;
+import com.saferoute.dto.response.ApiResponse;
 import com.saferoute.service.interfaces.IProductoService;
 
 import jakarta.validation.Valid;
@@ -10,7 +11,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/productos")
@@ -24,39 +24,72 @@ public class ProductoController {
 
     @PreAuthorize("hasAnyRole('SAD', 'ADM')")
     @PostMapping
-    public ProductoDTO crearProducto(@Valid @RequestBody ProductoDTO productoDTO) {
-        return productoService.crearProducto(productoDTO);
+    public ResponseEntity<ApiResponse<ProductoDTO>> crearProducto(@Valid @RequestBody ProductoDTO productoDTO) {
+        ProductoDTO producto = productoService.crearProducto(productoDTO);
+
+        ApiResponse<ProductoDTO> response = ApiResponse.success(
+                producto,
+                "Producto creado exitosamente");
+
+        return ResponseEntity.ok(response);
     }
 
     @PreAuthorize("hasAnyRole('SAD', 'ADM')")
     @GetMapping
-    public List<ProductoDTO> listarProductos() {
-        return productoService.listarProductos();
+    public ResponseEntity<ApiResponse<List<ProductoDTO>>> listarProductos() {
+        List<ProductoDTO> productos = productoService.listarProductos();
+
+        ApiResponse<List<ProductoDTO>> response = ApiResponse.success(
+                productos,
+                "Se encontraron " + productos.size() + " producto(s)");
+
+        return ResponseEntity.ok(response);
     }
 
     @PreAuthorize("hasAnyRole('SAD', 'ADM')")
     @GetMapping("/{id}")
-    public ProductoDTO obtenerProducto(@PathVariable Integer id) {
-        return productoService.obtenerProductoPorId(id);
+    public ResponseEntity<ApiResponse<ProductoDTO>> obtenerProducto(@PathVariable Integer id) {
+        ProductoDTO producto = productoService.obtenerProductoPorId(id);
+
+        ApiResponse<ProductoDTO> response = ApiResponse.success(
+                producto,
+                "Producto encontrado");
+
+        return ResponseEntity.ok(response);
     }
 
     @PreAuthorize("hasAnyRole('SAD', 'ADM')")
     @GetMapping("/buscar")
-    public ProductoDTO buscarProductoPorNombre(@RequestParam String nombre) {
-        return productoService.buscarProductoPorNombre(nombre);
+    public ResponseEntity<ApiResponse<ProductoDTO>> buscarProductoPorNombre(@RequestParam String nombre) {
+        ProductoDTO producto = productoService.buscarProductoPorNombre(nombre);
+
+        ApiResponse<ProductoDTO> response = ApiResponse.success(
+                producto,
+                "Producto encontrado por nombre");
+
+        return ResponseEntity.ok(response);
     }
 
     @PreAuthorize("hasAnyRole('SAD', 'ADM')")
     @PutMapping("/{id}")
-    public ProductoDTO actualizarProducto(@PathVariable Integer id,
+    public ResponseEntity<ApiResponse<ProductoDTO>> actualizarProducto(@PathVariable Integer id,
             @Valid @RequestBody ProductoDTO productoDTO) {
-        return productoService.actualizarProducto(id, productoDTO);
+        ProductoDTO producto = productoService.actualizarProducto(id, productoDTO);
+
+        ApiResponse<ProductoDTO> response = ApiResponse.success(
+                producto,
+                "Producto actualizado exitosamente");
+
+        return ResponseEntity.ok(response);
     }
 
     @PreAuthorize("hasAnyRole('SAD', 'ADM')")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, String>> eliminarProducto(@PathVariable Integer id) {
+    public ResponseEntity<ApiResponse<Void>> eliminarProducto(@PathVariable Integer id) {
         productoService.eliminarProducto(id);
-        return ResponseEntity.ok(Map.of("mensaje", "Producto eliminado exitosamente"));
+
+        ApiResponse<Void> response = ApiResponse.success("Producto eliminado exitosamente");
+
+        return ResponseEntity.ok(response);
     }
 }

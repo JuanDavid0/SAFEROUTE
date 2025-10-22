@@ -1,6 +1,7 @@
 package com.saferoute.controller;
 
 import com.saferoute.dto.HistorialPedidoDTO;
+import com.saferoute.dto.response.ApiResponse;
 import com.saferoute.service.interfaces.IHistorialService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,7 +29,7 @@ public class HistorialController {
      */
     @GetMapping("/pedidos")
     @PreAuthorize("hasRole('SAD')")
-    public ResponseEntity<List<HistorialPedidoDTO>> consultarHistorico(
+    public ResponseEntity<ApiResponse<List<HistorialPedidoDTO>>> consultarHistorico(
             @RequestParam(required = false) Integer idCliente,
             @RequestParam(required = false) Integer idProducto,
             @RequestParam(required = false) LocalDate fechaInicio,
@@ -37,7 +38,12 @@ public class HistorialController {
 
         List<HistorialPedidoDTO> historial = historialService.consultarHistorico(
                 idCliente, idProducto, fechaInicio, fechaFin, estado);
-        return ResponseEntity.ok(historial);
+
+        ApiResponse<List<HistorialPedidoDTO>> response = ApiResponse.success(
+                historial,
+                "Se encontraron " + historial.size() + " pedido(s) en el histórico");
+
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -45,8 +51,13 @@ public class HistorialController {
      */
     @GetMapping("/pedidos/{idPedido}")
     @PreAuthorize("hasRole('SAD')")
-    public ResponseEntity<HistorialPedidoDTO> obtenerDetallePedido(@PathVariable Integer idPedido) {
+    public ResponseEntity<ApiResponse<HistorialPedidoDTO>> obtenerDetallePedido(@PathVariable Integer idPedido) {
         HistorialPedidoDTO detalle = historialService.obtenerDetallePedido(idPedido);
-        return ResponseEntity.ok(detalle);
+
+        ApiResponse<HistorialPedidoDTO> response = ApiResponse.success(
+                detalle,
+                "Detalle del pedido histórico obtenido exitosamente");
+
+        return ResponseEntity.ok(response);
     }
 }
