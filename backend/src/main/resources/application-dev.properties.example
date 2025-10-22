@@ -1,0 +1,25 @@
+# ========================================
+# EXAMPLE Development Configuration
+# ========================================
+# Copy this file to: application-dev.properties
+# Then fill in your actual credentials
+# ========================================
+
+# Database Configuration
+spring.datasource.url=jdbc:postgresql://localhost:5432/saferoute
+spring.datasource.username=postgres
+spring.datasource.password=YOUR_POSTGRES_PASSWORD_HERE
+
+# Twilio Configuration
+twilio.account-sid=YOUR_TWILIO_ACCOUNT_SID_HERE
+twilio.auth-token=YOUR_TWILIO_AUTH_TOKEN_HERE
+twilio.phone-number=YOUR_TWILIO_PHONE_NUMBER_HERE
+
+# JWT Configuration
+jwt.secret=YOUR_JWT_SECRET_AT_LEAST_256_BITS_LONG_HERE
+jwt.expiration=86400000
+
+# OTP Configuration
+otp.length=6
+otp.expiration-minutes=5
+otp.max-attempts=3

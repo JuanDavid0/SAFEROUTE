@@ -49,7 +49,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String jwt = getJwtFromRequest(request);
 
             if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
-                
+
                 // Verificar si es un token OTP
                 if (tokenProvider.isOtpToken(jwt)) {
                     // Token OTP: el subject es la cédula del cliente
@@ -72,16 +72,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private void handleOtpToken(String jwt, HttpServletRequest request) {
         String cedula = tokenProvider.getCedulaFromJWT(jwt);
         Claims claims = tokenProvider.getClaimsFromJWT(jwt);
-        
+
         // Obtener roles del token (ROLE_OTP_VERIFIED)
-        @SuppressWarnings("unchecked")
-        List<String> roles = (List<String>) claims.get("roles");
-        
-        List<SimpleGrantedAuthority> authorities = roles != null 
-            ? roles.stream()
+        // Puede ser String o List dependiendo de cómo se creó el token
+        Object rolesObj = claims.get("roles");
+        List<String> roles;
+
+        if (rolesObj instanceof String roleStr) {
+            // Si es un String único, convertirlo a lista
+            roles = Collections.singletonList(roleStr);
+        } else if (rolesObj instanceof List<?>) {
+            // Si ya es una lista, usarla directamente
+            @SuppressWarnings("unchecked")
+            List<String> rolesList = (List<String>) rolesObj;
+            roles = rolesList;
+        } else {
+            // Si es null u otro tipo, lista vacía
+            roles = Collections.emptyList();
+        }
+
+        List<SimpleGrantedAuthority> authorities = roles.stream()
                 .map(SimpleGrantedAuthority::new)
-                .toList()
-            : Collections.emptyList();
+                .toList();
 
         // Crear autenticación con la cédula como principal
         UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
@@ -89,7 +101,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
-        
+
         logger.debug("OTP token authenticated for cedula: " + cedula);
     }
 
@@ -105,7 +117,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
-        
+
         logger.debug("Regular token authenticated for username: " + username);
     }
 

@@ -2,6 +2,7 @@ package com.saferoute.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
@@ -10,10 +11,16 @@ import java.util.Date;
 @Component
 public class JwtTokenProvider {
 
-    // Clave segura de 256 bits para JWT
-    private final String jwtSecret = "SafeRouteSecretKeyForJWTThatMustBeAtLeast256BitsLongToBeSecure";
-    private final long jwtExpiration = 86400000; // 1 día
-    private final SecretKey secretKey = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+    // Clave segura de 256 bits para JWT (cargada desde variables de entorno)
+    @Value("${jwt.secret}")
+    private String jwtSecret;
+
+    @Value("${jwt.expiration:86400000}")
+    private long jwtExpiration; // 1 día por defecto
+
+    private SecretKey getSecretKey() {
+        return Keys.hmacShaKeyFor(jwtSecret.getBytes());
+    }
 
     public String generateToken(Authentication authentication) {
         CustomUserDetails userPrincipal = (CustomUserDetails) authentication.getPrincipal();
@@ -25,7 +32,7 @@ public class JwtTokenProvider {
                 .claim("userId", userPrincipal.getId())
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
-                .signWith(secretKey)
+                .signWith(getSecretKey())
                 .compact();
     }
 
@@ -43,13 +50,13 @@ public class JwtTokenProvider {
                 .claim("tokenType", "OTP")
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
-                .signWith(secretKey)
+                .signWith(getSecretKey())
                 .compact();
     }
 
     public String getUsernameFromJWT(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(secretKey)
+                .setSigningKey(getSecretKey())
                 .build()
                 .parseClaimsJws(token)
                 .getBody()
@@ -59,7 +66,7 @@ public class JwtTokenProvider {
     public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder()
-                    .setSigningKey(secretKey)
+                    .setSigningKey(getSecretKey())
                     .build()
                     .parseClaimsJws(token);
             return true;
@@ -73,7 +80,7 @@ public class JwtTokenProvider {
      */
     public String getCedulaFromJWT(String token) {
         Claims claims = Jwts.parserBuilder()
-                .setSigningKey(secretKey)
+                .setSigningKey(getSecretKey())
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
@@ -86,7 +93,7 @@ public class JwtTokenProvider {
      */
     public String getTokenTypeFromJWT(String token) {
         Claims claims = Jwts.parserBuilder()
-                .setSigningKey(secretKey)
+                .setSigningKey(getSecretKey())
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
@@ -111,7 +118,7 @@ public class JwtTokenProvider {
      */
     public Claims getClaimsFromJWT(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(secretKey)
+                .setSigningKey(getSecretKey())
                 .build()
                 .parseClaimsJws(token)
                 .getBody();

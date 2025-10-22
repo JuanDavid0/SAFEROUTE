@@ -6,9 +6,9 @@ spring:
     active: dev
   
   datasource:
-    url: jdbc:postgresql://localhost:5432/saferoute
-    username: postgres
-    password: root123
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:saferoute}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
   
   jpa:
@@ -40,9 +40,14 @@ logging:
 
 # Twilio Configuration for OTP SMS
 twilio:
-  account-sid: ${TWILIO_ACCOUNT_SID:AC2cd6b16cdb8c4bdf5b0beec6e8bfca8e}
-  auth-token: ${TWILIO_AUTH_TOKEN:4a6c857d56954a31b6e7cecf591a74cc}
-  phone-number: ${TWILIO_PHONE_NUMBER:+16204078479}
+  account-sid: ${TWILIO_ACCOUNT_SID}
+  auth-token: ${TWILIO_AUTH_TOKEN}
+  phone-number: ${TWILIO_PHONE_NUMBER}
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION_MS:86400000}
 
 # OTP Configuration
 otp:

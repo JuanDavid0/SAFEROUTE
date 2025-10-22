@@ -5,9 +5,9 @@ services:
     image: postgres:15
     container_name: saferoute-db
     environment:
-      POSTGRES_DB: saferoute
-      POSTGRES_USER: saferoute_user
-      POSTGRES_PASSWORD: saferoute_password
+      POSTGRES_DB: ${POSTGRES_DB:-saferoute}
+      POSTGRES_USER: ${POSTGRES_USER:-saferoute_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -22,10 +22,15 @@ services:
       dockerfile: ../infra/docker/Dockerfile.backend
     container_name: saferoute-backend
     environment:
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/saferoute
-      SPRING_DATASOURCE_USERNAME: saferoute_user
-      SPRING_DATASOURCE_PASSWORD: saferoute_password
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/${POSTGRES_DB:-saferoute}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-saferoute_user}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
     ports:
       - "8080:8080"
     depends_on:
