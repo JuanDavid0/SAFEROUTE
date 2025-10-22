@@ -28,11 +28,11 @@ CREATE TABLE USUARIO (
     id_usuario SERIAL PRIMARY KEY,
     nombres VARCHAR(100) NOT NULL,
     apellidos VARCHAR(100) NOT NULL,
-    correo VARCHAR(100) NOT NULL UNIQUE,
     telefono VARCHAR(15) NOT NULL UNIQUE,
     cedula VARCHAR(20) NOT NULL UNIQUE,
     direccion VARCHAR(150) NOT NULL,
-    contrasenia VARCHAR(512)
+    contrasenia VARCHAR(512),
+    estado_usuario VARCHAR(10) NOT NULL DEFAULT 'ACTIVO'
 );
 
 CREATE TABLE PRODUCTO (
@@ -41,7 +41,9 @@ CREATE TABLE PRODUCTO (
     tipo_producto VARCHAR(100) NOT NULL,
     descripcion_producto TEXT NOT NULL,
     precio_unitario NUMERIC(10,2) NOT NULL,
-    costo_unitario NUMERIC(10,2) NOT NULL
+    costo_unitario NUMERIC(10,2) NOT NULL,
+    url_imagen VARCHAR(255),
+    estado_producto VARCHAR(10) NOT NULL DEFAULT 'ACTIVO'
 );
 
 -- ======================================================
@@ -60,8 +62,8 @@ CREATE TABLE USUARIO_ROL (
 
 CREATE TABLE LOG (
     id_log SERIAL PRIMARY KEY,
-    id_usuario INTEGER NOT NULL,
-    accion VARCHAR(50) NOT NULL,
+    id_usuario INTEGER,
+    accion VARCHAR(255) NOT NULL,
     fecha_log TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT LOG_FK_IDUS FOREIGN KEY (id_usuario)
         REFERENCES USUARIO(id_usuario) ON DELETE SET NULL
@@ -83,7 +85,8 @@ CREATE TABLE SOLICITUD (
     id_pedido INTEGER NOT NULL,
     fecha_solicitud DATE NOT NULL DEFAULT CURRENT_DATE,
     estado_solicitud ESTADO_SOLICITUD_DOM DEFAULT 'PDP',
-    direccion_entrega VARCHAR(255) NOT NULL,
+    direccion_entrega VARCHAR(255) NOT NULL DEFAULT '',
+    modificaciones_restantes INTEGER NOT NULL DEFAULT 3,
     CONSTRAINT SOL_FK_ID_CLI FOREIGN KEY (id_cliente)
         REFERENCES USUARIO(id_usuario),
     CONSTRAINT SOL_FK_ID_PED FOREIGN KEY (id_pedido)
@@ -108,7 +111,6 @@ CREATE TABLE SOLICITUD_PRODUCTO (
     id_producto INTEGER NOT NULL,
     cantidad_solicitada INTEGER NOT NULL CHECK (cantidad_solicitada > 0),
     precio NUMERIC(10,2) NOT NULL,
-    modificaciones_restantes INTEGER NOT NULL DEFAULT 3 CHECK (modificaciones_restantes >= 0),
     PRIMARY KEY (id_solicitud, id_producto),
     CONSTRAINT SP_FK_ID_SOL FOREIGN KEY (id_solicitud)
         REFERENCES SOLICITUD(id_solicitud) ON DELETE CASCADE,
@@ -117,18 +119,52 @@ CREATE TABLE SOLICITUD_PRODUCTO (
 );
 
 -- ======================================================
--- 4. ÍNDICES PARA OPTIMIZACIÓN
+-- 4. TABLA OTP (TOKEN DE VERIFICACIÓN)
 -- ======================================================
 
-CREATE INDEX idx_usuario_correo ON USUARIO(correo);
+CREATE TABLE OTP_TOKEN (
+    id_otp SERIAL PRIMARY KEY,
+    cedula VARCHAR(10) NOT NULL,
+    telefono VARCHAR(10) NOT NULL,
+    codigo_otp VARCHAR(6) NOT NULL,
+    fecha_creacion TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_expiracion TIMESTAMP NOT NULL,
+    intentos_fallidos INTEGER NOT NULL DEFAULT 0,
+    verificado BOOLEAN NOT NULL DEFAULT FALSE,
+    usado BOOLEAN NOT NULL DEFAULT FALSE,
+    CONSTRAINT chk_fechas_otp CHECK (fecha_expiracion > fecha_creacion)
+);
+
+-- Índices para OTP
+CREATE INDEX idx_otp_cedula_usado_expiracion
+    ON OTP_TOKEN(cedula, usado, fecha_expiracion);
+
+CREATE INDEX idx_otp_fecha_expiracion
+    ON OTP_TOKEN(fecha_expiracion);
+
+-- ======================================================
+-- 5. ÍNDICES PARA OPTIMIZACIÓN GENERAL
+-- ======================================================
+
 CREATE INDEX idx_log_usuario ON LOG(id_usuario);
 CREATE INDEX idx_log_fecha ON LOG(fecha_log);
+
 CREATE INDEX idx_pedido_admin ON PEDIDO(id_admin);
 CREATE INDEX idx_pedido_estado ON PEDIDO(estado_pedido);
+
 CREATE INDEX idx_solicitud_cliente ON SOLICITUD(id_cliente);
 CREATE INDEX idx_solicitud_pedido ON SOLICITUD(id_pedido);
 CREATE INDEX idx_solicitud_estado ON SOLICITUD(estado_solicitud);
+
 CREATE INDEX idx_pp_pedido ON PRODUCTO_PEDIDO(id_pedido);
 CREATE INDEX idx_pp_producto ON PRODUCTO_PEDIDO(id_producto);
+
 CREATE INDEX idx_sp_solicitud ON SOLICITUD_PRODUCTO(id_solicitud);
 CREATE INDEX idx_sp_producto ON SOLICITUD_PRODUCTO(id_producto);
+
+-- ======================================================
+-- 6. VALORES POR DEFECTO (ACTUALIZACIONES INICIALES)
+-- ======================================================
+
+UPDATE USUARIO SET estado_usuario = 'ACTIVO' WHERE estado_usuario IS NULL;
+UPDATE PRODUCTO SET estado_producto = 'ACTIVO' WHERE estado_producto IS NULL;
