@@ -2,12 +2,14 @@ package com.saferoute.config;
 
 import com.saferoute.security.CustomUserDetailsService;
 import com.saferoute.security.JwtTokenProvider;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -15,6 +17,8 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
@@ -45,20 +49,64 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String jwt = getJwtFromRequest(request);
 
             if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
-                String username = tokenProvider.getUsernameFromJWT(jwt);
-
-                UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                
+                // Verificar si es un token OTP
+                if (tokenProvider.isOtpToken(jwt)) {
+                    // Token OTP: el subject es la cédula del cliente
+                    handleOtpToken(jwt, request);
+                } else {
+                    // Token normal: cargar UserDetails desde la BD
+                    handleRegularToken(jwt, request);
+                }
             }
         } catch (Exception ex) {
             logger.error("Could not set user authentication in security context", ex);
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    /**
+     * Maneja tokens OTP donde el subject es la cédula del cliente
+     */
+    private void handleOtpToken(String jwt, HttpServletRequest request) {
+        String cedula = tokenProvider.getCedulaFromJWT(jwt);
+        Claims claims = tokenProvider.getClaimsFromJWT(jwt);
+        
+        // Obtener roles del token (ROLE_OTP_VERIFIED)
+        @SuppressWarnings("unchecked")
+        List<String> roles = (List<String>) claims.get("roles");
+        
+        List<SimpleGrantedAuthority> authorities = roles != null 
+            ? roles.stream()
+                .map(SimpleGrantedAuthority::new)
+                .toList()
+            : Collections.emptyList();
+
+        // Crear autenticación con la cédula como principal
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                cedula, null, authorities);
+        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        
+        logger.debug("OTP token authenticated for cedula: " + cedula);
+    }
+
+    /**
+     * Maneja tokens regulares cargando UserDetails desde la BD
+     */
+    private void handleRegularToken(String jwt, HttpServletRequest request) {
+        String username = tokenProvider.getUsernameFromJWT(jwt);
+
+        UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                userDetails, null, userDetails.getAuthorities());
+        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        
+        logger.debug("Regular token authenticated for username: " + username);
     }
 
     private String getJwtFromRequest(HttpServletRequest request) {

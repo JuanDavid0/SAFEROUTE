@@ -67,4 +67,53 @@ public class JwtTokenProvider {
             return false;
         }
     }
+
+    /**
+     * Extrae la cédula del token JWT (para tokens OTP, el subject es la cédula)
+     */
+    public String getCedulaFromJWT(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(secretKey)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+
+        return claims.getSubject();
+    }
+
+    /**
+     * Extrae el tipo de token del JWT
+     */
+    public String getTokenTypeFromJWT(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(secretKey)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+
+        return claims.get("tokenType", String.class);
+    }
+
+    /**
+     * Verifica si el token es un token OTP
+     */
+    public boolean isOtpToken(String token) {
+        try {
+            String tokenType = getTokenTypeFromJWT(token);
+            return "OTP".equals(tokenType);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Obtiene todos los claims del token
+     */
+    public Claims getClaimsFromJWT(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(secretKey)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
 }

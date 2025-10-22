@@ -10,11 +10,13 @@ import java.util.List;
 public interface SolicitudRepository extends JpaRepository<Solicitud, Integer> {
     List<Solicitud> findByCliente(Usuario cliente);
 
+    List<Solicitud> findByCliente_Cedula(String cedula);
+
     List<Solicitud> findByEstadoSolicitud(EstadoSolicitudEnum estado);
 
     List<Solicitud> findByPedidoFechaCierreBeforeAndEstadoSolicitud(LocalDate fecha, EstadoSolicitudEnum estado);
 
     List<Solicitud> findByPedido_IdPedido(Integer idPedido);
-    
+
     List<Solicitud> findByPedido_IdPedidoAndEstadoSolicitud(Integer idPedido, EstadoSolicitudEnum estado);
 }

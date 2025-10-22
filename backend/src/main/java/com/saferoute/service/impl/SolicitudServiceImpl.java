@@ -375,6 +375,12 @@ public class SolicitudServiceImpl implements ISolicitudService {
     }
 
     @Override
+    public List<SolicitudDTO> listarSolicitudesPorCedula(String cedula) {
+        return solicitudRepository.findByCliente_Cedula(cedula)
+                .stream().map(this::mapToDTO).collect(Collectors.toList());
+    }
+
+    @Override
     public void cambiarEstado(Integer idSolicitud, String nuevoEstado) {
         Solicitud solicitud = solicitudRepository.findById(idSolicitud)
                 .orElseThrow(() -> new RuntimeException("Solicitud no encontrada"));

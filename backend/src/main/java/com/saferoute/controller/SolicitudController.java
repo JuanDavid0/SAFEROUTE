@@ -2,9 +2,13 @@ package com.saferoute.controller;
 
 import com.saferoute.dto.*;
 import com.saferoute.service.interfaces.ISolicitudService;
+import com.saferoute.service.SolicitudAuthorizationService;
+import com.saferoute.security.JwtTokenProvider;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
@@ -14,9 +18,44 @@ import java.util.Map;
 public class SolicitudController {
 
     private final ISolicitudService solicitudService;
+    private final SolicitudAuthorizationService authorizationService;
+    private final JwtTokenProvider jwtTokenProvider;
 
-    public SolicitudController(ISolicitudService solicitudService) {
+    public SolicitudController(
+            ISolicitudService solicitudService,
+            SolicitudAuthorizationService authorizationService,
+            JwtTokenProvider jwtTokenProvider) {
         this.solicitudService = solicitudService;
+        this.authorizationService = authorizationService;
+        this.jwtTokenProvider = jwtTokenProvider;
+    }
+
+    /**
+     * Extrae la cédula del token OTP del header Authorization
+     */
+    private String getCedulaFromToken(HttpServletRequest request) {
+        String jwt = getJwtFromRequest(request);
+        if (jwt == null) {
+            throw new RuntimeException("Token no encontrado. Debe autenticarse vía OTP primero.");
+        }
+
+        if (!jwtTokenProvider.validateToken(jwt)) {
+            throw new RuntimeException("Token inválido o expirado.");
+        }
+
+        if (!jwtTokenProvider.isOtpToken(jwt)) {
+            throw new RuntimeException("Este endpoint requiere autenticación OTP.");
+        }
+
+        return jwtTokenProvider.getCedulaFromJWT(jwt);
+    }
+
+    private String getJwtFromRequest(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
     }
 
     @PreAuthorize("hasRole('CLI')")
@@ -30,9 +69,25 @@ public class SolicitudController {
         return solicitudService.crearSolicitudClienteNuevo(dto);
     }
 
+    /**
+     * Listar las solicitudes del cliente autenticado vía OTP
+     * Usa la cédula del token para filtrar las solicitudes
+     */
+    @GetMapping("/mis-solicitudes")
+    public List<SolicitudDTO> listarMisSolicitudes(HttpServletRequest request) {
+        String cedula = getCedulaFromToken(request);
+        return solicitudService.listarSolicitudesPorCedula(cedula);
+    }
+
     @PutMapping("/{idSolicitud}/modificar")
-    public SolicitudDTO modificarSolicitud(@PathVariable Integer idSolicitud,
-            @RequestBody SolicitudModificacionDTO dto) {
+    public SolicitudDTO modificarSolicitud(
+            @PathVariable Integer idSolicitud,
+            @RequestBody SolicitudModificacionDTO dto,
+            HttpServletRequest request) {
+        // Validar que el token OTP pertenece al dueño de la solicitud
+        String cedula = getCedulaFromToken(request);
+        authorizationService.validateSolicitudOwnership(idSolicitud, cedula);
+
         return solicitudService.modificarSolicitud(idSolicitud, dto);
     }
 
@@ -42,7 +97,12 @@ public class SolicitudController {
     @PostMapping("/{idSolicitud}/productos")
     public SolicitudDTO agregarProducto(
             @PathVariable Integer idSolicitud,
-            @Valid @RequestBody SolicitudProductoDTO productoDTO) {
+            @Valid @RequestBody SolicitudProductoDTO productoDTO,
+            HttpServletRequest request) {
+        // Validar que el token OTP pertenece al dueño de la solicitud
+        String cedula = getCedulaFromToken(request);
+        authorizationService.validateSolicitudOwnership(idSolicitud, cedula);
+
         return solicitudService.agregarProducto(idSolicitud, productoDTO);
     }
 
@@ -52,7 +112,12 @@ public class SolicitudController {
     @DeleteMapping("/{idSolicitud}/productos/{idProducto}")
     public SolicitudDTO eliminarProducto(
             @PathVariable Integer idSolicitud,
-            @PathVariable Integer idProducto) {
+            @PathVariable Integer idProducto,
+            HttpServletRequest request) {
+        // Validar que el token OTP pertenece al dueño de la solicitud
+        String cedula = getCedulaFromToken(request);
+        authorizationService.validateSolicitudOwnership(idSolicitud, cedula);
+
         return solicitudService.eliminarProducto(idSolicitud, idProducto);
     }
 
@@ -63,7 +128,12 @@ public class SolicitudController {
     public SolicitudDTO modificarCantidadProducto(
             @PathVariable Integer idSolicitud,
             @PathVariable Integer idProducto,
-            @RequestBody Map<String, Integer> body) {
+            @RequestBody Map<String, Integer> body,
+            HttpServletRequest request) {
+        // Validar que el token OTP pertenece al dueño de la solicitud
+        String cedula = getCedulaFromToken(request);
+        authorizationService.validateSolicitudOwnership(idSolicitud, cedula);
+
         Integer nuevaCantidad = body.get("cantidad");
         if (nuevaCantidad == null || nuevaCantidad <= 0) {
             throw new RuntimeException("La cantidad debe ser mayor a 0");
