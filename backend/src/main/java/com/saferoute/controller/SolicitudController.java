@@ -87,7 +87,32 @@ public class SolicitudController {
     }
 
     /**
-     * Listar las solicitudes del cliente autenticado vía OTP
+     * Listar las solicitudes del cliente autenticado vía OTP para un pedido
+     * específico
+     * Usa la cédula del token y el hash del pedido para filtrar las solicitudes
+     * 
+     * @param hashPedido Hash único del pedido
+     * @param request    Request con el token OTP
+     * @return Lista de solicitudes del cliente para ese pedido específico,
+     *         ordenadas por estado (PDP, PGD, CAN)
+     */
+    @GetMapping("/mis-solicitudes/{hashPedido}")
+    public ResponseEntity<ApiResponse<List<SolicitudDTO>>> listarMisSolicitudesPorPedido(
+            @PathVariable String hashPedido,
+            HttpServletRequest request) {
+        String cedula = getCedulaFromToken(request);
+        List<SolicitudDTO> solicitudes = solicitudService.listarSolicitudesPorCedulaYPedido(cedula, hashPedido);
+
+        ApiResponse<List<SolicitudDTO>> response = ApiResponse.success(
+                solicitudes,
+                String.format("Se encontraron %d solicitud(es) para este pedido", solicitudes.size()));
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Listar TODAS las solicitudes del cliente autenticado vía OTP (todos los
+     * pedidos)
      * Usa la cédula del token para filtrar las solicitudes
      */
     @GetMapping("/mis-solicitudes")

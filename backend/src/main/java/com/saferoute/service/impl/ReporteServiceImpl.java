@@ -383,13 +383,21 @@ public class ReporteServiceImpl implements IReporteService {
     private List<ReporteIngresosDTO.DatosPeriodo> agruparPorPeriodo(
             List<Solicitud> solicitudes, String agrupacion) {
 
-        DateTimeFormatter formatter = agrupacion.equals("MENSUAL") ? DateTimeFormatter.ofPattern("yyyy-MM")
-                : DateTimeFormatter.ofPattern("yyyy");
-
         Map<String, ReporteIngresosDTO.DatosPeriodo> periodosMap = new TreeMap<>();
 
         for (Solicitud solicitud : solicitudes) {
-            String periodo = solicitud.getFechaSolicitud().format(formatter);
+            String periodo;
+
+            if (agrupacion.equals("TRIMESTRAL")) {
+                // Formato: yyyy-Q1, yyyy-Q2, yyyy-Q3, yyyy-Q4
+                int year = solicitud.getFechaSolicitud().getYear();
+                int month = solicitud.getFechaSolicitud().getMonthValue();
+                int trimestre = ((month - 1) / 3) + 1;
+                periodo = year + "-Q" + trimestre;
+            } else {
+                // Formato anual: yyyy
+                periodo = String.valueOf(solicitud.getFechaSolicitud().getYear());
+            }
 
             ReporteIngresosDTO.DatosPeriodo datos = periodosMap.computeIfAbsent(periodo, k -> {
                 ReporteIngresosDTO.DatosPeriodo nuevo = new ReporteIngresosDTO.DatosPeriodo();

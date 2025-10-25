@@ -26,6 +26,8 @@ public interface ISolicitudService {
 
     List<SolicitudDTO> listarSolicitudesPorCedula(String cedula);
 
+    List<SolicitudDTO> listarSolicitudesPorCedulaYPedido(String cedula, String hashPedido);
+
     void cambiarEstado(Integer idSolicitud, String nuevoEstado);
 
     List<SolicitudDTO> listarPorPedido(Integer idPedido);

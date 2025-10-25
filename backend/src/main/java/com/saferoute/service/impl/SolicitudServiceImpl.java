@@ -3,10 +3,12 @@ package com.saferoute.service.impl;
 import com.saferoute.dto.*;
 import com.saferoute.model.*;
 import com.saferoute.model.enums.EstadoSolicitudEnum;
+import com.saferoute.model.enums.EstadoPedidoEnum;
 import com.saferoute.repository.*;
 import com.saferoute.service.interfaces.ISolicitudService;
 import com.saferoute.service.interfaces.ILogService;
 import com.saferoute.service.interfaces.IWhatsAppService;
+import com.saferoute.service.interfaces.IPedidoService;
 import com.saferoute.repository.UsuarioRolRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,20 +26,25 @@ public class SolicitudServiceImpl implements ISolicitudService {
     private final UsuarioRepository usuarioRepository;
     private final PedidoRepository pedidoRepository;
     private final ProductoRepository productoRepository;
+    private final ProductoPedidoRepository productoPedidoRepository;
     private final ILogService logService;
     private final IWhatsAppService whatsAppService;
+    private final IPedidoService pedidoService;
 
     public SolicitudServiceImpl(SolicitudRepository solicitudRepository, UsuarioRepository usuarioRepository,
             PedidoRepository pedidoRepository, ProductoRepository productoRepository, RolRepository rolRepository,
-            UsuarioRolRepository usuarioRolRepository, ILogService logService, IWhatsAppService whatsAppService) {
+            UsuarioRolRepository usuarioRolRepository, ILogService logService, IWhatsAppService whatsAppService,
+            ProductoPedidoRepository productoPedidoRepository, IPedidoService pedidoService) {
         this.usuarioRolRepository = usuarioRolRepository;
         this.solicitudRepository = solicitudRepository;
         this.usuarioRepository = usuarioRepository;
         this.pedidoRepository = pedidoRepository;
         this.productoRepository = productoRepository;
+        this.productoPedidoRepository = productoPedidoRepository;
         this.rolRepository = rolRepository;
         this.logService = logService;
         this.whatsAppService = whatsAppService;
+        this.pedidoService = pedidoService;
     }
 
     @Override
@@ -48,6 +55,21 @@ public class SolicitudServiceImpl implements ISolicitudService {
         Pedido pedido = pedidoRepository.findById(dto.getIdPedido())
                 .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
 
+        // Validar que el pedido esté en estado ACTIVO
+        if (pedido.getEstadoPedido() != EstadoPedidoEnum.ACT) {
+            throw new RuntimeException(String.format(
+                    "No se pueden crear solicitudes para este pedido. El pedido debe estar en estado ACTIVO. Estado actual: %s",
+                    pedido.getEstadoPedido()));
+        }
+
+        // Validar que no se haya pasado la fecha de cierre
+        LocalDate fechaCierre = pedido.getFechaCierre();
+        if (fechaCierre != null && LocalDate.now().isAfter(fechaCierre)) {
+            throw new RuntimeException(String.format(
+                    "No se pueden crear solicitudes. La fecha de cierre del pedido (%s) ya pasó",
+                    fechaCierre));
+        }
+
         Solicitud solicitud = new Solicitud();
         solicitud.setCliente(cliente);
         solicitud.setPedido(pedido);
@@ -57,6 +79,9 @@ public class SolicitudServiceImpl implements ISolicitudService {
         for (SolicitudProductoDTO spDTO : dto.getProductos()) {
             Producto producto = productoRepository.findById(spDTO.getIdProducto())
                     .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+
+            // Validar cantidad mínima y máxima
+            validarCantidadProducto(pedido.getIdPedido(), spDTO.getIdProducto(), spDTO.getCantidadSolicitada());
 
             SolicitudProducto sp = new SolicitudProducto();
             sp.setSolicitud(solicitud);
@@ -219,6 +244,10 @@ public class SolicitudServiceImpl implements ISolicitudService {
             throw new RuntimeException("El producto ya existe en esta solicitud. Use modificar cantidad en su lugar.");
         }
 
+        // Validar cantidad mínima y máxima
+        validarCantidadProducto(solicitud.getPedido().getIdPedido(), productoDTO.getIdProducto(),
+                productoDTO.getCantidadSolicitada());
+
         // Agregar el producto a la solicitud
         SolicitudProducto sp = new SolicitudProducto();
         sp.setSolicitud(solicitud);
@@ -332,6 +361,9 @@ public class SolicitudServiceImpl implements ISolicitudService {
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado en esta solicitud"));
 
+        // Validar cantidad mínima y máxima
+        validarCantidadProducto(solicitud.getPedido().getIdPedido(), idProducto, nuevaCantidad);
+
         // Actualizar cantidad
         sp.setCantidadSolicitada(nuevaCantidad);
 
@@ -384,8 +416,49 @@ public class SolicitudServiceImpl implements ISolicitudService {
 
     @Override
     public List<SolicitudDTO> listarSolicitudesPorCedula(String cedula) {
-        return solicitudRepository.findByCliente_Cedula(cedula)
-                .stream().map(this::mapToDTO).collect(Collectors.toList());
+        List<Solicitud> solicitudes = solicitudRepository.findByCliente_Cedula(cedula);
+
+        // Ordenar por estado: PDP primero, luego PGD, finalmente CAN
+        return solicitudes.stream()
+                .sorted((s1, s2) -> {
+                    int prioridad1 = obtenerPrioridadEstado(s1.getEstadoSolicitud());
+                    int prioridad2 = obtenerPrioridadEstado(s2.getEstadoSolicitud());
+                    return Integer.compare(prioridad1, prioridad2);
+                })
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<SolicitudDTO> listarSolicitudesPorCedulaYPedido(String cedula, String hashPedido) {
+        // Obtener el pedido mediante el hash
+        PedidoDTO pedidoDTO = pedidoService.obtenerPedidoPorHash(hashPedido);
+
+        // Obtener todas las solicitudes del cliente para ese pedido específico
+        List<Solicitud> solicitudes = solicitudRepository.findByCliente_Cedula(cedula);
+
+        // Filtrar solo las solicitudes del pedido específico y ordenar por estado
+        return solicitudes.stream()
+                .filter(s -> s.getPedido().getIdPedido().equals(pedidoDTO.getIdPedido()))
+                .sorted((s1, s2) -> {
+                    int prioridad1 = obtenerPrioridadEstado(s1.getEstadoSolicitud());
+                    int prioridad2 = obtenerPrioridadEstado(s2.getEstadoSolicitud());
+                    return Integer.compare(prioridad1, prioridad2);
+                })
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Define la prioridad de ordenamiento por estado
+     * PDP = 1 (primero), PGD = 2 (segundo), CAN = 3 (último)
+     */
+    private int obtenerPrioridadEstado(EstadoSolicitudEnum estado) {
+        return switch (estado) {
+            case PDP -> 1; // Pendiente de Pago - primero
+            case PGD -> 2; // Pagado - segundo
+            case CAN -> 3; // Cancelado - último
+        };
     }
 
     @Override
@@ -443,5 +516,30 @@ public class SolicitudServiceImpl implements ISolicitudService {
             return spDTO;
         }).collect(Collectors.toList()));
         return dto;
+    }
+
+    /**
+     * Valida que la cantidad solicitada esté dentro de los límites definidos
+     * en la tabla PRODUCTO_PEDIDO (cantidad_min y cantidad_max)
+     */
+    private void validarCantidadProducto(Integer idPedido, Integer idProducto, Integer cantidad) {
+        ProductoPedido productoPedido = productoPedidoRepository
+                .findByPedidoAndProducto(idPedido, idProducto)
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado en el pedido"));
+
+        Integer cantidadMin = productoPedido.getCantidadMin();
+        Integer cantidadMax = productoPedido.getCantidadMax();
+
+        if (cantidad < cantidadMin) {
+            throw new RuntimeException(String.format(
+                    "La cantidad solicitada (%d) es menor a la cantidad mínima permitida (%d) para este producto",
+                    cantidad, cantidadMin));
+        }
+
+        if (cantidadMax != null && cantidad > cantidadMax) {
+            throw new RuntimeException(String.format(
+                    "La cantidad solicitada (%d) excede la cantidad máxima permitida (%d) para este producto",
+                    cantidad, cantidadMax));
+        }
     }
 }

@@ -77,13 +77,19 @@ public class PedidoController {
     public ResponseEntity<ApiResponse<PedidoDTO>> actualizarEstado(
             @PathVariable Integer idPedido,
             @PathVariable String estado) {
-        PedidoDTO pedido = pedidoService.actualizarEstado(idPedido, estado);
+        try {
+            PedidoDTO pedido = pedidoService.actualizarEstado(idPedido, estado);
 
-        ApiResponse<PedidoDTO> response = ApiResponse.success(
-                pedido,
-                String.format("Estado del pedido actualizado a %s", estado));
+            ApiResponse<PedidoDTO> response = ApiResponse.success(
+                    pedido,
+                    String.format("Estado del pedido actualizado a %s", estado));
 
-        return ResponseEntity.ok(response);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            // Capturar errores de validación de transición de estado
+            ApiResponse<PedidoDTO> response = ApiResponse.fail(e.getMessage(), null);
+            return ResponseEntity.badRequest().body(response);
+        }
     }
 
     @PreAuthorize("hasAnyRole('SAD', 'ADM')")
@@ -141,7 +147,7 @@ public class PedidoController {
 
         return ResponseEntity.ok(response);
     }
-    
+
     /**
      * Endpoint publico para obtener un pedido activo mediante su hash unico
      * Este endpoint NO requiere autenticacion y permite a los clientes

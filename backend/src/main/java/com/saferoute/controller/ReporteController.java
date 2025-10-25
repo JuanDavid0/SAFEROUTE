@@ -34,7 +34,7 @@ public class ReporteController {
      * 
      * @param fechaInicio Fecha inicial (formato: yyyy-MM-dd)
      * @param fechaFin    Fecha final (formato: yyyy-MM-dd)
-     * @param agrupacion  "MENSUAL" o "ANUAL" (opcional, default: MENSUAL)
+     * @param agrupacion  "TRIMESTRAL" o "ANUAL" (opcional, default: TRIMESTRAL)
      * @return Reporte con ingresos, costos y ganancias
      */
     @GetMapping("/ingresos")
@@ -42,7 +42,7 @@ public class ReporteController {
     public ResponseEntity<?> obtenerReporteIngresos(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
-            @RequestParam(required = false, defaultValue = "MENSUAL") String agrupacion) {
+            @RequestParam(required = false, defaultValue = "TRIMESTRAL") String agrupacion) {
 
         try {
             log.info("📊 GET /reportes/ingresos - Rango: {} a {}, Agrupación: {}",
@@ -55,9 +55,9 @@ public class ReporteController {
             }
 
             // Validar agrupación
-            if (!agrupacion.equals("MENSUAL") && !agrupacion.equals("ANUAL")) {
+            if (!agrupacion.equals("TRIMESTRAL") && !agrupacion.equals("ANUAL")) {
                 return ResponseEntity.badRequest().body(Map.of(
-                        "error", "La agrupación debe ser 'MENSUAL' o 'ANUAL'"));
+                        "error", "La agrupación debe ser 'TRIMESTRAL' o 'ANUAL'"));
             }
 
             ReporteIngresosDTO reporte = reporteService.generarReporteIngresos(
