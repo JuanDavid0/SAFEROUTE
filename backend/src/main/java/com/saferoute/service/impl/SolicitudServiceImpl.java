@@ -6,6 +6,7 @@ import com.saferoute.model.enums.EstadoSolicitudEnum;
 import com.saferoute.repository.*;
 import com.saferoute.service.interfaces.ISolicitudService;
 import com.saferoute.service.interfaces.ILogService;
+import com.saferoute.service.interfaces.IWhatsAppService;
 import com.saferoute.repository.UsuarioRolRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,10 +25,11 @@ public class SolicitudServiceImpl implements ISolicitudService {
     private final PedidoRepository pedidoRepository;
     private final ProductoRepository productoRepository;
     private final ILogService logService;
+    private final IWhatsAppService whatsAppService;
 
     public SolicitudServiceImpl(SolicitudRepository solicitudRepository, UsuarioRepository usuarioRepository,
             PedidoRepository pedidoRepository, ProductoRepository productoRepository, RolRepository rolRepository,
-            UsuarioRolRepository usuarioRolRepository, ILogService logService) {
+            UsuarioRolRepository usuarioRolRepository, ILogService logService, IWhatsAppService whatsAppService) {
         this.usuarioRolRepository = usuarioRolRepository;
         this.solicitudRepository = solicitudRepository;
         this.usuarioRepository = usuarioRepository;
@@ -35,6 +37,7 @@ public class SolicitudServiceImpl implements ISolicitudService {
         this.productoRepository = productoRepository;
         this.rolRepository = rolRepository;
         this.logService = logService;
+        this.whatsAppService = whatsAppService;
     }
 
     @Override
@@ -72,7 +75,12 @@ public class SolicitudServiceImpl implements ISolicitudService {
                         ", Pedido ID: " + pedido.getIdPedido() +
                         ", Productos: " + dto.getProductos().size());
 
-        return mapToDTO(solicitud);
+        SolicitudDTO solicitudDTO = mapToDTO(solicitud);
+
+        // Enviar notificación de WhatsApp con resumen de la solicitud
+        whatsAppService.enviarResumenSolicitud(solicitudDTO);
+
+        return solicitudDTO;
     }
 
     @Override
@@ -390,8 +398,15 @@ public class SolicitudServiceImpl implements ISolicitudService {
             throw new RuntimeException("Estado no válido. Solo se permite PGD, PDP o CAN");
         }
 
-        solicitud.setEstadoSolicitud(EstadoSolicitudEnum.valueOf(nuevoEstado));
+        EstadoSolicitudEnum estadoNuevo = EstadoSolicitudEnum.valueOf(nuevoEstado);
+        solicitud.setEstadoSolicitud(estadoNuevo);
         solicitudRepository.save(solicitud);
+
+        // Notificar al cliente si la solicitud fue marcada como pagada
+        if (estadoNuevo == EstadoSolicitudEnum.PGD) {
+            SolicitudDTO solicitudDTO = mapToDTO(solicitud);
+            whatsAppService.notificarSolicitudPagada(solicitudDTO);
+        }
     }
 
     @Override

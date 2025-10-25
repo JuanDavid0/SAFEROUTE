@@ -44,6 +44,14 @@ twilio:
   auth-token: ${TWILIO_AUTH_TOKEN}
   phone-number: ${TWILIO_PHONE_NUMBER}
 
+# WhatsApp Business API Configuration
+whatsapp:
+  api:
+    url: https://graph.facebook.com/v24.0
+    phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID}
+    token: ${WHATSAPP_API_TOKEN}
+  base-url: ${APP_BASE_URL:http://localhost:3000}
+
 # JWT Configuration
 jwt:
   secret: ${JWT_SECRET}
