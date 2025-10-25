@@ -120,7 +120,17 @@ public class WhatsAppServiceImpl implements IWhatsAppService {
                     .toList();
 
             String fechaCierre = pedido.getFechaCierre().format(DATE_FORMATTER);
-            String urlPedido = baseUrl + "/pedido/" + pedido.getIdPedido();
+
+            // Usar el hash del pedido en la URL en lugar del ID
+            String urlPedido;
+            if (pedido.getUrlHash() != null && !pedido.getUrlHash().isEmpty()) {
+                urlPedido = baseUrl + "/pedidos/pedido-disponible/" + pedido.getUrlHash();
+                System.out.println("🔗 URL del pedido usando hash: " + urlPedido);
+            } else {
+                // Fallback al ID si por alguna razón no hay hash (no debería pasar)
+                urlPedido = baseUrl + "/pedidos/pedido/" + pedido.getIdPedido();
+                log.warn("⚠️ Pedido #{} no tiene URL hash, usando ID en la URL", pedido.getIdPedido());
+            }
 
             // Preparar parámetros para la plantilla
             List<String> parametros = List.of(
@@ -321,162 +331,6 @@ public class WhatsAppServiceImpl implements IWhatsAppService {
             log.error("❌ Error inesperado al enviar plantilla a {}: {}", telefono, e.getMessage());
             throw new RuntimeException("Error al enviar plantilla de WhatsApp", e);
         }
-    }
-
-    /**
-     * Envía un mensaje de texto por WhatsApp (solo funciona dentro de la ventana de
-     * 24h)
-     */
-    private void enviarMensajeTexto(String telefono, String mensaje) {
-        try {
-            String url = String.format("%s/%s/messages", whatsappApiUrl, phoneNumberId);
-
-            // Formatear número (debe incluir código de país sin +)
-            String numeroFormateado = formatearNumeroTelefono(telefono);
-
-            WhatsAppMessageRequest request = WhatsAppMessageRequest.builder()
-                    .messagingProduct("whatsapp")
-                    .recipientType("individual")
-                    .to(numeroFormateado)
-                    .type("text")
-                    .text(WhatsAppText.builder()
-                            .previewUrl(true)
-                            .body(mensaje)
-                            .build())
-                    .build();
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setBearerAuth(apiToken);
-
-            HttpEntity<WhatsAppMessageRequest> entity = new HttpEntity<>(request, headers);
-
-            log.info("📤 Enviando mensaje a WhatsApp - URL: {}, Número: {}", url, numeroFormateado);
-            log.debug("📋 Request body: {}", request);
-
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
-
-            if (response.getStatusCode().is2xxSuccessful()) {
-                log.info("✅ Mensaje enviado exitosamente a {} - Response: {}", numeroFormateado, response.getBody());
-            } else {
-                log.error("⚠️ Error al enviar mensaje. Status: {}, Body: {}",
-                        response.getStatusCode(), response.getBody());
-            }
-
-        } catch (org.springframework.web.client.HttpClientErrorException e) {
-            if (e.getStatusCode().value() == 401) {
-                log.error("❌ ERROR 401: Token de WhatsApp inválido o expirado. " +
-                        "Por favor, genera un nuevo token en Meta for Developers. " +
-                        "Ver instrucciones en WHATSAPP_TOKEN_SETUP.md");
-            } else if (e.getStatusCode().value() == 403) {
-                log.error("❌ ERROR 403: Número {} no autorizado. " +
-                        "Agrega el número en Meta for Developers > WhatsApp > API Setup > To", telefono);
-            } else {
-                log.error("❌ Error HTTP {} al enviar mensaje a {}: {}",
-                        e.getStatusCode().value(), telefono, e.getMessage());
-            }
-            throw new RuntimeException("Error al enviar mensaje de WhatsApp", e);
-        } catch (Exception e) {
-            log.error("❌ Error inesperado al enviar mensaje de WhatsApp a {}: {}", telefono, e.getMessage());
-            throw new RuntimeException("Error al enviar mensaje de WhatsApp", e);
-        }
-    }
-
-    /**
-     * Construye el mensaje de resumen de solicitud
-     */
-    private String construirMensajeResumenSolicitud(Solicitud solicitud) {
-        // Calcular total
-        BigDecimal total = solicitud.getProductos().stream()
-                .map(sp -> sp.getPrecio().multiply(BigDecimal.valueOf(sp.getCantidadSolicitada())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        StringBuilder mensaje = new StringBuilder();
-        mensaje.append("🎉 *¡Gracias por tu solicitud!*\n\n");
-        mensaje.append("📋 *Resumen de tu pedido:*\n");
-        mensaje.append("━━━━━━━━━━━━━━━━━━━━\n");
-        mensaje.append(String.format("🆔 Solicitud #%d\n", solicitud.getIdSolicitud()));
-        mensaje.append(String.format("💰 Total a pagar: *%s*\n", CURRENCY_FORMATTER.format(total)));
-        mensaje.append(String.format("📅 Fecha límite: %s\n",
-                solicitud.getPedido().getFechaCierre().format(DATE_FORMATTER)));
-        mensaje.append("━━━━━━━━━━━━━━━━━━━━\n\n");
-        mensaje.append("🔗 Puedes ver más detalles en:\n");
-        mensaje.append(String.format("%s/solicitud/%d\n\n", baseUrl, solicitud.getIdSolicitud()));
-        mensaje.append("¡Gracias por confiar en SafeRoute! 🚚");
-
-        return mensaje.toString();
-    }
-
-    /**
-     * Construye el mensaje de nuevo pedido
-     */
-    private String construirMensajeNuevoPedido(Pedido pedido) {
-        StringBuilder mensaje = new StringBuilder();
-        mensaje.append("🆕 *¡Nuevo pedido disponible!*\n\n");
-        mensaje.append("Un nuevo pedido está activo y listo para tus solicitudes.\n\n");
-        mensaje.append("━━━━━━━━━━━━━━━━━━━━\n");
-        mensaje.append(String.format("🆔 Pedido #%d\n", pedido.getIdPedido()));
-        mensaje.append(String.format("📅 Fecha cierre: %s\n", pedido.getFechaCierre().format(DATE_FORMATTER)));
-        mensaje.append("━━━━━━━━━━━━━━━━━━━━\n\n");
-        mensaje.append("🔗 Haz tu solicitud aquí:\n");
-        mensaje.append(String.format("%s/pedido/%d\n\n", baseUrl, pedido.getIdPedido()));
-        mensaje.append("¡No te lo pierdas! 🚀");
-
-        return mensaje.toString();
-    }
-
-    /**
-     * Construye el mensaje de cambio de estado
-     */
-    private String construirMensajeCambioEstado(Pedido pedido, String estadoAnterior) {
-        StringBuilder mensaje = new StringBuilder();
-        mensaje.append("📢 *Actualización de pedido*\n\n");
-        mensaje.append(String.format("Tu pedido #%d ha cambiado de estado:\n\n", pedido.getIdPedido()));
-        mensaje.append("━━━━━━━━━━━━━━━━━━━━\n");
-        mensaje.append(String.format("📊 Estado anterior: *%s*\n", traducirEstado(estadoAnterior)));
-        mensaje.append(String.format("✅ Estado actual: *%s*\n", traducirEstado(pedido.getEstadoPedido().name())));
-        mensaje.append("━━━━━━━━━━━━━━━━━━━━\n\n");
-        mensaje.append(obtenerMensajeSegunEstado(pedido.getEstadoPedido().name()));
-
-        return mensaje.toString();
-    }
-
-    /**
-     * Construye el mensaje de cancelación
-     */
-    private String construirMensajeCancelacion(Pedido pedido) {
-        StringBuilder mensaje = new StringBuilder();
-        mensaje.append("⚠️ *Pedido cancelado*\n\n");
-        mensaje.append(String.format("Lamentamos informarte que el pedido #%d ha sido cancelado.\n\n",
-                pedido.getIdPedido()));
-        mensaje.append("━━━━━━━━━━━━━━━━━━━━\n");
-        mensaje.append("Si tienes alguna duda o necesitas más información, por favor contáctanos.\n\n");
-        mensaje.append("Disculpa los inconvenientes. 🙏\n\n");
-        mensaje.append("_SafeRoute Team_");
-
-        return mensaje.toString();
-    }
-
-    /**
-     * Construye el mensaje de solicitud pagada
-     */
-    private String construirMensajeSolicitudPagada(Solicitud solicitud) {
-        // Calcular total
-        BigDecimal total = solicitud.getProductos().stream()
-                .map(sp -> sp.getPrecio().multiply(BigDecimal.valueOf(sp.getCantidadSolicitada())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        StringBuilder mensaje = new StringBuilder();
-        mensaje.append("✅ *¡Pago confirmado!*\n\n");
-        mensaje.append(
-                String.format("Tu solicitud #%d ha sido marcada como *PAGADA*.\n\n", solicitud.getIdSolicitud()));
-        mensaje.append("━━━━━━━━━━━━━━━━━━━━\n");
-        mensaje.append(String.format("💰 Monto: *%s*\n", CURRENCY_FORMATTER.format(total)));
-        mensaje.append("━━━━━━━━━━━━━━━━━━━━\n\n");
-        mensaje.append("Tu pedido será procesado pronto. 📦\n\n");
-        mensaje.append("¡Gracias por tu compra! 🎉");
-
-        return mensaje.toString();
     }
 
     /**

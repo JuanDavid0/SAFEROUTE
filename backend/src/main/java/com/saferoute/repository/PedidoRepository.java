@@ -8,13 +8,22 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
     List<Pedido> findByAdmin(Usuario admin);
 
     List<Pedido> findByEstadoPedido(EstadoPedidoEnum estado);
 
-    // ==================== QUERIES PARA REPORTES ====================
+    /**
+     * Buscar pedido por URL hash
+     */
+    Optional<Pedido> findByUrlHash(String urlHash);
+
+    /**
+     * Verificar si existe un pedido con el hash dado
+     */
+    boolean existsByUrlHash(String urlHash);
 
     /**
      * Contar pedidos por estado

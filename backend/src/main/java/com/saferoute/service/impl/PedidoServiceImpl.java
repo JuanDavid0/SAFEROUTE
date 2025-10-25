@@ -8,6 +8,7 @@ import com.saferoute.repository.*;
 import com.saferoute.service.interfaces.IPedidoService;
 import com.saferoute.service.interfaces.ILogService;
 import com.saferoute.service.interfaces.IWhatsAppService;
+import org.hashids.Hashids;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.Arrays;
@@ -26,16 +27,18 @@ public class PedidoServiceImpl implements IPedidoService {
         private final SolicitudRepository solicitudRepository;
         private final ILogService logService;
         private final IWhatsAppService whatsAppService;
+        private final Hashids hashids;
 
         public PedidoServiceImpl(PedidoRepository pedidoRepository, UsuarioRepository usuarioRepository,
                         ProductoRepository productoRepository, SolicitudRepository solicitudRepository,
-                        ILogService logService, IWhatsAppService whatsAppService) {
+                        ILogService logService, IWhatsAppService whatsAppService, Hashids hashids) {
                 this.pedidoRepository = pedidoRepository;
                 this.usuarioRepository = usuarioRepository;
                 this.productoRepository = productoRepository;
                 this.solicitudRepository = solicitudRepository;
                 this.logService = logService;
                 this.whatsAppService = whatsAppService;
+                this.hashids = hashids;
         }
 
         @Override
@@ -106,6 +109,8 @@ public class PedidoServiceImpl implements IPedidoService {
 
                 // Si el pedido pasa a activo, notificar a todos los usuarios CLI
                 if (estadoNuevo == EstadoPedidoEnum.ACT && estadoActual != EstadoPedidoEnum.ACT) {
+                        // Generar URL hash única para el pedido
+                        generarUrlHash(idPedido);
                         whatsAppService.notificarNuevoPedidoActivo(pedidoGuardado);
                 }
 
@@ -330,6 +335,7 @@ public class PedidoServiceImpl implements IPedidoService {
                 dto.setEstadoPedido(pedido.getEstadoPedido().name());
                 dto.setFechaCreado(pedido.getFechaCreado());
                 dto.setFechaCierre(pedido.getFechaCierre());
+                dto.setUrlHash(pedido.getUrlHash());
                 dto.setProductos(pedido.getProductos().stream().map(pp -> {
                         ProductoPedidoDTO ppDTO = new ProductoPedidoDTO();
                         ppDTO.setIdProducto(pp.getProducto().getIdProducto());
@@ -338,5 +344,64 @@ public class PedidoServiceImpl implements IPedidoService {
                         return ppDTO;
                 }).collect(Collectors.toList()));
                 return dto;
+        }
+
+        @Override
+        public String generarUrlHash(Integer idPedido) {
+                Pedido pedido = pedidoRepository.findById(idPedido)
+                                .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+
+                // Validar que el pedido esté en estado ACTIVO
+                if (pedido.getEstadoPedido() != EstadoPedidoEnum.ACT) {
+                        throw new RuntimeException(
+                                        "Solo se puede generar URL hash para pedidos en estado ACTIVO");
+                }
+
+                // Si ya tiene hash, devolverlo (idempotente)
+                if (pedido.getUrlHash() != null && !pedido.getUrlHash().isEmpty()) {
+                        return pedido.getUrlHash();
+                }
+
+                // Generar hash usando Hashids - convierte el ID numerico en string ofuscado
+                // Ejemplo: ID 123 -> "5N6y2Kl" (reversible con la misma salt)
+                String hash = hashids.encode(idPedido.longValue());
+
+                // Guardar el hash en el pedido
+                pedido.setUrlHash(hash);
+                pedidoRepository.save(pedido);
+
+                // Registrar en logs
+                logService.registrarLog(pedido.getAdmin().getIdUsuario(),
+                                "URL hash generada para pedido ID: " + idPedido + " - Hash: " + hash);
+
+                return hash;
+        }
+
+        @Override
+        public PedidoDTO obtenerPedidoPorHash(String hash) {
+                if (hash == null || hash.isEmpty()) {
+                        throw new RuntimeException("El hash no puede estar vacío");
+                }
+
+                // Decodificar el hash para obtener el ID del pedido
+                long[] ids = hashids.decode(hash);
+                if (ids.length == 0) {
+                        throw new RuntimeException("Hash inválido");
+                }
+
+                Integer idPedido = (int) ids[0];
+
+                // Buscar el pedido por ID
+                Pedido pedido = pedidoRepository.findById(idPedido)
+                                .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+
+                // Validar que el pedido esté en estado ACTIVO
+                if (pedido.getEstadoPedido() != EstadoPedidoEnum.ACT) {
+                        throw new RuntimeException(
+                                        "Este pedido ya no está disponible para nuevas solicitudes (Estado: "
+                                                        + pedido.getEstadoPedido() + ")");
+                }
+
+                return mapToDTO(pedido);
         }
 }

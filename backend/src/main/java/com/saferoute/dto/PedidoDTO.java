@@ -9,6 +9,7 @@ public class PedidoDTO {
     private String estadoPedido;
     private LocalDate fechaCreado;
     private LocalDate fechaCierre;
+    private String urlHash;
     private List<ProductoPedidoDTO> productos;
 
     // Getters y setters
@@ -23,6 +24,14 @@ public class PedidoDTO {
 
     public void setFechaCierre(LocalDate fechaCierre) {
         this.fechaCierre = fechaCierre;
+    }
+
+    public String getUrlHash() {
+        return urlHash;
+    }
+
+    public void setUrlHash(String urlHash) {
+        this.urlHash = urlHash;
     }
 
     public Integer getIdPedido() {

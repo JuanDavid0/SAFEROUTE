@@ -27,6 +27,9 @@ public class Pedido {
 
     private LocalDate fechaCierre;
 
+    @Column(unique = true, length = 64)
+    private String urlHash;
+
     @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<ProductoPedido> productos = new HashSet<>();
 
@@ -77,6 +80,14 @@ public class Pedido {
 
     public void setProductos(Set<ProductoPedido> productos) {
         this.productos = productos;
+    }
+
+    public String getUrlHash() {
+        return urlHash;
+    }
+
+    public void setUrlHash(String urlHash) {
+        this.urlHash = urlHash;
     }
 
 }

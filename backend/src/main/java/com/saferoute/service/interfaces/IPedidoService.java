@@ -23,4 +23,9 @@ public interface IPedidoService {
     PedidoDTO eliminarProducto(Integer idPedido, Integer idProducto);
 
     PedidoDTO modificarProducto(Integer idPedido, Integer idProducto, ProductoPedidoDTO productoDTO);
+
+    // Gestión de URL hash para pedidos
+    String generarUrlHash(Integer idPedido);
+
+    PedidoDTO obtenerPedidoPorHash(String hash);
 }

@@ -50,7 +50,7 @@ whatsapp:
     url: https://graph.facebook.com/v24.0
     phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID}
     token: ${WHATSAPP_API_TOKEN}
-  base-url: ${APP_BASE_URL:http://localhost:3000}
+  base-url: ${APP_BASE_URL}
 
 # JWT Configuration
 jwt:
@@ -62,6 +62,12 @@ otp:
   length: 6                  # Longitud del código OTP (6 dígitos)
   expiration-minutes: 5      # Código válido por 5 minutos
   max-attempts: 3            # Máximo 3 intentos de verificación
+
+# Hashids Configuration for URL obfuscation
+saferoute:
+  hashids:
+    salt: ${HASHIDS_SALT}  # Clave secreta para generar hashes (debe ser única)
+    min-length: 15                                  # Longitud mínima del hash generado
 
 ---
 spring:
