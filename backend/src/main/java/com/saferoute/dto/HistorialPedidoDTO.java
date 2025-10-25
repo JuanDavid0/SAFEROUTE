@@ -12,7 +12,7 @@ public class HistorialPedidoDTO {
     private LocalDate fechaCierre;
     private List<SolicitudDTO> solicitudes;
     private Integer totalSolicitudes;
-    private BigDecimal precioTotal; // Nuevo: precio total del pedido
+    private BigDecimal precioTotal;
 
     // Getters y setters
     public Integer getIdPedido() {

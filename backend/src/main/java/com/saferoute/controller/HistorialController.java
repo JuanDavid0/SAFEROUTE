@@ -23,10 +23,6 @@ public class HistorialController {
         this.historialService = historialService;
     }
 
-    /**
-     * RF004: Consultar histórico completo de pedidos con filtros
-     * Solo para visualización (SuperAdministrador)
-     */
     @GetMapping("/pedidos")
     @PreAuthorize("hasRole('SAD')")
     public ResponseEntity<ApiResponse<List<HistorialPedidoDTO>>> consultarHistorico(

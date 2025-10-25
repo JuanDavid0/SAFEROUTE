@@ -75,6 +75,7 @@ CREATE TABLE PEDIDO (
     estado_pedido ESTADO_PEDIDO_DOM DEFAULT 'CRT',
     fecha_creado DATE NOT NULL DEFAULT CURRENT_DATE,
     fecha_cierre DATE,
+    url_hash VARCHAR(64) UNIQUE,
     CONSTRAINT PED_FK_ID_ADMIN FOREIGN KEY (id_admin)
         REFERENCES USUARIO(id_usuario)
 );
@@ -151,6 +152,7 @@ CREATE INDEX idx_log_fecha ON LOG(fecha_log);
 
 CREATE INDEX idx_pedido_admin ON PEDIDO(id_admin);
 CREATE INDEX idx_pedido_estado ON PEDIDO(estado_pedido);
+CREATE INDEX idx_pedido_url_hash ON PEDIDO(url_hash);
 
 CREATE INDEX idx_solicitud_cliente ON SOLICITUD(id_cliente);
 CREATE INDEX idx_solicitud_pedido ON SOLICITUD(id_pedido);

@@ -10,7 +10,7 @@ import java.util.List;
 
 /**
  * DTO para el reporte de ingresos
- * Contiene datos agregados por periodo (mensual/anual)
+ * Contiene datos agregados por periodo (trimestral/anual)
  */
 @Data
 @NoArgsConstructor
@@ -19,7 +19,7 @@ public class ReporteIngresosDTO {
 
     private LocalDate fechaInicio;
     private LocalDate fechaFin;
-    private String agrupacion; // "MENSUAL" o "ANUAL"
+    private String agrupacion; // "TRIMESTRAL" o "ANUAL"
 
     private BigDecimal totalIngresos;
     private BigDecimal totalCostos;

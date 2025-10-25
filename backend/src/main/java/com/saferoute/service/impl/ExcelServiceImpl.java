@@ -1,5 +1,11 @@
 package com.saferoute.service.impl;
 
+import com.saferoute.constants.ExcelConstants;
+import com.saferoute.exception.ExcelBusinessException;
+import com.saferoute.helper.ExcelRowHelper;
+import com.saferoute.helper.ExcelStyleHelper;
+import com.saferoute.helper.ProductoConsolidacionHelper;
+import com.saferoute.helper.ProductoConsolidacionHelper.ProductoConsolidado;
 import com.saferoute.model.*;
 import com.saferoute.model.enums.EstadoPedidoEnum;
 import com.saferoute.model.enums.EstadoSolicitudEnum;
@@ -8,7 +14,6 @@ import com.saferoute.service.interfaces.IExcelService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +26,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 📊 IMPLEMENTACIÓN DEL SERVICIO DE EXPORTACIÓN A EXCEL
+ * IMPLEMENTACIÓN DEL SERVICIO DE EXPORTACIÓN A EXCEL
  * 
  * Genera informes contables profesionales en formato .xlsx con:
  * - Formato de tabla específico
@@ -42,384 +47,292 @@ public class ExcelServiceImpl implements IExcelService {
     private final UsuarioRepository usuarioRepository;
     private final PedidoRepository pedidoRepository;
     private final SolicitudRepository solicitudRepository;
+    private final ExcelStyleHelper styleHelper;
+    private final ExcelRowHelper rowHelper;
+    private final ProductoConsolidacionHelper consolidacionHelper;
 
-    private static final DateTimeFormatter FECHA_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter FECHA_FORMATTER = DateTimeFormatter.ofPattern(ExcelConstants.FORMATO_FECHA);
 
     @Override
     @Transactional(readOnly = true)
-    public ByteArrayOutputStream generarInformeCliente(Integer idCliente) throws Exception {
-        log.info("📄 Generando informe de compras para cliente ID: {}", idCliente);
+    public ByteArrayOutputStream generarInformeCliente(Integer idCliente) {
+        log.info(ExcelConstants.LOG_GENERANDO_INFORME_CLIENTE, idCliente);
 
-        // Obtener cliente
-        Usuario cliente = usuarioRepository.findById(idCliente)
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
+        Usuario cliente = obtenerCliente(idCliente);
+        List<Solicitud> solicitudes = obtenerSolicitudesPagadasCliente(cliente, idCliente);
 
-        // Obtener solicitudes pagadas del cliente CON productos cargados
+        try (Workbook workbook = new XSSFWorkbook();
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+
+            Sheet sheet = workbook.createSheet(ExcelConstants.NOMBRE_HOJA_CLIENTE);
+            Map<String, CellStyle> estilos = crearMapaEstilos(workbook);
+
+            int rowNum = construirInformeCliente(sheet, cliente, solicitudes, estilos);
+            configurarAnchoColumnasCliente(sheet);
+
+            workbook.write(outputStream);
+            log.info(ExcelConstants.LOG_INFORME_CLIENTE_GENERADO, idCliente);
+            return outputStream;
+
+        } catch (Exception e) {
+            log.error(ExcelConstants.LOG_ERROR_GENERANDO_INFORME_CLIENTE, idCliente, e.getMessage());
+            throw new ExcelBusinessException(
+                    String.format("Error al generar informe Excel del cliente %d: %s", idCliente, e.getMessage()), e);
+        }
+    }
+
+    private Usuario obtenerCliente(Integer idCliente) {
+        return usuarioRepository.findById(idCliente)
+                .orElseThrow(() -> new ExcelBusinessException(ExcelConstants.ERROR_CLIENTE_NO_ENCONTRADO));
+    }
+
+    private List<Solicitud> obtenerSolicitudesPagadasCliente(Usuario cliente, Integer idCliente) {
         List<Solicitud> solicitudes = solicitudRepository.findByClienteWithProductos(cliente).stream()
                 .filter(s -> s.getEstadoSolicitud() == EstadoSolicitudEnum.PGD)
                 .sorted(Comparator.comparing(Solicitud::getFechaSolicitud).reversed())
                 .collect(Collectors.toList());
 
         if (solicitudes.isEmpty()) {
-            log.warn("⚠️ Cliente {} no tiene solicitudes pagadas", idCliente);
-            throw new RuntimeException("El cliente no tiene compras registradas");
+            log.warn(ExcelConstants.LOG_CLIENTE_SIN_COMPRAS, idCliente);
+            throw new ExcelBusinessException(ExcelConstants.ERROR_CLIENTE_SIN_COMPRAS);
         }
 
-        try (Workbook workbook = new XSSFWorkbook();
-                ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+        return solicitudes;
+    }
 
-            Sheet sheet = workbook.createSheet("Compras Cliente");
+    private int construirInformeCliente(Sheet sheet, Usuario cliente,
+            List<Solicitud> solicitudes,
+            Map<String, CellStyle> estilos) {
+        int rowNum = 0;
 
-            // Crear estilos
-            CellStyle tituloStyle = crearEstiloTitulo(workbook);
-            CellStyle headerStyle = crearEstiloHeader(workbook);
-            CellStyle normalStyle = crearEstiloNormal(workbook);
-            CellStyle monedaStyle = crearEstiloMoneda(workbook);
-            CellStyle fechaStyle = crearEstiloFecha(workbook);
-            CellStyle totalStyle = crearEstiloTotal(workbook);
+        // Título
+        String nombreCompleto = cliente.getNombres() + " " + cliente.getApellidos();
+        rowHelper.crearFilaTitulo(sheet, rowNum++,
+                ExcelConstants.TITULO_INFORME_COMPRAS + nombreCompleto,
+                ExcelConstants.HEADERS_INFORME_CLIENTE.length,
+                estilos.get("titulo"));
+        rowNum++;
 
-            int rowNum = 0;
+        // Información del cliente
+        String infoCliente = ExcelConstants.PREFIJO_INFO_CLIENTE + nombreCompleto +
+                ExcelConstants.PREFIJO_INFO_CEDULA + cliente.getCedula();
+        rowHelper.crearFilaInfo(sheet, rowNum++, infoCliente,
+                ExcelConstants.HEADERS_INFORME_CLIENTE.length,
+                estilos.get("normal"));
+        rowNum++;
 
-            // Título
-            Row titleRow = sheet.createRow(rowNum++);
-            Cell titleCell = titleRow.createCell(0);
-            String nombreCompleto = cliente.getNombres() + " " + cliente.getApellidos();
-            titleCell.setCellValue("📊 INFORME DE COMPRAS - " + nombreCompleto);
-            titleCell.setCellStyle(tituloStyle);
-            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 4));
-            rowNum++;
+        // Headers
+        rowHelper.crearFilaHeaders(sheet, rowNum++,
+                ExcelConstants.HEADERS_INFORME_CLIENTE,
+                estilos.get("header"));
 
-            // Info del cliente
-            Row infoRow = sheet.createRow(rowNum++);
-            Cell infoCell = infoRow.createCell(0);
-            infoCell.setCellValue("Cliente: " + nombreCompleto + " | Cédula: " + cliente.getCedula());
-            infoCell.setCellStyle(normalStyle);
-            sheet.addMergedRegion(new CellRangeAddress(2, 2, 0, 4));
-            rowNum++;
+        // Datos
+        BigDecimal totalGeneral = agregarFilasSolicitudesCliente(sheet, solicitudes, rowNum, estilos);
+        rowNum += contarFilasDatos(solicitudes);
 
-            // Headers de la tabla
-            Row headerRow = sheet.createRow(rowNum++);
-            String[] headers = { "Fecha", "Producto", "Cantidad", "Precio Unitario", "Precio Total" };
-            for (int i = 0; i < headers.length; i++) {
-                Cell cell = headerRow.createCell(i);
-                cell.setCellValue(headers[i]);
-                cell.setCellStyle(headerStyle);
+        // Total
+        rowNum++;
+        rowHelper.crearFilaTotal(sheet, rowNum, 3, 4, totalGeneral, estilos.get("total"));
+
+        return rowNum;
+    }
+
+    private BigDecimal agregarFilasSolicitudesCliente(Sheet sheet, List<Solicitud> solicitudes,
+            int rowNum, Map<String, CellStyle> estilos) {
+        BigDecimal totalGeneral = BigDecimal.ZERO;
+
+        for (Solicitud solicitud : solicitudes) {
+            for (SolicitudProducto sp : solicitud.getProductos()) {
+                Row row = sheet.createRow(rowNum++);
+
+                BigDecimal precioTotal = sp.getPrecio()
+                        .multiply(BigDecimal.valueOf(sp.getCantidadSolicitada()));
+                totalGeneral = totalGeneral.add(precioTotal);
+
+                rowHelper.crearCeldaTexto(row, 0,
+                        solicitud.getFechaSolicitud().format(FECHA_FORMATTER),
+                        estilos.get("fecha"));
+                rowHelper.crearCeldaTexto(row, 1,
+                        sp.getProducto().getNombreProducto(),
+                        estilos.get("normal"));
+                rowHelper.crearCeldaNumerica(row, 2,
+                        sp.getCantidadSolicitada(),
+                        estilos.get("normal"));
+                rowHelper.crearCeldaMoneda(row, 3,
+                        sp.getPrecio(),
+                        estilos.get("moneda"));
+                rowHelper.crearCeldaMoneda(row, 4,
+                        precioTotal,
+                        estilos.get("moneda"));
             }
-
-            // Datos
-            BigDecimal totalGeneral = BigDecimal.ZERO;
-
-            for (Solicitud solicitud : solicitudes) {
-                for (SolicitudProducto sp : solicitud.getProductos()) {
-                    Row row = sheet.createRow(rowNum++);
-
-                    BigDecimal precioTotal = sp.getPrecio().multiply(BigDecimal.valueOf(sp.getCantidadSolicitada()));
-                    totalGeneral = totalGeneral.add(precioTotal);
-
-                    // Fecha
-                    Cell fechaCell = row.createCell(0);
-                    fechaCell.setCellValue(solicitud.getFechaSolicitud().format(FECHA_FORMATTER));
-                    fechaCell.setCellStyle(fechaStyle);
-
-                    // Producto
-                    Cell productoCell = row.createCell(1);
-                    productoCell.setCellValue(sp.getProducto().getNombreProducto());
-                    productoCell.setCellStyle(normalStyle);
-
-                    // Cantidad
-                    Cell cantidadCell = row.createCell(2);
-                    cantidadCell.setCellValue(sp.getCantidadSolicitada());
-                    cantidadCell.setCellStyle(normalStyle);
-
-                    // Precio Unitario
-                    Cell precioUnitCell = row.createCell(3);
-                    precioUnitCell.setCellValue(sp.getPrecio().doubleValue());
-                    precioUnitCell.setCellStyle(monedaStyle);
-
-                    // Precio Total
-                    Cell precioTotalCell = row.createCell(4);
-                    precioTotalCell.setCellValue(precioTotal.doubleValue());
-                    precioTotalCell.setCellStyle(monedaStyle);
-                }
-            }
-
-            // Fila de total
-            rowNum++;
-            Row totalRow = sheet.createRow(rowNum);
-            Cell totalLabelCell = totalRow.createCell(3);
-            totalLabelCell.setCellValue("TOTAL:");
-            totalLabelCell.setCellStyle(totalStyle);
-
-            Cell totalValueCell = totalRow.createCell(4);
-            totalValueCell.setCellValue(totalGeneral.doubleValue());
-            totalValueCell.setCellStyle(totalStyle);
-
-            // Ajustar anchos de columna
-            sheet.setColumnWidth(0, 3500); // Fecha
-            sheet.setColumnWidth(1, 8000); // Producto
-            sheet.setColumnWidth(2, 3000); // Cantidad
-            sheet.setColumnWidth(3, 4500); // Precio Unitario
-            sheet.setColumnWidth(4, 4500); // Precio Total
-
-            workbook.write(outputStream);
-            log.info("✅ Informe de cliente {} generado exitosamente", idCliente);
-            return outputStream;
-
-        } catch (Exception e) {
-            log.error("❌ Error al generar informe de cliente {}: {}", idCliente, e.getMessage());
-            throw e;
         }
+
+        return totalGeneral;
+    }
+
+    private int contarFilasDatos(List<Solicitud> solicitudes) {
+        return solicitudes.stream()
+                .mapToInt(s -> s.getProductos().size())
+                .sum();
+    }
+
+    private void configurarAnchoColumnasCliente(Sheet sheet) {
+        sheet.setColumnWidth(0, ExcelConstants.ANCHO_COLUMNA_FECHA);
+        sheet.setColumnWidth(1, ExcelConstants.ANCHO_COLUMNA_PRODUCTO);
+        sheet.setColumnWidth(2, ExcelConstants.ANCHO_COLUMNA_CANTIDAD);
+        sheet.setColumnWidth(3, ExcelConstants.ANCHO_COLUMNA_PRECIO);
+        sheet.setColumnWidth(4, ExcelConstants.ANCHO_COLUMNA_PRECIO);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ByteArrayOutputStream generarInformePedidoConsolidado(Integer idPedido) throws Exception {
-        log.info("📊 Generando informe consolidado para pedido ID: {}", idPedido);
+    public ByteArrayOutputStream generarInformePedidoConsolidado(Integer idPedido) {
+        log.info(ExcelConstants.LOG_GENERANDO_INFORME_PEDIDO, idPedido);
 
-        // Obtener pedido
-        Pedido pedido = pedidoRepository.findById(idPedido)
-                .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+        Pedido pedido = obtenerPedido(idPedido);
+        validarPedidoEntregado(pedido, idPedido);
+        List<Solicitud> solicitudes = obtenerSolicitudesPagadasPedido(pedido, idPedido);
 
-        // Validar que el pedido esté entregado
-        if (pedido.getEstadoPedido() != EstadoPedidoEnum.ENT) {
-            log.warn("⚠️ Pedido {} no está en estado ENTREGADO (estado actual: {})",
-                    idPedido, pedido.getEstadoPedido());
-            throw new RuntimeException("Solo se pueden generar informes de pedidos entregados (estado ENT)");
+        try (Workbook workbook = new XSSFWorkbook();
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+
+            Sheet sheet = workbook.createSheet(ExcelConstants.NOMBRE_HOJA_PEDIDO);
+            Map<String, CellStyle> estilos = crearMapaEstilos(workbook);
+
+            int rowNum = construirInformePedido(sheet, pedido, solicitudes, estilos);
+            configurarAnchoColumnasPedido(sheet);
+
+            workbook.write(outputStream);
+            log.info(ExcelConstants.LOG_INFORME_PEDIDO_GENERADO, idPedido);
+            return outputStream;
+
+        } catch (Exception e) {
+            log.error(ExcelConstants.LOG_ERROR_GENERANDO_INFORME_PEDIDO, idPedido, e.getMessage());
+            throw new ExcelBusinessException(
+                    String.format("Error al generar informe Excel del pedido %d: %s", idPedido, e.getMessage()), e);
         }
+    }
 
-        // Obtener solicitudes pagadas del pedido CON productos cargados
+    private Pedido obtenerPedido(Integer idPedido) {
+        return pedidoRepository.findById(idPedido)
+                .orElseThrow(() -> new ExcelBusinessException(ExcelConstants.ERROR_PEDIDO_NO_ENCONTRADO));
+    }
+
+    private void validarPedidoEntregado(Pedido pedido, Integer idPedido) {
+        if (pedido.getEstadoPedido() != EstadoPedidoEnum.ENT) {
+            log.warn(ExcelConstants.LOG_PEDIDO_ESTADO_INVALIDO, idPedido, pedido.getEstadoPedido());
+            throw new ExcelBusinessException(ExcelConstants.ERROR_PEDIDO_NO_ENTREGADO);
+        }
+    }
+
+    private List<Solicitud> obtenerSolicitudesPagadasPedido(Pedido pedido, Integer idPedido) {
         List<Solicitud> solicitudes = solicitudRepository.findByPedidoWithProductos(pedido).stream()
                 .filter(s -> s.getEstadoSolicitud() == EstadoSolicitudEnum.PGD)
                 .collect(Collectors.toList());
 
         if (solicitudes.isEmpty()) {
-            log.warn("⚠️ Pedido {} no tiene solicitudes pagadas", idPedido);
-            throw new RuntimeException("El pedido no tiene solicitudes pagadas");
+            log.warn(ExcelConstants.LOG_PEDIDO_SIN_SOLICITUDES, idPedido);
+            throw new ExcelBusinessException(ExcelConstants.ERROR_PEDIDO_SIN_SOLICITUDES);
         }
 
-        // Consolidar productos (sumar cantidades del mismo producto)
-        Map<Integer, ProductoConsolidado> productosConsolidados = new HashMap<>();
+        return solicitudes;
+    }
 
-        for (Solicitud solicitud : solicitudes) {
-            for (SolicitudProducto sp : solicitud.getProductos()) {
-                Integer idProducto = sp.getProducto().getIdProducto();
-                ProductoConsolidado consolidado = productosConsolidados.get(idProducto);
+    private int construirInformePedido(Sheet sheet, Pedido pedido,
+            List<Solicitud> solicitudes,
+            Map<String, CellStyle> estilos) {
+        int rowNum = 0;
 
-                if (consolidado == null) {
-                    consolidado = new ProductoConsolidado();
-                    consolidado.codigoProducto = idProducto;
-                    consolidado.nombreProducto = sp.getProducto().getNombreProducto();
-                    consolidado.precio = sp.getPrecio();
-                    consolidado.cantidad = 0;
-                    consolidado.fechaPrimera = solicitud.getFechaSolicitud();
-                    productosConsolidados.put(idProducto, consolidado);
-                }
+        // Título
+        rowHelper.crearFilaTitulo(sheet, rowNum++,
+                ExcelConstants.TITULO_INFORME_PEDIDO + pedido.getIdPedido(),
+                ExcelConstants.HEADERS_INFORME_PEDIDO.length,
+                estilos.get("titulo"));
+        rowNum++;
 
-                consolidado.cantidad += sp.getCantidadSolicitada();
+        // Información del pedido
+        String infoPedido = ExcelConstants.PREFIJO_INFO_PEDIDO + pedido.getIdPedido() +
+                ExcelConstants.PREFIJO_INFO_ESTADO + ExcelConstants.ESTADO_ENTREGADO +
+                ExcelConstants.PREFIJO_INFO_FECHA + pedido.getFechaCreado().format(FECHA_FORMATTER);
+        rowHelper.crearFilaInfo(sheet, rowNum++, infoPedido,
+                ExcelConstants.HEADERS_INFORME_PEDIDO.length,
+                estilos.get("normal"));
+        rowNum++;
 
-                // Actualizar fecha si es más reciente
-                if (solicitud.getFechaSolicitud().isAfter(consolidado.fechaPrimera)) {
-                    consolidado.fechaPrimera = solicitud.getFechaSolicitud();
-                }
-            }
+        // Headers
+        rowHelper.crearFilaHeaders(sheet, rowNum++,
+                ExcelConstants.HEADERS_INFORME_PEDIDO,
+                estilos.get("header"));
+
+        // Consolidar y agregar datos
+        List<ProductoConsolidado> productosConsolidados = consolidacionHelper.consolidarProductos(solicitudes);
+        BigDecimal totalGeneral = agregarFilasProductosConsolidados(sheet, productosConsolidados,
+                rowNum, estilos);
+        rowNum += productosConsolidados.size();
+
+        // Total
+        rowNum++;
+        rowHelper.crearFilaTotal(sheet, rowNum, 4, 5, totalGeneral, estilos.get("total"));
+
+        return rowNum;
+    }
+
+    private BigDecimal agregarFilasProductosConsolidados(Sheet sheet,
+            List<ProductoConsolidado> productos,
+            int rowNum,
+            Map<String, CellStyle> estilos) {
+        BigDecimal totalGeneral = BigDecimal.ZERO;
+
+        for (ProductoConsolidado producto : productos) {
+            Row row = sheet.createRow(rowNum++);
+            BigDecimal precioTotal = producto.calcularPrecioTotal();
+            totalGeneral = totalGeneral.add(precioTotal);
+
+            rowHelper.crearCeldaNumerica(row, 0,
+                    producto.getCodigoProducto(),
+                    estilos.get("normal"));
+            rowHelper.crearCeldaTexto(row, 1,
+                    producto.getFechaPrimera().format(FECHA_FORMATTER),
+                    estilos.get("fecha"));
+            rowHelper.crearCeldaTexto(row, 2,
+                    producto.getNombreProducto(),
+                    estilos.get("normal"));
+            rowHelper.crearCeldaNumerica(row, 3,
+                    producto.getCantidad(),
+                    estilos.get("normal"));
+            rowHelper.crearCeldaMoneda(row, 4,
+                    producto.getPrecio(),
+                    estilos.get("moneda"));
+            rowHelper.crearCeldaMoneda(row, 5,
+                    precioTotal,
+                    estilos.get("moneda"));
         }
 
-        try (Workbook workbook = new XSSFWorkbook();
-                ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-
-            Sheet sheet = workbook.createSheet("Informe Pedido");
-
-            // Crear estilos
-            CellStyle tituloStyle = crearEstiloTitulo(workbook);
-            CellStyle headerStyle = crearEstiloHeader(workbook);
-            CellStyle normalStyle = crearEstiloNormal(workbook);
-            CellStyle monedaStyle = crearEstiloMoneda(workbook);
-            CellStyle fechaStyle = crearEstiloFecha(workbook);
-            CellStyle totalStyle = crearEstiloTotal(workbook);
-
-            int rowNum = 0;
-
-            // Título
-            Row titleRow = sheet.createRow(rowNum++);
-            Cell titleCell = titleRow.createCell(0);
-            titleCell.setCellValue("📊 INFORME DE PEDIDO #" + idPedido);
-            titleCell.setCellStyle(tituloStyle);
-            sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, 5));
-            rowNum++;
-
-            // Info del pedido
-            Row infoRow = sheet.createRow(rowNum++);
-            Cell infoCell = infoRow.createCell(0);
-            infoCell.setCellValue("Pedido: #" + idPedido + " | Estado: ENTREGADO | Fecha: " +
-                    pedido.getFechaCreado().format(FECHA_FORMATTER));
-            infoCell.setCellStyle(normalStyle);
-            sheet.addMergedRegion(new CellRangeAddress(2, 2, 0, 5));
-            rowNum++;
-
-            // Headers de la tabla
-            Row headerRow = sheet.createRow(rowNum++);
-            String[] headers = { "Código Producto", "Fecha", "Nombre Producto", "Cantidad", "Precio Unitario",
-                    "Precio Total" };
-            for (int i = 0; i < headers.length; i++) {
-                Cell cell = headerRow.createCell(i);
-                cell.setCellValue(headers[i]);
-                cell.setCellStyle(headerStyle);
-            }
-
-            // Ordenar productos por código
-            List<ProductoConsolidado> productosOrdenados = productosConsolidados.values().stream()
-                    .sorted(Comparator.comparing(p -> p.codigoProducto))
-                    .collect(Collectors.toList());
-
-            // Datos
-            BigDecimal totalGeneral = BigDecimal.ZERO;
-
-            for (ProductoConsolidado producto : productosOrdenados) {
-                Row row = sheet.createRow(rowNum++);
-
-                BigDecimal precioTotal = producto.precio.multiply(BigDecimal.valueOf(producto.cantidad));
-                totalGeneral = totalGeneral.add(precioTotal);
-
-                // Código Producto
-                Cell codigoCell = row.createCell(0);
-                codigoCell.setCellValue(producto.codigoProducto);
-                codigoCell.setCellStyle(normalStyle);
-
-                // Fecha
-                Cell fechaCell = row.createCell(1);
-                fechaCell.setCellValue(producto.fechaPrimera.format(FECHA_FORMATTER));
-                fechaCell.setCellStyle(fechaStyle);
-
-                // Nombre Producto
-                Cell nombreCell = row.createCell(2);
-                nombreCell.setCellValue(producto.nombreProducto);
-                nombreCell.setCellStyle(normalStyle);
-
-                // Cantidad
-                Cell cantidadCell = row.createCell(3);
-                cantidadCell.setCellValue(producto.cantidad);
-                cantidadCell.setCellStyle(normalStyle);
-
-                // Precio Unitario
-                Cell precioUnitCell = row.createCell(4);
-                precioUnitCell.setCellValue(producto.precio.doubleValue());
-                precioUnitCell.setCellStyle(monedaStyle);
-
-                // Precio Total
-                Cell precioTotalCell = row.createCell(5);
-                precioTotalCell.setCellValue(precioTotal.doubleValue());
-                precioTotalCell.setCellStyle(monedaStyle);
-            }
-
-            // Fila de total
-            rowNum++;
-            Row totalRow = sheet.createRow(rowNum);
-            Cell totalLabelCell = totalRow.createCell(4);
-            totalLabelCell.setCellValue("TOTAL:");
-            totalLabelCell.setCellStyle(totalStyle);
-
-            Cell totalValueCell = totalRow.createCell(5);
-            totalValueCell.setCellValue(totalGeneral.doubleValue());
-            totalValueCell.setCellStyle(totalStyle);
-
-            // Ajustar anchos de columna
-            sheet.setColumnWidth(0, 4000); // Código
-            sheet.setColumnWidth(1, 3500); // Fecha
-            sheet.setColumnWidth(2, 8000); // Nombre Producto
-            sheet.setColumnWidth(3, 3000); // Cantidad
-            sheet.setColumnWidth(4, 4500); // Precio Unitario
-            sheet.setColumnWidth(5, 4500); // Precio Total
-
-            workbook.write(outputStream);
-            log.info("✅ Informe de pedido {} generado exitosamente", idPedido);
-            return outputStream;
-
-        } catch (Exception e) {
-            log.error("❌ Error al generar informe de pedido {}: {}", idPedido, e.getMessage());
-            throw e;
-        }
+        return totalGeneral;
     }
 
-    // ========== ESTILOS ==========
-
-    private CellStyle crearEstiloTitulo(Workbook workbook) {
-        CellStyle style = workbook.createCellStyle();
-        Font font = workbook.createFont();
-        font.setBold(true);
-        font.setFontHeightInPoints((short) 16);
-        font.setColor(IndexedColors.WHITE.getIndex());
-        style.setFont(font);
-        style.setFillForegroundColor(IndexedColors.DARK_BLUE.getIndex());
-        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        style.setAlignment(HorizontalAlignment.CENTER);
-        style.setVerticalAlignment(VerticalAlignment.CENTER);
-        return style;
+    private void configurarAnchoColumnasPedido(Sheet sheet) {
+        sheet.setColumnWidth(0, ExcelConstants.ANCHO_COLUMNA_CODIGO);
+        sheet.setColumnWidth(1, ExcelConstants.ANCHO_COLUMNA_FECHA);
+        sheet.setColumnWidth(2, ExcelConstants.ANCHO_COLUMNA_PRODUCTO);
+        sheet.setColumnWidth(3, ExcelConstants.ANCHO_COLUMNA_CANTIDAD);
+        sheet.setColumnWidth(4, ExcelConstants.ANCHO_COLUMNA_PRECIO);
+        sheet.setColumnWidth(5, ExcelConstants.ANCHO_COLUMNA_PRECIO);
     }
 
-    private CellStyle crearEstiloHeader(Workbook workbook) {
-        CellStyle style = workbook.createCellStyle();
-        Font font = workbook.createFont();
-        font.setBold(true);
-        font.setColor(IndexedColors.WHITE.getIndex());
-        style.setFont(font);
-        style.setFillForegroundColor(IndexedColors.DARK_GREEN.getIndex());
-        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        style.setAlignment(HorizontalAlignment.CENTER);
-        style.setVerticalAlignment(VerticalAlignment.CENTER);
-        style.setBorderBottom(BorderStyle.THIN);
-        style.setBorderTop(BorderStyle.THIN);
-        style.setBorderLeft(BorderStyle.THIN);
-        style.setBorderRight(BorderStyle.THIN);
-        return style;
-    }
+    // ==================== MÉTODOS AUXILIARES ====================
 
-    private CellStyle crearEstiloNormal(Workbook workbook) {
-        CellStyle style = workbook.createCellStyle();
-        style.setBorderBottom(BorderStyle.THIN);
-        style.setBorderTop(BorderStyle.THIN);
-        style.setBorderLeft(BorderStyle.THIN);
-        style.setBorderRight(BorderStyle.THIN);
-        style.setVerticalAlignment(VerticalAlignment.CENTER);
-        return style;
-    }
-
-    private CellStyle crearEstiloMoneda(Workbook workbook) {
-        CellStyle style = crearEstiloNormal(workbook);
-        DataFormat format = workbook.createDataFormat();
-        style.setDataFormat(format.getFormat("$#,##0.00"));
-        return style;
-    }
-
-    private CellStyle crearEstiloFecha(Workbook workbook) {
-        CellStyle style = crearEstiloNormal(workbook);
-        style.setAlignment(HorizontalAlignment.CENTER);
-        return style;
-    }
-
-    private CellStyle crearEstiloTotal(Workbook workbook) {
-        CellStyle style = workbook.createCellStyle();
-        Font font = workbook.createFont();
-        font.setBold(true);
-        font.setFontHeightInPoints((short) 12);
-        style.setFont(font);
-        style.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
-        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        style.setBorderBottom(BorderStyle.DOUBLE);
-        style.setBorderTop(BorderStyle.THIN);
-        style.setBorderLeft(BorderStyle.THIN);
-        style.setBorderRight(BorderStyle.THIN);
-        DataFormat format = workbook.createDataFormat();
-        style.setDataFormat(format.getFormat("$#,##0.00"));
-        return style;
-    }
-
-    // ========== CLASE AUXILIAR ==========
-
-    private static class ProductoConsolidado {
-        Integer codigoProducto;
-        String nombreProducto;
-        int cantidad;
-        BigDecimal precio;
-        LocalDate fechaPrimera;
+    /**
+     * Crea un mapa con todos los estilos necesarios para el informe.
+     */
+    private Map<String, CellStyle> crearMapaEstilos(Workbook workbook) {
+        Map<String, CellStyle> estilos = new HashMap<>();
+        estilos.put("titulo", styleHelper.crearEstiloTitulo(workbook));
+        estilos.put("header", styleHelper.crearEstiloHeader(workbook));
+        estilos.put("normal", styleHelper.crearEstiloNormal(workbook));
+        estilos.put("moneda", styleHelper.crearEstiloMoneda(workbook));
+        estilos.put("fecha", styleHelper.crearEstiloFecha(workbook));
+        estilos.put("total", styleHelper.crearEstiloTotal(workbook));
+        return estilos;
     }
 }

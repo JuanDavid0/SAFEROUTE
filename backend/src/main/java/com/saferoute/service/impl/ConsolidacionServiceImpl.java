@@ -1,98 +1,117 @@
 package com.saferoute.service.impl;
 
+import com.saferoute.constants.ConsolidacionConstants;
 import com.saferoute.dto.ConsolidacionDTO;
 import com.saferoute.dto.ConsolidacionProductoDTO;
+import com.saferoute.exception.ConsolidacionBusinessException;
+import com.saferoute.helper.ConsolidacionCalculosHelper;
 import com.saferoute.model.Pedido;
 import com.saferoute.model.Solicitud;
-import com.saferoute.model.SolicitudProducto;
 import com.saferoute.model.enums.EstadoPedidoEnum;
 import com.saferoute.model.enums.EstadoSolicitudEnum;
 import com.saferoute.repository.PedidoRepository;
 import com.saferoute.repository.SolicitudRepository;
 import com.saferoute.service.interfaces.IConsolidacionService;
 import com.saferoute.service.interfaces.ILogService;
+import com.saferoute.validator.ConsolidacionValidator;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
+/**
+ * Implementación del servicio de consolidación de pedidos.
+ */
+@Slf4j
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class ConsolidacionServiceImpl implements IConsolidacionService {
 
-    private final PedidoRepository pedidoRepository;
-    private final SolicitudRepository solicitudRepository;
-    private final ILogService logService;
+        private final PedidoRepository pedidoRepository;
+        private final SolicitudRepository solicitudRepository;
+        private final ILogService logService;
+        private final ConsolidacionValidator consolidacionValidator;
+        private final ConsolidacionCalculosHelper calculosHelper;
 
-    public ConsolidacionServiceImpl(PedidoRepository pedidoRepository,
-            SolicitudRepository solicitudRepository,
-            ILogService logService) {
-        this.pedidoRepository = pedidoRepository;
-        this.solicitudRepository = solicitudRepository;
-        this.logService = logService;
-    }
+        @Override
+        public ConsolidacionDTO consolidarPedido(Integer idPedido, Map<String, Object> opciones) {
+                log.info(ConsolidacionConstants.LOG_CONSOLIDANDO_PEDIDO, idPedido);
 
-    @Override
-    public ConsolidacionDTO consolidarPedido(Integer idPedido, Map<String, Object> opciones) {
-        Pedido pedido = pedidoRepository.findById(idPedido)
-                .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+                Pedido pedido = buscarYValidarPedido(idPedido);
+                List<Solicitud> solicitudesPagadas = obtenerYValidarSolicitudesPagadas(idPedido);
 
-        if (!pedido.getEstadoPedido().equals(EstadoPedidoEnum.ACT)) {
-            throw new RuntimeException("Solo se pueden consolidar pedidos activos");
+                cambiarEstadoPedido(pedido);
+
+                ConsolidacionDTO resultado = construirResultado(idPedido, solicitudesPagadas);
+
+                log.info(ConsolidacionConstants.LOG_PEDIDO_CONSOLIDADO,
+                                idPedido, resultado.getTotalSolicitudes(), resultado.getMontoTotal());
+
+                return resultado;
         }
 
-        List<Solicitud> solicitudesPagadas = solicitudRepository
-                .findByPedido_IdPedidoAndEstadoSolicitud(idPedido, EstadoSolicitudEnum.PGD);
+        /**
+         * Busca el pedido y valida que esté activo.
+         */
+        private Pedido buscarYValidarPedido(Integer idPedido) {
+                Pedido pedido = pedidoRepository.findById(idPedido)
+                                .orElseThrow(() -> new ConsolidacionBusinessException(
+                                                String.format(ConsolidacionConstants.ERROR_PEDIDO_NO_ENCONTRADO_CON_ID,
+                                                                idPedido)));
 
-        if (solicitudesPagadas.isEmpty()) {
-            throw new RuntimeException("No hay solicitudes pagadas para consolidar");
+                consolidacionValidator.validarPedidoActivo(pedido);
+                return pedido;
         }
 
-        // Cambiar estado del pedido a RTA (En Ruta)
-        String estadoAnterior = pedido.getEstadoPedido().name();
-        pedido.setEstadoPedido(EstadoPedidoEnum.RTA);
-        pedidoRepository.save(pedido);
+        /**
+         * Obtiene las solicitudes pagadas y valida que existan.
+         */
+        private List<Solicitud> obtenerYValidarSolicitudesPagadas(Integer idPedido) {
+                List<Solicitud> solicitudesPagadas = solicitudRepository
+                                .findByPedido_IdPedidoAndEstadoSolicitud(idPedido, EstadoSolicitudEnum.PGD);
 
-        // Registrar en log
-        logService.registrarCambioEstadoPedido(
-                pedido.getAdmin().getIdUsuario(),
-                idPedido,
-                estadoAnterior,
-                EstadoPedidoEnum.RTA.name());
+                consolidacionValidator.validarSolicitudesPagadas(solicitudesPagadas, idPedido);
+                return solicitudesPagadas;
+        }
 
-        // Calcular totales
-        BigDecimal montoTotal = solicitudesPagadas.stream()
-                .flatMap(s -> s.getProductos().stream())
-                .map(sp -> sp.getPrecio().multiply(BigDecimal.valueOf(sp.getCantidadSolicitada())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        /**
+         * Cambia el estado del pedido a RTA (En Ruta) y registra en log.
+         */
+        private void cambiarEstadoPedido(Pedido pedido) {
+                String estadoAnterior = pedido.getEstadoPedido().name();
+                pedido.setEstadoPedido(EstadoPedidoEnum.RTA);
+                pedidoRepository.save(pedido);
 
-        // Consolidar productos
-        Map<Integer, Integer> productosConsolidados = solicitudesPagadas.stream()
-                .flatMap(s -> s.getProductos().stream())
-                .collect(Collectors.groupingBy(
-                        sp -> sp.getProducto().getIdProducto(),
-                        Collectors.summingInt(SolicitudProducto::getCantidadSolicitada)));
+                log.info(ConsolidacionConstants.LOG_CAMBIO_ESTADO_PEDIDO,
+                                pedido.getIdPedido(), estadoAnterior, EstadoPedidoEnum.RTA.name());
 
-        List<ConsolidacionProductoDTO> productos = productosConsolidados.entrySet().stream()
-                .map(entry -> {
-                    ConsolidacionProductoDTO dto = new ConsolidacionProductoDTO();
-                    dto.setIdProducto(entry.getKey());
-                    dto.setCantidadTotal(entry.getValue());
-                    return dto;
-                })
-                .collect(Collectors.toList());
+                logService.registrarCambioEstadoPedido(
+                                pedido.getAdmin().getIdUsuario(),
+                                pedido.getIdPedido(),
+                                estadoAnterior,
+                                EstadoPedidoEnum.RTA.name());
+        }
 
-        ConsolidacionDTO resultado = new ConsolidacionDTO();
-        resultado.setIdPedido(idPedido);
-        resultado.setNuevoEstado(EstadoPedidoEnum.RTA.name());
-        resultado.setTotalSolicitudes(solicitudesPagadas.size());
-        resultado.setMontoTotal(montoTotal);
-        resultado.setProductos(productos);
-        resultado.setMensaje("Pedido consolidado exitosamente");
+        /**
+         * Construye el DTO de resultado con totales y productos consolidados.
+         */
+        private ConsolidacionDTO construirResultado(Integer idPedido, List<Solicitud> solicitudesPagadas) {
+                BigDecimal montoTotal = calculosHelper.calcularMontoTotal(solicitudesPagadas);
+                List<ConsolidacionProductoDTO> productos = calculosHelper.consolidarProductos(solicitudesPagadas);
 
-        return resultado;
-    }
+                ConsolidacionDTO resultado = new ConsolidacionDTO();
+                resultado.setIdPedido(idPedido);
+                resultado.setNuevoEstado(EstadoPedidoEnum.RTA.name());
+                resultado.setTotalSolicitudes(solicitudesPagadas.size());
+                resultado.setMontoTotal(montoTotal);
+                resultado.setProductos(productos);
+                resultado.setMensaje(ConsolidacionConstants.MENSAJE_PEDIDO_CONSOLIDADO);
+
+                return resultado;
+        }
 }

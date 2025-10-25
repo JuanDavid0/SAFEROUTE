@@ -20,10 +20,6 @@ public class ConsolidacionController {
         this.consolidacionService = consolidacionService;
     }
 
-    /**
-     * RF005: Consolidar solicitudes pagadas de un pedido
-     * Agrupa todas las solicitudes en estado 'PGD' y cambia el pedido a 'RTA'
-     */
     @PostMapping("/pedido/{idPedido}")
     @PreAuthorize("hasAnyRole('SAD', 'ADM')")
     public ResponseEntity<ApiResponse<ConsolidacionDTO>> consolidarPedido(

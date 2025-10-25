@@ -1,21 +1,29 @@
 package com.saferoute.service.impl;
 
+import com.saferoute.constants.SolicitudConstants;
 import com.saferoute.dto.*;
+import com.saferoute.exception.SolicitudBusinessException;
 import com.saferoute.model.*;
 import com.saferoute.model.enums.EstadoSolicitudEnum;
-import com.saferoute.model.enums.EstadoPedidoEnum;
 import com.saferoute.repository.*;
+import com.saferoute.service.helper.SolicitudProductoHelper;
 import com.saferoute.service.interfaces.ISolicitudService;
 import com.saferoute.service.interfaces.ILogService;
 import com.saferoute.service.interfaces.IWhatsAppService;
 import com.saferoute.service.interfaces.IPedidoService;
+import com.saferoute.service.validator.SolicitudValidator;
 import com.saferoute.repository.UsuarioRolRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Implementación del servicio de Solicitudes
+ * Refactorizado siguiendo principios SOLID y buenas prácticas
+ */
 @Service
 @Transactional
 public class SolicitudServiceImpl implements ISolicitudService {
@@ -30,11 +38,22 @@ public class SolicitudServiceImpl implements ISolicitudService {
     private final ILogService logService;
     private final IWhatsAppService whatsAppService;
     private final IPedidoService pedidoService;
+    private final SolicitudValidator validator;
+    private final SolicitudProductoHelper helper;
 
-    public SolicitudServiceImpl(SolicitudRepository solicitudRepository, UsuarioRepository usuarioRepository,
-            PedidoRepository pedidoRepository, ProductoRepository productoRepository, RolRepository rolRepository,
-            UsuarioRolRepository usuarioRolRepository, ILogService logService, IWhatsAppService whatsAppService,
-            ProductoPedidoRepository productoPedidoRepository, IPedidoService pedidoService) {
+    public SolicitudServiceImpl(
+            SolicitudRepository solicitudRepository,
+            UsuarioRepository usuarioRepository,
+            PedidoRepository pedidoRepository,
+            ProductoRepository productoRepository,
+            RolRepository rolRepository,
+            UsuarioRolRepository usuarioRolRepository,
+            ILogService logService,
+            IWhatsAppService whatsAppService,
+            ProductoPedidoRepository productoPedidoRepository,
+            IPedidoService pedidoService,
+            SolicitudValidator validator,
+            SolicitudProductoHelper helper) {
         this.usuarioRolRepository = usuarioRolRepository;
         this.solicitudRepository = solicitudRepository;
         this.usuarioRepository = usuarioRepository;
@@ -45,330 +64,243 @@ public class SolicitudServiceImpl implements ISolicitudService {
         this.logService = logService;
         this.whatsAppService = whatsAppService;
         this.pedidoService = pedidoService;
+        this.validator = validator;
+        this.helper = helper;
     }
 
     @Override
     public SolicitudDTO crearSolicitud(SolicitudDTO dto, Integer idCliente) {
         Usuario cliente = usuarioRepository.findById(idCliente)
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
+                .orElseThrow(() -> new SolicitudBusinessException(SolicitudConstants.ERROR_CLIENTE_NO_ENCONTRADO));
 
         Pedido pedido = pedidoRepository.findById(dto.getIdPedido())
-                .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+                .orElseThrow(() -> new SolicitudBusinessException(SolicitudConstants.ERROR_PEDIDO_NO_ENCONTRADO));
 
-        // Validar que el pedido esté en estado ACTIVO
-        if (pedido.getEstadoPedido() != EstadoPedidoEnum.ACT) {
-            throw new RuntimeException(String.format(
-                    "No se pueden crear solicitudes para este pedido. El pedido debe estar en estado ACTIVO. Estado actual: %s",
-                    pedido.getEstadoPedido()));
-        }
+        validator.validarPedidoDisponible(pedido);
 
-        // Validar que no se haya pasado la fecha de cierre
-        LocalDate fechaCierre = pedido.getFechaCierre();
-        if (fechaCierre != null && LocalDate.now().isAfter(fechaCierre)) {
-            throw new RuntimeException(String.format(
-                    "No se pueden crear solicitudes. La fecha de cierre del pedido (%s) ya pasó",
-                    fechaCierre));
-        }
-
-        Solicitud solicitud = new Solicitud();
-        solicitud.setCliente(cliente);
-        solicitud.setPedido(pedido);
-        solicitud.setDireccionEntrega(dto.getDireccionEntrega());
-        solicitud.setEstadoSolicitud(EstadoSolicitudEnum.PDP);
-
-        for (SolicitudProductoDTO spDTO : dto.getProductos()) {
-            Producto producto = productoRepository.findById(spDTO.getIdProducto())
-                    .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
-
-            // Validar cantidad mínima y máxima
-            validarCantidadProducto(pedido.getIdPedido(), spDTO.getIdProducto(), spDTO.getCantidadSolicitada());
-
-            SolicitudProducto sp = new SolicitudProducto();
-            sp.setSolicitud(solicitud);
-            sp.setProducto(producto);
-            sp.setCantidadSolicitada(spDTO.getCantidadSolicitada());
-            // CALCULAR PRECIO AUTOMÁTICAMENTE del producto
-            sp.setPrecio(producto.getPrecioUnitario());
-            solicitud.getProductos().add(sp);
-        }
+        Solicitud solicitud = construirNuevaSolicitud(cliente, pedido, dto.getDireccionEntrega());
+        agregarProductosASolicitud(solicitud, dto.getProductos(), pedido.getIdPedido());
 
         solicitudRepository.save(solicitud);
 
-        // Registrar creación de solicitud en logs
-        logService.registrarLog(idCliente,
-                "Solicitud creada - ID: " + solicitud.getIdSolicitud() +
-                        ", Pedido ID: " + pedido.getIdPedido() +
-                        ", Productos: " + dto.getProductos().size());
+        registrarCreacionSolicitud(idCliente, solicitud, dto.getProductos().size());
 
         SolicitudDTO solicitudDTO = mapToDTO(solicitud);
-
-        // Enviar notificación de WhatsApp con resumen de la solicitud
         whatsAppService.enviarResumenSolicitud(solicitudDTO);
 
         return solicitudDTO;
     }
 
+    private Solicitud construirNuevaSolicitud(Usuario cliente, Pedido pedido, String direccionEntrega) {
+        Solicitud solicitud = new Solicitud();
+        solicitud.setCliente(cliente);
+        solicitud.setPedido(pedido);
+        solicitud.setDireccionEntrega(direccionEntrega);
+        solicitud.setEstadoSolicitud(EstadoSolicitudEnum.PDP);
+        return solicitud;
+    }
+
+    private void agregarProductosASolicitud(Solicitud solicitud, List<SolicitudProductoDTO> productosDTO,
+            Integer idPedido) {
+        for (SolicitudProductoDTO spDTO : productosDTO) {
+            Producto producto = productoRepository.findById(spDTO.getIdProducto())
+                    .orElseThrow(() -> new SolicitudBusinessException(SolicitudConstants.ERROR_PRODUCTO_NO_ENCONTRADO));
+
+            validarCantidadProducto(idPedido, spDTO.getIdProducto(), spDTO.getCantidadSolicitada());
+
+            SolicitudProducto sp = helper.crearSolicitudProducto(
+                    solicitud,
+                    producto,
+                    spDTO.getCantidadSolicitada());
+
+            sp.setPrecio(producto.getPrecioUnitario());
+            solicitud.getProductos().add(sp);
+        }
+    }
+
+    private void registrarCreacionSolicitud(Integer idCliente, Solicitud solicitud, int cantidadProductos) {
+        logService.registrarLog(idCliente, String.format(
+                SolicitudConstants.LOG_SOLICITUD_CREADA,
+                solicitud.getIdSolicitud(),
+                solicitud.getPedido().getIdPedido(),
+                cantidadProductos));
+    }
+
     @Override
     public SolicitudDTO crearSolicitudClienteNuevo(SolicitudClienteDTO dto) {
-        Usuario cliente = null;
+        Usuario cliente = buscarOCrearCliente(dto);
 
-        // Buscar usuario existente por cédula o teléfono
-        if (usuarioRepository.findByCedula(dto.getCedula()).isPresent()) {
-            cliente = usuarioRepository.findByCedula(dto.getCedula()).get();
-        } else if (usuarioRepository.findByTelefono(dto.getTelefono()).isPresent()) {
-            cliente = usuarioRepository.findByTelefono(dto.getTelefono()).get();
-        }
-
-        // Si no existe, crear nuevo usuario
-        if (cliente == null) {
-            Usuario nuevoCliente = new Usuario();
-            nuevoCliente.setNombres(dto.getNombres());
-            nuevoCliente.setApellidos(dto.getApellidos());
-            nuevoCliente.setTelefono(dto.getTelefono());
-            nuevoCliente.setCedula(dto.getCedula());
-            nuevoCliente.setDireccion(dto.getDireccion());
-            cliente = usuarioRepository.save(nuevoCliente);
-
-            // Asignar rol "CLI"
-            Rol rolCliente = rolRepository.findByTipoRol("CLI")
-                    .orElseThrow(() -> new RuntimeException("Rol CLI no encontrado"));
-            UsuarioRol usuarioRol = new UsuarioRol(rolCliente, cliente);
-            usuarioRolRepository.save(usuarioRol);
-        }
-
-        // Crear la solicitud
         SolicitudDTO solicitudDTO = new SolicitudDTO();
         solicitudDTO.setIdPedido(dto.getIdPedido());
         solicitudDTO.setDireccionEntrega(dto.getDireccion());
         solicitudDTO.setProductos(dto.getProductos());
+
         return crearSolicitud(solicitudDTO, cliente.getIdUsuario());
+    }
+
+    private Usuario buscarOCrearCliente(SolicitudClienteDTO dto) {
+        Usuario cliente = buscarClienteExistente(dto);
+        if (cliente == null) {
+            cliente = crearNuevoCliente(dto);
+        }
+        return cliente;
+    }
+
+    private Usuario buscarClienteExistente(SolicitudClienteDTO dto) {
+        return usuarioRepository.findByCedula(dto.getCedula())
+                .or(() -> usuarioRepository.findByTelefono(dto.getTelefono()))
+                .orElse(null);
+    }
+
+    private Usuario crearNuevoCliente(SolicitudClienteDTO dto) {
+        Usuario nuevoCliente = new Usuario();
+        nuevoCliente.setNombres(dto.getNombres());
+        nuevoCliente.setApellidos(dto.getApellidos());
+        nuevoCliente.setTelefono(dto.getTelefono());
+        nuevoCliente.setCedula(dto.getCedula());
+        nuevoCliente.setDireccion(dto.getDireccion());
+        Usuario cliente = usuarioRepository.save(nuevoCliente);
+
+        asignarRolCliente(cliente);
+        return cliente;
+    }
+
+    private void asignarRolCliente(Usuario cliente) {
+        Rol rolCliente = rolRepository.findByTipoRol(SolicitudConstants.ROL_CLIENTE)
+                .orElseThrow(() -> new SolicitudBusinessException(SolicitudConstants.ERROR_ROL_CLI_NO_ENCONTRADO));
+        UsuarioRol usuarioRol = new UsuarioRol(rolCliente, cliente);
+        usuarioRolRepository.save(usuarioRol);
     }
 
     @Override
     public SolicitudDTO modificarSolicitud(Integer idSolicitud, SolicitudModificacionDTO datos) {
         Solicitud solicitud = solicitudRepository.findById(idSolicitud)
-                .orElseThrow(() -> new RuntimeException("Solicitud no encontrada"));
+                .orElseThrow(() -> new SolicitudBusinessException(SolicitudConstants.ERROR_SOLICITUD_NO_ENCONTRADA));
 
-        if (!solicitud.getEstadoSolicitud().equals(EstadoSolicitudEnum.PDP))
-            throw new RuntimeException("Solo se puede modificar solicitudes pendientes de pago");
+        validator.validarSolicitudModificable(solicitud);
 
-        // Verificar que no estemos a 5 días o menos del cierre
-        LocalDate fechaCierre = solicitud.getPedido().getFechaCierre();
-        if (fechaCierre != null) {
-            LocalDate fechaLimite = fechaCierre.minusDays(5);
-            if (LocalDate.now().isAfter(fechaLimite)) {
-                throw new RuntimeException("No se pueden realizar modificaciones 5 días antes del cierre del pedido");
-            }
-        }
+        modificarDatosBasicos(solicitud, datos);
+        modificarProductosLista(solicitud, datos);
+        modificarProductoCompatibilidad(solicitud, datos);
 
-        // Verificar modificaciones restantes a nivel de solicitud
-        if (solicitud.getModificacionesRestantes() <= 0) {
-            throw new RuntimeException(
-                    "Se alcanzó el número máximo de modificaciones para esta solicitud (3 modificaciones)");
-        }
+        helper.decrementarModificaciones(solicitud);
+        solicitudRepository.save(solicitud);
 
-        // Modificar dirección de entrega
+        return mapToDTO(solicitud);
+    }
+
+    private void modificarDatosBasicos(Solicitud solicitud, SolicitudModificacionDTO datos) {
         if (datos.getDireccionEntrega() != null) {
             solicitud.setDireccionEntrega(datos.getDireccionEntrega());
         }
+    }
 
-        // Modificar productos (nuevo formato con lista)
+    private void modificarProductosLista(Solicitud solicitud, SolicitudModificacionDTO datos) {
         if (datos.getProductos() != null && !datos.getProductos().isEmpty()) {
             for (SolicitudModificacionDTO.ProductoModificacionDTO prodMod : datos.getProductos()) {
-                // Buscar el producto en la solicitud
-                SolicitudProducto sp = solicitud.getProductos().stream()
-                        .filter(s -> s.getProducto().getIdProducto().equals(prodMod.getIdProducto()))
-                        .findFirst()
-                        .orElseThrow(() -> new RuntimeException("Producto no encontrado en esta solicitud"));
-
+                SolicitudProducto sp = helper.buscarProductoEnSolicitud(solicitud, prodMod.getIdProducto());
                 sp.setCantidadSolicitada(prodMod.getCantidadSolicitada());
             }
         }
+    }
+
+    private void modificarProductoCompatibilidad(Solicitud solicitud, SolicitudModificacionDTO datos) {
         // Compatibilidad con formato antiguo (un solo producto)
-        else if (datos.getNuevaCantidad() != null && !solicitud.getProductos().isEmpty()) {
+        if (datos.getNuevaCantidad() != null && !solicitud.getProductos().isEmpty()) {
             SolicitudProducto sp = solicitud.getProductos().iterator().next();
             sp.setCantidadSolicitada(datos.getNuevaCantidad());
         }
-
-        // Decrementar modificaciones restantes a nivel de solicitud
-        solicitud.setModificacionesRestantes(solicitud.getModificacionesRestantes() - 1);
-
-        solicitudRepository.save(solicitud);
-        return mapToDTO(solicitud);
     }
 
     @Override
     public SolicitudDTO agregarProducto(Integer idSolicitud, SolicitudProductoDTO productoDTO) {
         Solicitud solicitud = solicitudRepository.findById(idSolicitud)
-                .orElseThrow(() -> new RuntimeException("Solicitud no encontrada"));
+                .orElseThrow(() -> new SolicitudBusinessException(SolicitudConstants.ERROR_SOLICITUD_NO_ENCONTRADA));
 
-        // Validar que la solicitud esté en estado PDP
-        if (solicitud.getEstadoSolicitud() != EstadoSolicitudEnum.PDP) {
-            throw new RuntimeException(
-                    "Solo se pueden agregar productos a solicitudes en estado Pendiente de Pago (PDP). " +
-                            "Estado actual: " + solicitud.getEstadoSolicitud());
-        }
+        validator.validarSolicitudModificable(solicitud);
 
-        // Verificar ventana de modificación (5 días antes del cierre)
-        LocalDate fechaCierre = solicitud.getPedido().getFechaCierre();
-        if (fechaCierre != null) {
-            LocalDate fechaLimite = fechaCierre.minusDays(5);
-            if (LocalDate.now().isAfter(fechaLimite)) {
-                throw new RuntimeException("No se pueden agregar productos 5 días antes del cierre del pedido");
-            }
-        }
-
-        // Verificar modificaciones restantes a nivel de solicitud
-        if (solicitud.getModificacionesRestantes() <= 0) {
-            throw new RuntimeException(
-                    "Se alcanzó el número máximo de modificaciones para esta solicitud (3 modificaciones)");
-        }
-
-        // Verificar que el producto exista
         Producto producto = productoRepository.findById(productoDTO.getIdProducto())
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+                .orElseThrow(() -> new SolicitudBusinessException(SolicitudConstants.ERROR_PRODUCTO_NO_ENCONTRADO));
 
-        // Verificar que el producto esté en el pedido asociado
-        boolean productoEnPedido = solicitud.getPedido().getProductos().stream()
-                .anyMatch(pp -> pp.getProducto().getIdProducto().equals(productoDTO.getIdProducto()));
-
-        if (!productoEnPedido) {
-            throw new RuntimeException("El producto no está disponible en el pedido asociado");
-        }
-
-        // Verificar que el producto no exista ya en la solicitud
-        boolean productoYaEnSolicitud = solicitud.getProductos().stream()
-                .anyMatch(sp -> sp.getProducto().getIdProducto().equals(productoDTO.getIdProducto()));
-
-        if (productoYaEnSolicitud) {
-            throw new RuntimeException("El producto ya existe en esta solicitud. Use modificar cantidad en su lugar.");
-        }
-
-        // Validar cantidad mínima y máxima
+        validarProductoParaAgregar(solicitud, productoDTO.getIdProducto());
         validarCantidadProducto(solicitud.getPedido().getIdPedido(), productoDTO.getIdProducto(),
                 productoDTO.getCantidadSolicitada());
 
-        // Agregar el producto a la solicitud
-        SolicitudProducto sp = new SolicitudProducto();
-        sp.setSolicitud(solicitud);
-        sp.setProducto(producto);
-        sp.setCantidadSolicitada(productoDTO.getCantidadSolicitada());
-        sp.setPrecio(producto.getPrecioUnitario());
-
-        solicitud.getProductos().add(sp);
-
-        // Decrementar modificaciones restantes a nivel de solicitud
-        solicitud.setModificacionesRestantes(solicitud.getModificacionesRestantes() - 1);
+        agregarProducto(solicitud, producto, productoDTO.getCantidadSolicitada());
+        helper.decrementarModificaciones(solicitud);
 
         solicitudRepository.save(solicitud);
 
-        // Registrar log de agregación de producto
-        logService.registrarLog(solicitud.getCliente().getIdUsuario(),
-                "Producto agregado a solicitud - Solicitud ID: " + idSolicitud +
-                        ", Producto: " + producto.getNombreProducto() +
-                        ", Cantidad: " + productoDTO.getCantidadSolicitada() +
-                        ", Modificaciones restantes: " + solicitud.getModificacionesRestantes());
+        registrarAgregarProducto(solicitud, producto, productoDTO.getCantidadSolicitada());
 
         return mapToDTO(solicitud);
+    }
+
+    private void validarProductoParaAgregar(Solicitud solicitud, Integer idProducto) {
+        if (!helper.productoExisteEnPedido(solicitud, idProducto)) {
+            throw new SolicitudBusinessException(SolicitudConstants.ERROR_PRODUCTO_NO_EN_PEDIDO);
+        }
+        if (helper.productoExisteEnSolicitud(solicitud, idProducto)) {
+            throw new SolicitudBusinessException(SolicitudConstants.ERROR_PRODUCTO_YA_EN_SOLICITUD);
+        }
+    }
+
+    private void agregarProducto(Solicitud solicitud, Producto producto, Integer cantidad) {
+        SolicitudProducto sp = helper.crearSolicitudProducto(solicitud, producto, cantidad);
+        sp.setPrecio(producto.getPrecioUnitario());
+        solicitud.getProductos().add(sp);
+    }
+
+    private void registrarAgregarProducto(Solicitud solicitud, Producto producto, Integer cantidad) {
+        logService.registrarLog(solicitud.getCliente().getIdUsuario(), String.format(
+                SolicitudConstants.LOG_PRODUCTO_AGREGADO,
+                solicitud.getIdSolicitud(),
+                producto.getNombreProducto(),
+                cantidad,
+                solicitud.getModificacionesRestantes()));
     }
 
     @Override
     public SolicitudDTO eliminarProducto(Integer idSolicitud, Integer idProducto) {
         Solicitud solicitud = solicitudRepository.findById(idSolicitud)
-                .orElseThrow(() -> new RuntimeException("Solicitud no encontrada"));
+                .orElseThrow(() -> new SolicitudBusinessException(SolicitudConstants.ERROR_SOLICITUD_NO_ENCONTRADA));
 
-        // Validar que la solicitud esté en estado PDP
-        if (solicitud.getEstadoSolicitud() != EstadoSolicitudEnum.PDP) {
-            throw new RuntimeException(
-                    "Solo se pueden eliminar productos de solicitudes en estado Pendiente de Pago (PDP). " +
-                            "Estado actual: " + solicitud.getEstadoSolicitud());
-        }
+        validator.validarSolicitudModificable(solicitud);
+        validator.validarCantidadProductosParaEliminar(solicitud);
 
-        // Verificar ventana de modificación (5 días antes del cierre)
-        LocalDate fechaCierre = solicitud.getPedido().getFechaCierre();
-        if (fechaCierre != null) {
-            LocalDate fechaLimite = fechaCierre.minusDays(5);
-            if (LocalDate.now().isAfter(fechaLimite)) {
-                throw new RuntimeException("No se pueden eliminar productos 5 días antes del cierre del pedido");
-            }
-        }
-
-        // Verificar modificaciones restantes a nivel de solicitud
-        if (solicitud.getModificacionesRestantes() <= 0) {
-            throw new RuntimeException(
-                    "Se alcanzó el número máximo de modificaciones para esta solicitud (3 modificaciones)");
-        }
-
-        // Verificar que la solicitud tenga al menos 2 productos
-        if (solicitud.getProductos().size() <= 1) {
-            throw new RuntimeException(
-                    "No se puede eliminar el único producto de la solicitud. Cancele la solicitud en su lugar.");
-        }
-
-        // Buscar y eliminar el producto
-        SolicitudProducto sp = solicitud.getProductos().stream()
-                .filter(p -> p.getProducto().getIdProducto().equals(idProducto))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado en esta solicitud"));
-
+        SolicitudProducto sp = helper.buscarProductoEnSolicitud(solicitud, idProducto);
         String nombreProducto = sp.getProducto().getNombreProducto();
-        solicitud.getProductos().remove(sp);
 
-        // Decrementar modificaciones restantes a nivel de solicitud
-        solicitud.setModificacionesRestantes(solicitud.getModificacionesRestantes() - 1);
+        solicitud.getProductos().remove(sp);
+        helper.decrementarModificaciones(solicitud);
 
         solicitudRepository.save(solicitud);
 
-        // Registrar log de eliminación de producto
-        logService.registrarLog(solicitud.getCliente().getIdUsuario(),
-                "Producto eliminado de solicitud - Solicitud ID: " + idSolicitud +
-                        ", Producto: " + nombreProducto +
-                        ", Modificaciones restantes: " + solicitud.getModificacionesRestantes());
+        registrarEliminarProducto(solicitud, nombreProducto);
 
         return mapToDTO(solicitud);
+    }
+
+    private void registrarEliminarProducto(Solicitud solicitud, String nombreProducto) {
+        logService.registrarLog(solicitud.getCliente().getIdUsuario(), String.format(
+                SolicitudConstants.LOG_PRODUCTO_ELIMINADO,
+                solicitud.getIdSolicitud(),
+                nombreProducto,
+                solicitud.getModificacionesRestantes()));
     }
 
     @Override
     public SolicitudDTO modificarCantidadProducto(Integer idSolicitud, Integer idProducto, Integer nuevaCantidad) {
         Solicitud solicitud = solicitudRepository.findById(idSolicitud)
-                .orElseThrow(() -> new RuntimeException("Solicitud no encontrada"));
+                .orElseThrow(() -> new SolicitudBusinessException(SolicitudConstants.ERROR_SOLICITUD_NO_ENCONTRADA));
 
-        // Validar que la solicitud esté en estado PDP
-        if (solicitud.getEstadoSolicitud() != EstadoSolicitudEnum.PDP) {
-            throw new RuntimeException(
-                    "Solo se pueden modificar productos de solicitudes en estado Pendiente de Pago (PDP). " +
-                            "Estado actual: " + solicitud.getEstadoSolicitud());
-        }
+        validator.validarSolicitudModificable(solicitud);
 
-        // Verificar ventana de modificación (5 días antes del cierre)
-        LocalDate fechaCierre = solicitud.getPedido().getFechaCierre();
-        if (fechaCierre != null) {
-            LocalDate fechaLimite = fechaCierre.minusDays(5);
-            if (LocalDate.now().isAfter(fechaLimite)) {
-                throw new RuntimeException("No se pueden modificar productos 5 días antes del cierre del pedido");
-            }
-        }
-
-        // Verificar modificaciones restantes a nivel de solicitud
-        if (solicitud.getModificacionesRestantes() <= 0) {
-            throw new RuntimeException(
-                    "Se alcanzó el número máximo de modificaciones para esta solicitud (3 modificaciones)");
-        }
-
-        // Buscar el producto en la solicitud
-        SolicitudProducto sp = solicitud.getProductos().stream()
-                .filter(p -> p.getProducto().getIdProducto().equals(idProducto))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado en esta solicitud"));
-
-        // Validar cantidad mínima y máxima
+        SolicitudProducto sp = helper.buscarProductoEnSolicitud(solicitud, idProducto);
         validarCantidadProducto(solicitud.getPedido().getIdPedido(), idProducto, nuevaCantidad);
 
-        // Actualizar cantidad
         sp.setCantidadSolicitada(nuevaCantidad);
-
-        // Decrementar modificaciones restantes a nivel de solicitud
-        solicitud.setModificacionesRestantes(solicitud.getModificacionesRestantes() - 1);
+        helper.decrementarModificaciones(solicitud);
 
         solicitudRepository.save(solicitud);
 
@@ -378,28 +310,26 @@ public class SolicitudServiceImpl implements ISolicitudService {
     @Override
     public void cancelarSolicitud(Integer idSolicitud) {
         Solicitud solicitud = solicitudRepository.findById(idSolicitud)
-                .orElseThrow(() -> new RuntimeException("Solicitud no encontrada"));
+                .orElseThrow(() -> new SolicitudBusinessException(SolicitudConstants.ERROR_SOLICITUD_NO_ENCONTRADA));
 
-        // Validar que la solicitud esté en estado PDP (Pendiente de Pago)
-        if (solicitud.getEstadoSolicitud() != EstadoSolicitudEnum.PDP) {
-            throw new RuntimeException(
-                    "Solo se pueden cancelar solicitudes en estado Pendiente de Pago (PDP). " +
-                            "Estado actual: " + solicitud.getEstadoSolicitud());
-        }
+        validator.validarSolicitudEstadoPDP(solicitud);
 
         solicitud.setEstadoSolicitud(EstadoSolicitudEnum.CAN);
         solicitudRepository.save(solicitud);
 
-        // Registrar cancelación de solicitud en logs
+        registrarCancelacionSolicitud(solicitud);
+    }
+
+    private void registrarCancelacionSolicitud(Solicitud solicitud) {
         Integer clienteId = solicitud.getCliente().getIdUsuario();
-        logService.registrarLog(clienteId,
-                "Solicitud cancelada - ID: " + solicitud.getIdSolicitud() +
-                        ", Pedido ID: " + solicitud.getPedido().getIdPedido());
+        logService.registrarLog(clienteId, String.format(
+                SolicitudConstants.LOG_SOLICITUD_CANCELADA,
+                solicitud.getIdSolicitud(),
+                solicitud.getPedido().getIdPedido()));
     }
 
     @Override
     public void cancelarSolicitudesVencidas() {
-        // Buscar solicitudes cuyo pedido asociado tiene fecha_cierre vencida
         List<Solicitud> vencidas = solicitudRepository
                 .findByPedidoFechaCierreBeforeAndEstadoSolicitud(LocalDate.now(), EstadoSolicitudEnum.PDP);
         vencidas.forEach(s -> s.setEstadoSolicitud(EstadoSolicitudEnum.CAN));
@@ -409,44 +339,39 @@ public class SolicitudServiceImpl implements ISolicitudService {
     @Override
     public List<SolicitudDTO> listarSolicitudesCliente(Integer idCliente) {
         Usuario cliente = usuarioRepository.findById(idCliente)
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
+                .orElseThrow(() -> new SolicitudBusinessException(SolicitudConstants.ERROR_CLIENTE_NO_ENCONTRADO));
         return solicitudRepository.findByCliente(cliente)
-                .stream().map(this::mapToDTO).collect(Collectors.toList());
+                .stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
     }
 
     @Override
     public List<SolicitudDTO> listarSolicitudesPorCedula(String cedula) {
         List<Solicitud> solicitudes = solicitudRepository.findByCliente_Cedula(cedula);
 
-        // Ordenar por estado: PDP primero, luego PGD, finalmente CAN
         return solicitudes.stream()
-                .sorted((s1, s2) -> {
-                    int prioridad1 = obtenerPrioridadEstado(s1.getEstadoSolicitud());
-                    int prioridad2 = obtenerPrioridadEstado(s2.getEstadoSolicitud());
-                    return Integer.compare(prioridad1, prioridad2);
-                })
+                .sorted(this::compararPorPrioridad)
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<SolicitudDTO> listarSolicitudesPorCedulaYPedido(String cedula, String hashPedido) {
-        // Obtener el pedido mediante el hash
         PedidoDTO pedidoDTO = pedidoService.obtenerPedidoPorHash(hashPedido);
-
-        // Obtener todas las solicitudes del cliente para ese pedido específico
         List<Solicitud> solicitudes = solicitudRepository.findByCliente_Cedula(cedula);
 
-        // Filtrar solo las solicitudes del pedido específico y ordenar por estado
         return solicitudes.stream()
                 .filter(s -> s.getPedido().getIdPedido().equals(pedidoDTO.getIdPedido()))
-                .sorted((s1, s2) -> {
-                    int prioridad1 = obtenerPrioridadEstado(s1.getEstadoSolicitud());
-                    int prioridad2 = obtenerPrioridadEstado(s2.getEstadoSolicitud());
-                    return Integer.compare(prioridad1, prioridad2);
-                })
+                .sorted(this::compararPorPrioridad)
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
+    }
+
+    private int compararPorPrioridad(Solicitud s1, Solicitud s2) {
+        int prioridad1 = obtenerPrioridadEstado(s1.getEstadoSolicitud());
+        int prioridad2 = obtenerPrioridadEstado(s2.getEstadoSolicitud());
+        return Integer.compare(prioridad1, prioridad2);
     }
 
     /**
@@ -464,18 +389,26 @@ public class SolicitudServiceImpl implements ISolicitudService {
     @Override
     public void cambiarEstado(Integer idSolicitud, String nuevoEstado) {
         Solicitud solicitud = solicitudRepository.findById(idSolicitud)
-                .orElseThrow(() -> new RuntimeException("Solicitud no encontrada"));
+                .orElseThrow(() -> new SolicitudBusinessException(SolicitudConstants.ERROR_SOLICITUD_NO_ENCONTRADA));
 
-        // Validar estados permitidos
-        if (!nuevoEstado.equals("PGD") && !nuevoEstado.equals("CAN") && !nuevoEstado.equals("PDP")) {
-            throw new RuntimeException("Estado no válido. Solo se permite PGD, PDP o CAN");
-        }
+        validarEstadoPermitido(nuevoEstado);
 
         EstadoSolicitudEnum estadoNuevo = EstadoSolicitudEnum.valueOf(nuevoEstado);
         solicitud.setEstadoSolicitud(estadoNuevo);
         solicitudRepository.save(solicitud);
 
-        // Notificar al cliente si la solicitud fue marcada como pagada
+        notificarSiPagada(solicitud, estadoNuevo);
+    }
+
+    private void validarEstadoPermitido(String nuevoEstado) {
+        if (!nuevoEstado.equals(SolicitudConstants.ESTADO_PGD) &&
+                !nuevoEstado.equals(SolicitudConstants.ESTADO_CAN) &&
+                !nuevoEstado.equals(SolicitudConstants.ESTADO_PDP)) {
+            throw new SolicitudBusinessException(SolicitudConstants.ERROR_ESTADO_NO_VALIDO);
+        }
+    }
+
+    private void notificarSiPagada(Solicitud solicitud, EstadoSolicitudEnum estadoNuevo) {
         if (estadoNuevo == EstadoSolicitudEnum.PGD) {
             SolicitudDTO solicitudDTO = mapToDTO(solicitud);
             whatsAppService.notificarSolicitudPagada(solicitudDTO);
@@ -485,14 +418,18 @@ public class SolicitudServiceImpl implements ISolicitudService {
     @Override
     public List<SolicitudDTO> listarPorPedido(Integer idPedido) {
         return solicitudRepository.findByPedido_IdPedido(idPedido)
-                .stream().map(this::mapToDTO).collect(Collectors.toList());
+                .stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
     }
 
     @Override
     public List<SolicitudDTO> listarPorPedidoYEstado(Integer idPedido, String estado) {
         EstadoSolicitudEnum estadoEnum = EstadoSolicitudEnum.valueOf(estado);
         return solicitudRepository.findByPedido_IdPedidoAndEstadoSolicitud(idPedido, estadoEnum)
-                .stream().map(this::mapToDTO).collect(Collectors.toList());
+                .stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
     }
 
     private SolicitudDTO mapToDTO(Solicitud solicitud) {
@@ -503,19 +440,20 @@ public class SolicitudServiceImpl implements ISolicitudService {
         dto.setDireccionEntrega(solicitud.getDireccionEntrega());
         dto.setEstadoSolicitud(solicitud.getEstadoSolicitud().name());
         dto.setFechaSolicitud(solicitud.getFechaSolicitud());
-        // Incluir fechaLimitePago desde la fecha_cierre del pedido
         dto.setFechaLimitePago(solicitud.getPedido().getFechaCierre());
-        // Incluir modificaciones restantes a nivel de solicitud
         dto.setModificacionesRestantes(solicitud.getModificacionesRestantes());
-        dto.setProductos(solicitud.getProductos().stream().map(sp -> {
-            SolicitudProductoDTO spDTO = new SolicitudProductoDTO();
-            spDTO.setIdProducto(sp.getProducto().getIdProducto());
-            spDTO.setCantidadSolicitada(sp.getCantidadSolicitada());
-            // Calcular precio total: cantidad * precio unitario
-            spDTO.setPrecio(sp.getPrecio().multiply(java.math.BigDecimal.valueOf(sp.getCantidadSolicitada())));
-            return spDTO;
-        }).collect(Collectors.toList()));
+        dto.setProductos(solicitud.getProductos().stream()
+                .map(this::mapSolicitudProductoToDTO)
+                .collect(Collectors.toList()));
         return dto;
+    }
+
+    private SolicitudProductoDTO mapSolicitudProductoToDTO(SolicitudProducto sp) {
+        SolicitudProductoDTO spDTO = new SolicitudProductoDTO();
+        spDTO.setIdProducto(sp.getProducto().getIdProducto());
+        spDTO.setCantidadSolicitada(sp.getCantidadSolicitada());
+        spDTO.setPrecio(sp.getPrecio().multiply(java.math.BigDecimal.valueOf(sp.getCantidadSolicitada())));
+        return spDTO;
     }
 
     /**
@@ -525,19 +463,23 @@ public class SolicitudServiceImpl implements ISolicitudService {
     private void validarCantidadProducto(Integer idPedido, Integer idProducto, Integer cantidad) {
         ProductoPedido productoPedido = productoPedidoRepository
                 .findByPedidoAndProducto(idPedido, idProducto)
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado en el pedido"));
+                .orElseThrow(() -> new SolicitudBusinessException(SolicitudConstants.ERROR_PRODUCTO_NO_ENCONTRADO));
 
+        validarLimitesCantidad(cantidad, productoPedido);
+    }
+
+    private void validarLimitesCantidad(Integer cantidad, ProductoPedido productoPedido) {
         Integer cantidadMin = productoPedido.getCantidadMin();
         Integer cantidadMax = productoPedido.getCantidadMax();
 
         if (cantidad < cantidadMin) {
-            throw new RuntimeException(String.format(
+            throw new SolicitudBusinessException(String.format(
                     "La cantidad solicitada (%d) es menor a la cantidad mínima permitida (%d) para este producto",
                     cantidad, cantidadMin));
         }
 
         if (cantidadMax != null && cantidad > cantidadMax) {
-            throw new RuntimeException(String.format(
+            throw new SolicitudBusinessException(String.format(
                     "La cantidad solicitada (%d) excede la cantidad máxima permitida (%d) para este producto",
                     cantidad, cantidadMax));
         }

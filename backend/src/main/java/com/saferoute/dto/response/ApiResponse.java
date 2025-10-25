@@ -9,12 +9,6 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-/**
- * Clase genérica para respuestas API estandarizadas
- * Sigue el estándar JSend (https://github.com/omniti-labs/jsend)
- * 
- * @param <T> Tipo de datos a retornar
- */
 @Data
 @Builder
 @NoArgsConstructor

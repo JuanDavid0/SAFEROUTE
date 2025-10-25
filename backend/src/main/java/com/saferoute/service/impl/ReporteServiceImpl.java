@@ -1,11 +1,14 @@
 package com.saferoute.service.impl;
 
+import com.saferoute.constants.ReporteConstants;
 import com.saferoute.dto.reporte.*;
 import com.saferoute.model.*;
 import com.saferoute.model.enums.EstadoPedidoEnum;
 import com.saferoute.model.enums.EstadoSolicitudEnum;
 import com.saferoute.repository.*;
 import com.saferoute.service.IReporteService;
+import com.saferoute.service.helper.AgrupamientoReporteHelper;
+import com.saferoute.service.helper.CalculosFinancierosHelper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -14,11 +17,14 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Implementación del servicio de Reportes
+ * Refactorizado siguiendo principios SOLID y buenas prácticas
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -29,182 +35,219 @@ public class ReporteServiceImpl implements IReporteService {
     private final PedidoRepository pedidoRepository;
     private final ProductoRepository productoRepository;
     private final UsuarioRepository usuarioRepository;
+    private final CalculosFinancierosHelper calculosHelper;
+    private final AgrupamientoReporteHelper agrupamientoHelper;
 
     @Override
     public ReporteIngresosDTO generarReporteIngresos(LocalDate fechaInicio, LocalDate fechaFin, String agrupacion) {
-        log.info("📊 Generando reporte de ingresos desde {} hasta {} - Agrupación: {}",
-                fechaInicio, fechaFin, agrupacion);
+        log.info(ReporteConstants.LOG_GENERANDO_REPORTE_INGRESOS, fechaInicio, fechaFin, agrupacion);
 
-        // Obtener solicitudes pagadas en el rango
         List<Solicitud> solicitudesPagadas = solicitudRepository
                 .findSolicitudesPagadasEnRango(fechaInicio, fechaFin);
 
         if (solicitudesPagadas.isEmpty()) {
-            log.warn("⚠️ No se encontraron solicitudes pagadas en el rango especificado");
+            log.warn(ReporteConstants.LOG_SIN_SOLICITUDES);
             return crearReporteVacio(fechaInicio, fechaFin, agrupacion);
         }
 
-        // Calcular totales
+        BigDecimal[] totales = calcularTotalesFinancieros(solicitudesPagadas);
+        List<ReporteIngresosDTO.DatosPeriodo> datosPorPeriodo = agrupamientoHelper.agruparPorPeriodo(solicitudesPagadas,
+                agrupacion);
+
+        ReporteIngresosDTO reporte = construirReporteIngresos(
+                fechaInicio, fechaFin, agrupacion, totales, solicitudesPagadas.size(), datosPorPeriodo);
+
+        log.info(ReporteConstants.LOG_REPORTE_GENERADO,
+                solicitudesPagadas.size(), totales[0], totales[2]);
+
+        return reporte;
+    }
+
+    private BigDecimal[] calcularTotalesFinancieros(List<Solicitud> solicitudes) {
         BigDecimal totalIngresos = BigDecimal.ZERO;
         BigDecimal totalCostos = BigDecimal.ZERO;
 
-        for (Solicitud solicitud : solicitudesPagadas) {
-            for (SolicitudProducto sp : solicitud.getProductos()) {
-                BigDecimal cantidad = new BigDecimal(sp.getCantidadSolicitada());
-
-                // Ingresos = precio * cantidad
-                BigDecimal ingresos = sp.getPrecio().multiply(cantidad);
-                totalIngresos = totalIngresos.add(ingresos);
-
-                // Buscar costo del producto en el pedido
-                // Nota: ProductoPedido no tiene costoUnitario, se obtiene de Producto
-                BigDecimal costos = sp.getProducto().getCostoUnitario().multiply(cantidad);
-                totalCostos = totalCostos.add(costos);
-            }
+        for (Solicitud solicitud : solicitudes) {
+            totalIngresos = totalIngresos.add(calculosHelper.calcularIngresosSolicitud(solicitud));
+            totalCostos = totalCostos.add(calculosHelper.calcularCostosSolicitud(solicitud));
         }
 
         BigDecimal gananciaNeta = totalIngresos.subtract(totalCostos);
+        return new BigDecimal[] { totalIngresos, totalCostos, gananciaNeta };
+    }
 
-        // Agrupar por periodo
-        List<ReporteIngresosDTO.DatosPeriodo> datosPorPeriodo = agruparPorPeriodo(solicitudesPagadas, agrupacion);
-
+    private ReporteIngresosDTO construirReporteIngresos(LocalDate fechaInicio, LocalDate fechaFin,
+            String agrupacion, BigDecimal[] totales,
+            int cantidadSolicitudes,
+            List<ReporteIngresosDTO.DatosPeriodo> datosPorPeriodo) {
         ReporteIngresosDTO reporte = new ReporteIngresosDTO();
         reporte.setFechaInicio(fechaInicio);
         reporte.setFechaFin(fechaFin);
         reporte.setAgrupacion(agrupacion);
-        reporte.setTotalIngresos(totalIngresos);
-        reporte.setTotalCostos(totalCostos);
-        reporte.setGananciaNeta(gananciaNeta);
-        reporte.setTotalSolicitudesPagadas(solicitudesPagadas.size());
+        reporte.setTotalIngresos(totales[0]);
+        reporte.setTotalCostos(totales[1]);
+        reporte.setGananciaNeta(totales[2]);
+        reporte.setTotalSolicitudesPagadas(cantidadSolicitudes);
         reporte.setDatosPorPeriodo(datosPorPeriodo);
-
-        log.info("✅ Reporte generado: {} solicitudes, Ingresos: {}, Ganancia: {}",
-                solicitudesPagadas.size(), totalIngresos, gananciaNeta);
-
         return reporte;
     }
 
     @Override
     public List<ProductoVendidoDTO> obtenerProductosMasVendidos(Integer limite) {
-        log.info("📦 Obteniendo top {} productos más vendidos", limite);
+        int limiteReal = limite != null ? limite : ReporteConstants.LIMITE_DEFAULT_PRODUCTOS;
+        log.info(ReporteConstants.LOG_PRODUCTOS_MAS_VENDIDOS, limiteReal);
 
         List<Solicitud> solicitudesPagadas = solicitudRepository
                 .findByEstadoSolicitud(EstadoSolicitudEnum.PGD);
 
+        Map<Integer, ProductoVendidoDTO> productosMap = construirMapaProductos(solicitudesPagadas);
+        calcularGananciasProductos(productosMap);
+
+        List<ProductoVendidoDTO> resultado = productosMap.values().stream()
+                .sorted(Comparator.comparing(ProductoVendidoDTO::getCantidadTotalVendida).reversed())
+                .limit(limiteReal)
+                .collect(Collectors.toList());
+
+        log.info(ReporteConstants.LOG_RESULTADO_GENERADO,
+                String.format("Top %d productos más vendidos", resultado.size()));
+        return resultado;
+    }
+
+    private Map<Integer, ProductoVendidoDTO> construirMapaProductos(List<Solicitud> solicitudesPagadas) {
         Map<Integer, ProductoVendidoDTO> productosMap = new HashMap<>();
 
         for (Solicitud solicitud : solicitudesPagadas) {
             for (SolicitudProducto sp : solicitud.getProductos()) {
                 Integer idProducto = sp.getProducto().getIdProducto();
+                ProductoVendidoDTO dto = productosMap.computeIfAbsent(
+                        idProducto, k -> crearProductoVendidoDTO(sp));
 
-                ProductoVendidoDTO dto = productosMap.computeIfAbsent(idProducto, k -> {
-                    ProductoVendidoDTO nuevo = new ProductoVendidoDTO();
-                    nuevo.setIdProducto(idProducto);
-                    nuevo.setNombreProducto(sp.getProducto().getNombreProducto());
-                    nuevo.setDescripcion(sp.getProducto().getDescripcionProducto());
-                    nuevo.setCategoria(sp.getProducto().getTipoProducto()); // Categoría = Tipo
-                    nuevo.setCantidadTotalVendida(0);
-                    nuevo.setIngresosGenerados(BigDecimal.ZERO);
-                    nuevo.setCostosAsociados(BigDecimal.ZERO);
-                    nuevo.setNumeroPedidos(0);
-                    return nuevo;
-                });
-
-                // Acumular cantidades e ingresos
-                dto.setCantidadTotalVendida(dto.getCantidadTotalVendida() + sp.getCantidadSolicitada());
-
-                BigDecimal ingresos = sp.getPrecio()
-                        .multiply(new BigDecimal(sp.getCantidadSolicitada()));
-                dto.setIngresosGenerados(dto.getIngresosGenerados().add(ingresos));
-
-                // Calcular costos (de Producto directamente)
-                BigDecimal costos = sp.getProducto().getCostoUnitario()
-                        .multiply(new BigDecimal(sp.getCantidadSolicitada()));
-                dto.setCostosAsociados(dto.getCostosAsociados().add(costos));
+                acumularDatosProducto(dto, sp);
             }
         }
 
-        // Calcular ganancia neta
+        return productosMap;
+    }
+
+    private ProductoVendidoDTO crearProductoVendidoDTO(SolicitudProducto sp) {
+        ProductoVendidoDTO dto = new ProductoVendidoDTO();
+        dto.setIdProducto(sp.getProducto().getIdProducto());
+        dto.setNombreProducto(sp.getProducto().getNombreProducto());
+        dto.setDescripcion(sp.getProducto().getDescripcionProducto());
+        dto.setCategoria(sp.getProducto().getTipoProducto());
+        dto.setCantidadTotalVendida(0);
+        dto.setIngresosGenerados(BigDecimal.ZERO);
+        dto.setCostosAsociados(BigDecimal.ZERO);
+        dto.setNumeroPedidos(0);
+        return dto;
+    }
+
+    private void acumularDatosProducto(ProductoVendidoDTO dto, SolicitudProducto sp) {
+        dto.setCantidadTotalVendida(dto.getCantidadTotalVendida() + sp.getCantidadSolicitada());
+
+        BigDecimal ingresos = calculosHelper.calcularMontoProducto(sp);
+        dto.setIngresosGenerados(dto.getIngresosGenerados().add(ingresos));
+
+        BigDecimal costos = calculosHelper.calcularCostoProducto(sp);
+        dto.setCostosAsociados(dto.getCostosAsociados().add(costos));
+    }
+
+    private void calcularGananciasProductos(Map<Integer, ProductoVendidoDTO> productosMap) {
         productosMap.values().forEach(dto -> {
             BigDecimal ganancia = dto.getIngresosGenerados().subtract(dto.getCostosAsociados());
             dto.setGananciaNeta(ganancia);
         });
-
-        // Ordenar por cantidad vendida y limitar
-        List<ProductoVendidoDTO> resultado = productosMap.values().stream()
-                .sorted(Comparator.comparing(ProductoVendidoDTO::getCantidadTotalVendida).reversed())
-                .limit(limite != null ? limite : 10)
-                .collect(Collectors.toList());
-
-        log.info("✅ Top {} productos más vendidos obtenidos", resultado.size());
-        return resultado;
     }
 
     @Override
     public List<ProductoVendidoDTO> obtenerProductosMayorGanancia(Integer limite) {
-        log.info("💰 Obteniendo top {} productos con mayor ganancia", limite);
+        int limiteReal = limite != null ? limite : ReporteConstants.LIMITE_DEFAULT_PRODUCTOS;
+        log.info(ReporteConstants.LOG_PRODUCTOS_MAYOR_GANANCIA, limiteReal);
 
-        // Reutilizamos la lógica de productos más vendidos
         List<ProductoVendidoDTO> todosProductos = obtenerProductosMasVendidos(Integer.MAX_VALUE);
 
-        // Ordenar por ganancia neta
         List<ProductoVendidoDTO> resultado = todosProductos.stream()
                 .sorted(Comparator.comparing(ProductoVendidoDTO::getGananciaNeta).reversed())
-                .limit(limite != null ? limite : 10)
+                .limit(limiteReal)
                 .collect(Collectors.toList());
 
-        log.info("✅ Top {} productos con mayor ganancia obtenidos", resultado.size());
+        log.info(ReporteConstants.LOG_RESULTADO_GENERADO,
+                String.format("Top %d productos con mayor ganancia", resultado.size()));
         return resultado;
     }
 
     @Override
     public List<ClienteFrecuenteDTO> obtenerClientesFrecuentes(Integer limite) {
-        log.info("👥 Obteniendo top {} clientes frecuentes", limite);
+        int limiteReal = limite != null ? limite : ReporteConstants.LIMITE_DEFAULT_CLIENTES;
+        log.info(ReporteConstants.LOG_CLIENTES_FRECUENTES, limiteReal);
 
         List<Solicitud> todasSolicitudes = solicitudRepository.findAll();
+        Map<String, ClienteFrecuenteDTO> clientesMap = construirMapaClientes(todasSolicitudes);
+        calcularPromediosClientes(clientesMap);
+
+        List<ClienteFrecuenteDTO> resultado = clientesMap.values().stream()
+                .sorted(Comparator.comparing(ClienteFrecuenteDTO::getTotalSolicitudes).reversed())
+                .limit(limiteReal)
+                .collect(Collectors.toList());
+
+        log.info(ReporteConstants.LOG_RESULTADO_GENERADO,
+                String.format("Top %d clientes frecuentes", resultado.size()));
+        return resultado;
+    }
+
+    private Map<String, ClienteFrecuenteDTO> construirMapaClientes(List<Solicitud> todasSolicitudes) {
         Map<String, ClienteFrecuenteDTO> clientesMap = new HashMap<>();
 
         for (Solicitud solicitud : todasSolicitudes) {
             Usuario cliente = solicitud.getCliente();
             String cedula = cliente.getCedula();
 
-            ClienteFrecuenteDTO dto = clientesMap.computeIfAbsent(cedula, k -> {
-                ClienteFrecuenteDTO nuevo = new ClienteFrecuenteDTO();
-                nuevo.setCedula(cedula);
-                nuevo.setNombreCompleto(cliente.getNombres() + " " + cliente.getApellidos());
-                nuevo.setEmail(cliente.getTelefono()); // Email no existe, usamos teléfono
-                nuevo.setTelefono(cliente.getTelefono());
-                nuevo.setTotalSolicitudes(0);
-                nuevo.setSolicitudesPagadas(0);
-                nuevo.setMontoTotalGastado(BigDecimal.ZERO);
-                nuevo.setPrimeraCompra(null);
-                nuevo.setUltimaCompra(null);
-                return nuevo;
-            });
+            ClienteFrecuenteDTO dto = clientesMap.computeIfAbsent(
+                    cedula, k -> crearClienteFrecuenteDTO(cliente));
 
-            // Incrementar contador
-            dto.setTotalSolicitudes(dto.getTotalSolicitudes() + 1);
-
-            // Actualizar fechas
-            if (dto.getPrimeraCompra() == null ||
-                    solicitud.getFechaSolicitud().isBefore(dto.getPrimeraCompra())) {
-                dto.setPrimeraCompra(solicitud.getFechaSolicitud());
-            }
-            if (dto.getUltimaCompra() == null ||
-                    solicitud.getFechaSolicitud().isAfter(dto.getUltimaCompra())) {
-                dto.setUltimaCompra(solicitud.getFechaSolicitud());
-            }
-
-            // Si está pagada, sumar al monto
-            if (solicitud.getEstadoSolicitud() == EstadoSolicitudEnum.PGD) {
-                dto.setSolicitudesPagadas(dto.getSolicitudesPagadas() + 1);
-
-                BigDecimal montoSolicitud = calcularMontoSolicitud(solicitud);
-                dto.setMontoTotalGastado(dto.getMontoTotalGastado().add(montoSolicitud));
-            }
+            actualizarDatosCliente(dto, solicitud);
         }
 
-        // Calcular promedio de gasto
+        return clientesMap;
+    }
+
+    private ClienteFrecuenteDTO crearClienteFrecuenteDTO(Usuario cliente) {
+        ClienteFrecuenteDTO dto = new ClienteFrecuenteDTO();
+        dto.setCedula(cliente.getCedula());
+        dto.setNombreCompleto(cliente.getNombres() + " " + cliente.getApellidos());
+        dto.setEmail(cliente.getTelefono());
+        dto.setTelefono(cliente.getTelefono());
+        dto.setTotalSolicitudes(0);
+        dto.setSolicitudesPagadas(0);
+        dto.setMontoTotalGastado(BigDecimal.ZERO);
+        dto.setPrimeraCompra(null);
+        dto.setUltimaCompra(null);
+        return dto;
+    }
+
+    private void actualizarDatosCliente(ClienteFrecuenteDTO dto, Solicitud solicitud) {
+        dto.setTotalSolicitudes(dto.getTotalSolicitudes() + 1);
+        actualizarFechasCliente(dto, solicitud);
+
+        if (solicitud.getEstadoSolicitud() == EstadoSolicitudEnum.PGD) {
+            dto.setSolicitudesPagadas(dto.getSolicitudesPagadas() + 1);
+            BigDecimal montoSolicitud = calculosHelper.calcularMontoSolicitud(solicitud);
+            dto.setMontoTotalGastado(dto.getMontoTotalGastado().add(montoSolicitud));
+        }
+    }
+
+    private void actualizarFechasCliente(ClienteFrecuenteDTO dto, Solicitud solicitud) {
+        if (dto.getPrimeraCompra() == null ||
+                solicitud.getFechaSolicitud().isBefore(dto.getPrimeraCompra())) {
+            dto.setPrimeraCompra(solicitud.getFechaSolicitud());
+        }
+        if (dto.getUltimaCompra() == null ||
+                solicitud.getFechaSolicitud().isAfter(dto.getUltimaCompra())) {
+            dto.setUltimaCompra(solicitud.getFechaSolicitud());
+        }
+    }
+
+    private void calcularPromediosClientes(Map<String, ClienteFrecuenteDTO> clientesMap) {
         clientesMap.values().forEach(dto -> {
             if (dto.getSolicitudesPagadas() > 0) {
                 BigDecimal promedio = dto.getMontoTotalGastado()
@@ -214,90 +257,98 @@ public class ReporteServiceImpl implements IReporteService {
                 dto.setPromedioGastoPorSolicitud(BigDecimal.ZERO);
             }
         });
-
-        // Ordenar por total de solicitudes y limitar
-        List<ClienteFrecuenteDTO> resultado = clientesMap.values().stream()
-                .sorted(Comparator.comparing(ClienteFrecuenteDTO::getTotalSolicitudes).reversed())
-                .limit(limite != null ? limite : 20)
-                .collect(Collectors.toList());
-
-        log.info("✅ Top {} clientes frecuentes obtenidos", resultado.size());
-        return resultado;
     }
 
     @Override
     public List<PedidoEnCursoDTO> obtenerPedidosEnCurso() {
-        log.info("🚚 Obteniendo pedidos en curso");
+        log.info(ReporteConstants.LOG_PEDIDOS_EN_CURSO);
 
         List<Pedido> pedidosEnCurso = pedidoRepository.findPedidosEnCurso();
-        List<PedidoEnCursoDTO> resultado = new ArrayList<>();
+        List<PedidoEnCursoDTO> resultado = pedidosEnCurso.stream()
+                .map(this::construirPedidoEnCursoDTO)
+                .collect(Collectors.toList());
 
-        for (Pedido pedido : pedidosEnCurso) {
-            PedidoEnCursoDTO dto = new PedidoEnCursoDTO();
-            dto.setIdPedido(pedido.getIdPedido());
-            dto.setEstadoPedido(pedido.getEstadoPedido().name());
-            dto.setEstadoPedidoTraducido(traducirEstadoPedido(pedido.getEstadoPedido()));
-            dto.setFechaCreacion(pedido.getFechaCreado()); // fechaCreado, no fechaCreacion
-            dto.setFechaCierre(pedido.getFechaCierre());
+        log.info(ReporteConstants.LOG_PEDIDOS_EN_CURSO_COUNT, resultado.size());
+        return resultado;
+    }
 
-            // Calcular días transcurridos
-            long diasTranscurridos = ChronoUnit.DAYS.between(
-                    pedido.getFechaCreado(), LocalDate.now());
-            dto.setDiasTranscurridos((int) diasTranscurridos);
+    private PedidoEnCursoDTO construirPedidoEnCursoDTO(Pedido pedido) {
+        PedidoEnCursoDTO dto = new PedidoEnCursoDTO();
+        establecerDatosBasicosPedido(dto, pedido);
 
-            // Obtener solicitudes del pedido
-            List<Solicitud> solicitudes = solicitudRepository
-                    .findByPedido_IdPedido(pedido.getIdPedido());
+        List<Solicitud> solicitudes = solicitudRepository.findByPedido_IdPedido(pedido.getIdPedido());
+        establecerEstadisticasSolicitudes(dto, solicitudes);
+        calcularMontosPedido(dto, solicitudes);
+        calcularProgresoPedido(dto, solicitudes);
 
-            dto.setTotalSolicitudes(solicitudes.size());
+        return dto;
+    }
 
-            // Contar por estado
-            long pendientes = solicitudes.stream()
-                    .filter(s -> s.getEstadoSolicitud() == EstadoSolicitudEnum.PDP)
-                    .count();
-            long confirmadas = 0; // No existe CFM en el enum actual
-            long pagadas = solicitudes.stream()
-                    .filter(s -> s.getEstadoSolicitud() == EstadoSolicitudEnum.PGD)
-                    .count();
+    private void establecerDatosBasicosPedido(PedidoEnCursoDTO dto, Pedido pedido) {
+        dto.setIdPedido(pedido.getIdPedido());
+        dto.setEstadoPedido(pedido.getEstadoPedido().name());
+        dto.setEstadoPedidoTraducido(ReporteConstants.traducirEstadoPedido(pedido.getEstadoPedido()));
+        dto.setFechaCreacion(pedido.getFechaCreado());
+        dto.setFechaCierre(pedido.getFechaCierre());
 
-            dto.setSolicitudesPendientes((int) pendientes);
-            dto.setSolicitudesConfirmadas((int) confirmadas);
-            dto.setSolicitudesPagadas((int) pagadas);
+        long diasTranscurridos = ChronoUnit.DAYS.between(pedido.getFechaCreado(), LocalDate.now());
+        dto.setDiasTranscurridos((int) diasTranscurridos);
+    }
 
-            // Calcular montos
-            BigDecimal montoTotal = BigDecimal.ZERO;
-            BigDecimal montoPagado = BigDecimal.ZERO;
+    private void establecerEstadisticasSolicitudes(PedidoEnCursoDTO dto, List<Solicitud> solicitudes) {
+        dto.setTotalSolicitudes(solicitudes.size());
 
-            for (Solicitud solicitud : solicitudes) {
-                BigDecimal monto = calcularMontoSolicitud(solicitud);
-                montoTotal = montoTotal.add(monto);
+        long pendientes = solicitudes.stream()
+                .filter(s -> s.getEstadoSolicitud() == EstadoSolicitudEnum.PDP)
+                .count();
+        long pagadas = solicitudes.stream()
+                .filter(s -> s.getEstadoSolicitud() == EstadoSolicitudEnum.PGD)
+                .count();
 
-                if (solicitud.getEstadoSolicitud() == EstadoSolicitudEnum.PGD) {
-                    montoPagado = montoPagado.add(monto);
-                }
+        dto.setSolicitudesPendientes((int) pendientes);
+        dto.setSolicitudesConfirmadas(0);
+        dto.setSolicitudesPagadas((int) pagadas);
+    }
+
+    private void calcularMontosPedido(PedidoEnCursoDTO dto, List<Solicitud> solicitudes) {
+        BigDecimal montoTotal = BigDecimal.ZERO;
+        BigDecimal montoPagado = BigDecimal.ZERO;
+
+        for (Solicitud solicitud : solicitudes) {
+            BigDecimal monto = calculosHelper.calcularMontoSolicitud(solicitud);
+            montoTotal = montoTotal.add(monto);
+
+            if (solicitud.getEstadoSolicitud() == EstadoSolicitudEnum.PGD) {
+                montoPagado = montoPagado.add(monto);
             }
-
-            dto.setMontoTotalEstimado(montoTotal);
-            dto.setMontoPagado(montoPagado);
-
-            // Calcular progreso (basado en solicitudes pagadas)
-            int progreso = solicitudes.isEmpty() ? 0 : (int) ((pagadas * 100) / solicitudes.size());
-            dto.setProgresoPercent(progreso);
-
-            resultado.add(dto);
         }
 
-        log.info("✅ {} pedidos en curso obtenidos", resultado.size());
-        return resultado;
+        dto.setMontoTotalEstimado(montoTotal);
+        dto.setMontoPagado(montoPagado);
+    }
+
+    private void calcularProgresoPedido(PedidoEnCursoDTO dto, List<Solicitud> solicitudes) {
+        int progreso = solicitudes.isEmpty() ? 0 : (int) ((dto.getSolicitudesPagadas() * 100) / solicitudes.size());
+        dto.setProgresoPercent(progreso);
     }
 
     @Override
     public ResumenEstadisticasDTO obtenerResumenEstadisticas() {
-        log.info("📈 Generando resumen de estadísticas generales");
+        log.info(ReporteConstants.LOG_RESUMEN_ESTADISTICAS);
 
         ResumenEstadisticasDTO resumen = new ResumenEstadisticasDTO();
 
-        // Estadísticas de Pedidos
+        establecerEstadisticasPedidos(resumen);
+        establecerEstadisticasSolicitudes(resumen);
+        calcularEstadisticasFinancieras(resumen);
+        establecerEstadisticasClientes(resumen);
+        establecerEstadisticasProductos(resumen);
+
+        log.info(ReporteConstants.LOG_RESULTADO_GENERADO);
+        return resumen;
+    }
+
+    private void establecerEstadisticasPedidos(ResumenEstadisticasDTO resumen) {
         resumen.setTotalPedidos(Math.toIntExact(pedidoRepository.count()));
         resumen.setPedidosActivos(
                 Math.toIntExact(pedidoRepository.countByEstadoPedido(EstadoPedidoEnum.ACT)));
@@ -309,18 +360,20 @@ public class ReporteServiceImpl implements IReporteService {
         resumen.setPedidosCancelados(
                 Math.toIntExact(pedidoRepository.countByEstadoPedido(EstadoPedidoEnum.CRM) +
                         pedidoRepository.countByEstadoPedido(EstadoPedidoEnum.CRA)));
+    }
 
-        // Estadísticas de Solicitudes
+    private void establecerEstadisticasSolicitudes(ResumenEstadisticasDTO resumen) {
         resumen.setTotalSolicitudes(Math.toIntExact(solicitudRepository.count()));
         resumen.setSolicitudesPendientes(
                 Math.toIntExact(solicitudRepository.countByEstadoSolicitud(EstadoSolicitudEnum.PDP)));
-        resumen.setSolicitudesConfirmadas(0); // No existe CFM
+        resumen.setSolicitudesConfirmadas(0);
         resumen.setSolicitudesPagadas(
                 Math.toIntExact(solicitudRepository.countByEstadoSolicitud(EstadoSolicitudEnum.PGD)));
         resumen.setSolicitudesRechazadas(
                 Math.toIntExact(solicitudRepository.countByEstadoSolicitud(EstadoSolicitudEnum.CAN)));
+    }
 
-        // Estadísticas Financieras (solo solicitudes pagadas)
+    private void calcularEstadisticasFinancieras(ResumenEstadisticasDTO resumen) {
         List<Solicitud> solicitudesPagadas = solicitudRepository
                 .findByEstadoSolicitud(EstadoSolicitudEnum.PGD);
 
@@ -328,41 +381,41 @@ public class ReporteServiceImpl implements IReporteService {
         BigDecimal costosTotales = BigDecimal.ZERO;
 
         for (Solicitud solicitud : solicitudesPagadas) {
-            for (SolicitudProducto sp : solicitud.getProductos()) {
-                BigDecimal cantidad = new BigDecimal(sp.getCantidadSolicitada());
-                BigDecimal ingresos = sp.getPrecio().multiply(cantidad);
-                ingresosTotales = ingresosTotales.add(ingresos);
+            BigDecimal ingresos = calculosHelper.calcularIngresosSolicitud(solicitud);
+            BigDecimal costos = calculosHelper.calcularCostosSolicitud(solicitud);
 
-                // Costos desde Producto directamente
-                BigDecimal costos = sp.getProducto().getCostoUnitario().multiply(cantidad);
-                costosTotales = costosTotales.add(costos);
-            }
+            ingresosTotales = ingresosTotales.add(ingresos);
+            costosTotales = costosTotales.add(costos);
         }
 
         resumen.setIngresosTotales(ingresosTotales);
         resumen.setCostosTotales(costosTotales);
         resumen.setGananciaNeta(ingresosTotales.subtract(costosTotales));
+    }
 
-        // Estadísticas de Clientes
+    private void establecerEstadisticasClientes(ResumenEstadisticasDTO resumen) {
         resumen.setTotalClientes(Math.toIntExact(usuarioRepository.count()));
         resumen.setClientesActivos(Math.toIntExact(solicitudRepository.countClientesConSolicitudes()));
+    }
 
-        // Estadísticas de Productos
+    private void establecerEstadisticasProductos(ResumenEstadisticasDTO resumen) {
         resumen.setTotalProductos(Math.toIntExact(productoRepository.count()));
 
-        // Productos activos = productos en pedidos ACT
+        Set<Integer> productosActivos = obtenerProductosActivosDePedidos();
+        resumen.setProductosActivos(productosActivos.size());
+    }
+
+    private Set<Integer> obtenerProductosActivosDePedidos() {
         Set<Integer> productosActivos = new HashSet<>();
-        List<Pedido> pedidosActivos = pedidoRepository
-                .findByEstadoPedido(EstadoPedidoEnum.ACT);
+        List<Pedido> pedidosActivos = pedidoRepository.findByEstadoPedido(EstadoPedidoEnum.ACT);
+
         for (Pedido pedido : pedidosActivos) {
             for (ProductoPedido pp : pedido.getProductos()) {
                 productosActivos.add(pp.getProducto().getIdProducto());
             }
         }
-        resumen.setProductosActivos(productosActivos.size());
 
-        log.info("✅ Resumen de estadísticas generado exitosamente");
-        return resumen;
+        return productosActivos;
     }
 
     // ==================== MÉTODOS AUXILIARES ====================
@@ -378,72 +431,5 @@ public class ReporteServiceImpl implements IReporteService {
         reporte.setTotalSolicitudesPagadas(0);
         reporte.setDatosPorPeriodo(new ArrayList<>());
         return reporte;
-    }
-
-    private List<ReporteIngresosDTO.DatosPeriodo> agruparPorPeriodo(
-            List<Solicitud> solicitudes, String agrupacion) {
-
-        Map<String, ReporteIngresosDTO.DatosPeriodo> periodosMap = new TreeMap<>();
-
-        for (Solicitud solicitud : solicitudes) {
-            String periodo;
-
-            if (agrupacion.equals("TRIMESTRAL")) {
-                // Formato: yyyy-Q1, yyyy-Q2, yyyy-Q3, yyyy-Q4
-                int year = solicitud.getFechaSolicitud().getYear();
-                int month = solicitud.getFechaSolicitud().getMonthValue();
-                int trimestre = ((month - 1) / 3) + 1;
-                periodo = year + "-Q" + trimestre;
-            } else {
-                // Formato anual: yyyy
-                periodo = String.valueOf(solicitud.getFechaSolicitud().getYear());
-            }
-
-            ReporteIngresosDTO.DatosPeriodo datos = periodosMap.computeIfAbsent(periodo, k -> {
-                ReporteIngresosDTO.DatosPeriodo nuevo = new ReporteIngresosDTO.DatosPeriodo();
-                nuevo.setPeriodo(periodo);
-                nuevo.setIngresos(BigDecimal.ZERO);
-                nuevo.setCostos(BigDecimal.ZERO);
-                nuevo.setGanancia(BigDecimal.ZERO);
-                nuevo.setCantidadSolicitudes(0);
-                return nuevo;
-            });
-
-            datos.setCantidadSolicitudes(datos.getCantidadSolicitudes() + 1);
-
-            for (SolicitudProducto sp : solicitud.getProductos()) {
-                BigDecimal cantidad = new BigDecimal(sp.getCantidadSolicitada());
-                BigDecimal ingresos = sp.getPrecio().multiply(cantidad);
-                datos.setIngresos(datos.getIngresos().add(ingresos));
-
-                // Costos desde Producto directamente
-                BigDecimal costos = sp.getProducto().getCostoUnitario().multiply(cantidad);
-                datos.setCostos(datos.getCostos().add(costos));
-            }
-
-            datos.setGanancia(datos.getIngresos().subtract(datos.getCostos()));
-        }
-
-        return new ArrayList<>(periodosMap.values());
-    }
-
-    private BigDecimal calcularMontoSolicitud(Solicitud solicitud) {
-        return solicitud.getProductos().stream()
-                .map(sp -> sp.getPrecio().multiply(new BigDecimal(sp.getCantidadSolicitada())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    private String traducirEstadoPedido(EstadoPedidoEnum estado) {
-        return switch (estado) {
-            case CRT -> "Creado";
-            case ACT -> "Activo";
-            case RTA -> "En Ruta";
-            case ADU -> "En Aduanas";
-            case ENT -> "Entregado";
-            case CRM -> "Cancelado por Manager";
-            case CRA -> "Cancelado por Admin";
-            case PRD -> "Perdido";
-            case RCP -> "Recuperado";
-        };
     }
 }

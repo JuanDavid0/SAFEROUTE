@@ -16,7 +16,6 @@ public interface SolicitudRepository extends JpaRepository<Solicitud, Integer> {
 
         List<Solicitud> findByPedido(Pedido pedido);
 
-        // Queries con JOIN FETCH para Excel (cargar productos de forma eager)
         @Query("SELECT DISTINCT s FROM Solicitud s LEFT JOIN FETCH s.productos sp LEFT JOIN FETCH sp.producto WHERE s.cliente = :cliente")
         List<Solicitud> findByClienteWithProductos(@Param("cliente") Usuario cliente);
 

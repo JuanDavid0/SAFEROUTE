@@ -6,7 +6,7 @@ import java.util.List;
 public class SolicitudDTO {
     private Integer idSolicitud;
     private Integer idCliente;
-    private String nombreCliente; // Nuevo: nombre completo del cliente
+    private String nombreCliente;
     private Integer idPedido;
     private String estadoSolicitud;
     private String direccionEntrega;

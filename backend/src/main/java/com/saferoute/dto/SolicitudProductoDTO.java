@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 
 public class SolicitudProductoDTO {
     private Integer idProducto;
-    private String nombreProducto; // Nuevo: nombre del producto para histórico
+    private String nombreProducto;
     private Integer cantidadSolicitada;
     private BigDecimal precio;
 

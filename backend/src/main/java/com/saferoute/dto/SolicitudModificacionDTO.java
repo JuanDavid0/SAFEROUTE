@@ -3,13 +3,12 @@ package com.saferoute.dto;
 import java.util.List;
 
 public class SolicitudModificacionDTO {
-    private String direccionEntrega; // Nuevo nombre más claro
-    private String nuevaDireccion; // Mantener compatibilidad
-    private Integer nuevaCantidad; // Para compatibilidad con solicitudes de 1 producto
-    private List<ProductoModificacionDTO> productos; // Para múltiples productos
+    private String direccionEntrega;
+    private String nuevaDireccion;
+    private Integer nuevaCantidad;
+    private List<ProductoModificacionDTO> productos;
 
     public String getDireccionEntrega() {
-        // Priorizar direccionEntrega, sino usar nuevaDireccion
         return direccionEntrega != null ? direccionEntrega : nuevaDireccion;
     }
 

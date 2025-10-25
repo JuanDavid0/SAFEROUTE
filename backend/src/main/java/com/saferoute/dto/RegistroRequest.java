@@ -27,8 +27,6 @@ public class RegistroRequest {
     @Size(max = 150, message = "La dirección no puede exceder 150 caracteres")
     private String direccion;
 
-    // Contraseña opcional - solo requerida para admins, no para clientes en
-    // solicitudes
     @Size(min = 6, max = 50, message = "La contraseña debe tener entre 6 y 50 caracteres")
     private String contrasenia;
 

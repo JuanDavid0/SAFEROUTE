@@ -26,38 +26,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class EtiquetaDTO {
 
-    /**
-     * ID de la solicitud asociada a esta etiqueta
-     */
     private Integer idSolicitud;
-
-    /**
-     * ID del pedido
-     */
     private Integer idPedido;
-
-    /**
-     * Nombre completo del cliente
-     */
     private String nombreCliente;
-
-    /**
-     * Dirección de entrega
-     */
     private String direccion;
-
-    /**
-     * Número de teléfono de contacto
-     */
     private String telefono;
-
-    /**
-     * Número de etiqueta (orden secuencial)
-     */
     private Integer numeroEtiqueta;
-
-    /**
-     * Total de etiquetas del pedido
-     */
     private Integer totalEtiquetas;
 }

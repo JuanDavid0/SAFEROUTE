@@ -11,7 +11,6 @@ import java.util.Date;
 @Component
 public class JwtTokenProvider {
 
-    // Clave segura de 256 bits para JWT (cargada desde variables de entorno)
     @Value("${jwt.secret}")
     private String jwtSecret;
 

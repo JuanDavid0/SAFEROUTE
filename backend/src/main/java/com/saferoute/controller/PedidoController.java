@@ -77,19 +77,13 @@ public class PedidoController {
     public ResponseEntity<ApiResponse<PedidoDTO>> actualizarEstado(
             @PathVariable Integer idPedido,
             @PathVariable String estado) {
-        try {
-            PedidoDTO pedido = pedidoService.actualizarEstado(idPedido, estado);
+        PedidoDTO pedido = pedidoService.actualizarEstado(idPedido, estado);
 
-            ApiResponse<PedidoDTO> response = ApiResponse.success(
-                    pedido,
-                    String.format("Estado del pedido actualizado a %s", estado));
+        ApiResponse<PedidoDTO> response = ApiResponse.success(
+                pedido,
+                String.format("Estado del pedido actualizado a %s", estado));
 
-            return ResponseEntity.ok(response);
-        } catch (RuntimeException e) {
-            // Capturar errores de validación de transición de estado
-            ApiResponse<PedidoDTO> response = ApiResponse.fail(e.getMessage(), null);
-            return ResponseEntity.badRequest().body(response);
-        }
+        return ResponseEntity.ok(response);
     }
 
     @PreAuthorize("hasAnyRole('SAD', 'ADM')")
@@ -148,11 +142,6 @@ public class PedidoController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Endpoint publico para obtener un pedido activo mediante su hash unico
-     * Este endpoint NO requiere autenticacion y permite a los clientes
-     * acceder a un pedido especifico mediante una URL unica
-     */
     @GetMapping("/pedido-disponible/{hash}")
     public ResponseEntity<ApiResponse<PedidoDTO>> obtenerPedidoPorHash(@PathVariable String hash) {
         PedidoDTO pedido = pedidoService.obtenerPedidoPorHash(hash);
@@ -164,19 +153,4 @@ public class PedidoController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Endpoint administrativo para generar/obtener el hash de un pedido
-     * Solo para uso interno de administradores
-     */
-    @PreAuthorize("hasAnyRole('SAD', 'ADM')")
-    @PostMapping("/{idPedido}/generar-hash")
-    public ResponseEntity<ApiResponse<String>> generarUrlHash(@PathVariable Integer idPedido) {
-        String hash = pedidoService.generarUrlHash(idPedido);
-
-        ApiResponse<String> response = ApiResponse.success(
-                hash,
-                "Hash generado exitosamente para el pedido");
-
-        return ResponseEntity.ok(response);
-    }
 }

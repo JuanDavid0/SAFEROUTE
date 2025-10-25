@@ -1,407 +1,378 @@
 package com.saferoute.service.impl;
 
+import com.saferoute.constants.PedidoConstants;
 import com.saferoute.dto.*;
+import com.saferoute.exception.PedidoBusinessException;
 import com.saferoute.model.*;
 import com.saferoute.model.enums.EstadoPedidoEnum;
 import com.saferoute.model.enums.EstadoSolicitudEnum;
 import com.saferoute.repository.*;
+import com.saferoute.service.helper.ProductoPedidoHelper;
 import com.saferoute.service.interfaces.IPedidoService;
 import com.saferoute.service.interfaces.ILogService;
 import com.saferoute.service.interfaces.IWhatsAppService;
+import com.saferoute.service.validator.PedidoValidator;
 import org.hashids.Hashids;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.Arrays;
-import java.util.HashMap;
+
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Implementación del servicio de Pedidos
+ * Refactorizado siguiendo principios SOLID y buenas prácticas
+ */
 @Service
 @Transactional
 public class PedidoServiceImpl implements IPedidoService {
 
-        private final PedidoRepository pedidoRepository;
-        private final UsuarioRepository usuarioRepository;
-        private final ProductoRepository productoRepository;
-        private final SolicitudRepository solicitudRepository;
-        private final ILogService logService;
-        private final IWhatsAppService whatsAppService;
-        private final Hashids hashids;
+    private final PedidoRepository pedidoRepository;
+    private final UsuarioRepository usuarioRepository;
+    private final ProductoRepository productoRepository;
+    private final SolicitudRepository solicitudRepository;
+    private final ILogService logService;
+    private final IWhatsAppService whatsAppService;
+    private final Hashids hashids;
+    private final PedidoValidator validator;
+    private final ProductoPedidoHelper helper;
 
-        public PedidoServiceImpl(PedidoRepository pedidoRepository, UsuarioRepository usuarioRepository,
-                        ProductoRepository productoRepository, SolicitudRepository solicitudRepository,
-                        ILogService logService, IWhatsAppService whatsAppService, Hashids hashids) {
-                this.pedidoRepository = pedidoRepository;
-                this.usuarioRepository = usuarioRepository;
-                this.productoRepository = productoRepository;
-                this.solicitudRepository = solicitudRepository;
-                this.logService = logService;
-                this.whatsAppService = whatsAppService;
-                this.hashids = hashids;
+    public PedidoServiceImpl(
+            PedidoRepository pedidoRepository,
+            UsuarioRepository usuarioRepository,
+            ProductoRepository productoRepository,
+            SolicitudRepository solicitudRepository,
+            ILogService logService,
+            IWhatsAppService whatsAppService,
+            Hashids hashids,
+            PedidoValidator validator,
+            ProductoPedidoHelper helper) {
+        this.pedidoRepository = pedidoRepository;
+        this.usuarioRepository = usuarioRepository;
+        this.productoRepository = productoRepository;
+        this.solicitudRepository = solicitudRepository;
+        this.logService = logService;
+        this.whatsAppService = whatsAppService;
+        this.hashids = hashids;
+        this.validator = validator;
+        this.helper = helper;
+    }
+
+    @Override
+    public PedidoDTO crearPedido(PedidoDTO dto, Integer idAdmin) {
+        Usuario admin = usuarioRepository.findById(idAdmin)
+                .orElseThrow(() -> new PedidoBusinessException(PedidoConstants.ERROR_ADMIN_NO_ENCONTRADO));
+
+        Pedido pedido = construirNuevoPedido(admin, dto);
+        agregarProductosAPedido(pedido, dto.getProductos());
+
+        pedidoRepository.save(pedido);
+        actualizarDTOConDatosPersistidos(dto, pedido);
+
+        registrarCreacionPedido(idAdmin, pedido, dto.getProductos().size());
+        notificarSiPedidoActivo(pedido);
+
+        return dto;
+    }
+
+    private Pedido construirNuevoPedido(Usuario admin, PedidoDTO dto) {
+        Pedido pedido = new Pedido();
+        pedido.setAdmin(admin);
+        pedido.setEstadoPedido(EstadoPedidoEnum.CRT);
+        pedido.setFechaCierre(dto.getFechaCierre());
+        return pedido;
+    }
+
+    private void agregarProductosAPedido(Pedido pedido, List<ProductoPedidoDTO> productosDTO) {
+        for (ProductoPedidoDTO ppDTO : productosDTO) {
+            Producto producto = productoRepository.findById(ppDTO.getIdProducto())
+                    .orElseThrow(() -> new PedidoBusinessException(PedidoConstants.ERROR_PRODUCTO_NO_ENCONTRADO));
+
+            ProductoPedido pp = helper.crearProductoPedido(
+                    pedido,
+                    producto,
+                    ppDTO.getCantidadMin(),
+                    ppDTO.getCantidadMax());
+
+            pedido.getProductos().add(pp);
+        }
+    }
+
+    private void actualizarDTOConDatosPersistidos(PedidoDTO dto, Pedido pedido) {
+        dto.setIdPedido(pedido.getIdPedido());
+        dto.setIdAdmin(pedido.getAdmin().getIdUsuario());
+        dto.setEstadoPedido(pedido.getEstadoPedido().name());
+        dto.setFechaCreado(pedido.getFechaCreado());
+        dto.setFechaCierre(pedido.getFechaCierre());
+    }
+
+    private void registrarCreacionPedido(Integer adminId, Pedido pedido, int cantidadProductos) {
+        logService.registrarLog(adminId, String.format(
+                PedidoConstants.LOG_PEDIDO_CREADO,
+                pedido.getIdPedido(),
+                pedido.getEstadoPedido(),
+                cantidadProductos));
+    }
+
+    private void notificarSiPedidoActivo(Pedido pedido) {
+        if (pedido.getEstadoPedido() == EstadoPedidoEnum.ACT) {
+            whatsAppService.notificarNuevoPedidoActivo(pedido);
+        }
+    }
+
+    @Override
+    public PedidoDTO actualizarEstado(Integer idPedido, String nuevoEstado) {
+        Pedido pedido = pedidoRepository.findById(idPedido)
+                .orElseThrow(() -> new PedidoBusinessException(PedidoConstants.ERROR_PEDIDO_NO_ENCONTRADO));
+
+        EstadoPedidoEnum estadoActual = pedido.getEstadoPedido();
+        EstadoPedidoEnum estadoNuevo = EstadoPedidoEnum.valueOf(nuevoEstado);
+
+        // Validar transición de estado usando validator
+        validator.validarTransicionEstado(estadoActual, estadoNuevo);
+
+        pedido.setEstadoPedido(estadoNuevo);
+        Pedido pedidoGuardado = pedidoRepository.save(pedido);
+
+        registrarCambioEstado(pedido, estadoActual, estadoNuevo);
+        notificarCambioEstado(pedidoGuardado, estadoActual);
+        procesarActivacionPedido(idPedido, pedidoGuardado, estadoActual, estadoNuevo);
+
+        return mapToDTO(pedidoGuardado);
+    }
+
+    private void registrarCambioEstado(Pedido pedido, EstadoPedidoEnum estadoActual,
+            EstadoPedidoEnum estadoNuevo) {
+        Integer adminId = pedido.getAdmin().getIdUsuario();
+        logService.registrarCambioEstadoPedido(
+                adminId,
+                pedido.getIdPedido(),
+                estadoActual.name(),
+                estadoNuevo.name());
+    }
+
+    private void notificarCambioEstado(Pedido pedido, EstadoPedidoEnum estadoActual) {
+        whatsAppService.notificarCambioEstadoPedido(pedido, estadoActual.name());
+    }
+
+    private void procesarActivacionPedido(Integer idPedido, Pedido pedido,
+            EstadoPedidoEnum estadoActual, EstadoPedidoEnum estadoNuevo) {
+        if (estadoNuevo == EstadoPedidoEnum.ACT && estadoActual != EstadoPedidoEnum.ACT) {
+            generarUrlHash(idPedido);
+            whatsAppService.notificarNuevoPedidoActivo(pedido);
+        }
+    }
+
+    @Override
+    public PedidoDTO actualizarPedido(Integer idPedido, PedidoDTO dto) {
+        Pedido pedido = pedidoRepository.findById(idPedido)
+                .orElseThrow(() -> new PedidoBusinessException(PedidoConstants.ERROR_PEDIDO_NO_ENCONTRADO));
+
+        EstadoPedidoEnum estadoActual = pedido.getEstadoPedido();
+
+        if (estadoActual == EstadoPedidoEnum.ACT) {
+            actualizarPedidoActivo(pedido, dto);
+        } else if (estadoActual == EstadoPedidoEnum.CRT) {
+            actualizarPedidoCreado(pedido, dto);
+        } else {
+            throw new PedidoBusinessException(String.format(
+                    PedidoConstants.ERROR_PEDIDO_NO_MODIFICABLE,
+                    estadoActual));
         }
 
-        @Override
-        public PedidoDTO crearPedido(PedidoDTO dto, Integer idAdmin) {
-                Usuario admin = usuarioRepository.findById(idAdmin)
-                                .orElseThrow(() -> new RuntimeException("Administrador no encontrado"));
+        return mapToDTO(pedidoRepository.save(pedido));
+    }
 
-                Pedido pedido = new Pedido();
-                pedido.setAdmin(admin);
-                pedido.setEstadoPedido(EstadoPedidoEnum.CRT);
-                pedido.setFechaCierre(dto.getFechaCierre());
+    private void actualizarPedidoActivo(Pedido pedido, PedidoDTO dto) {
+        if (dto.getFechaCierre() != null) {
+            pedido.setFechaCierre(dto.getFechaCierre());
+        } else {
+            throw new PedidoBusinessException(PedidoConstants.ERROR_PEDIDO_ACTIVO_SOLO_FECHA);
+        }
+    }
 
-                for (ProductoPedidoDTO ppDTO : dto.getProductos()) {
-                        Producto producto = productoRepository.findById(ppDTO.getIdProducto())
-                                        .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+    private void actualizarPedidoCreado(Pedido pedido, PedidoDTO dto) {
+        if (dto.getFechaCierre() != null) {
+            pedido.setFechaCierre(dto.getFechaCierre());
+        }
+        if (dto.getEstadoPedido() != null) {
+            pedido.setEstadoPedido(EstadoPedidoEnum.valueOf(dto.getEstadoPedido()));
+        }
+        // Los productos se modifican con endpoints específicos
+    }
 
-                        ProductoPedido pp = new ProductoPedido();
-                        pp.setPedido(pedido);
-                        pp.setProducto(producto);
-                        pp.setCantidadMin(ppDTO.getCantidadMin());
-                        pp.setCantidadMax(ppDTO.getCantidadMax());
+    @Override
+    public PedidoDTO agregarProducto(Integer idPedido, ProductoPedidoDTO productoDTO) {
+        Pedido pedido = pedidoRepository.findById(idPedido)
+                .orElseThrow(() -> new PedidoBusinessException(PedidoConstants.ERROR_PEDIDO_NO_ENCONTRADO));
 
-                        pedido.getProductos().add(pp);
-                }
+        validator.validarPedidoEstadoCreado(pedido, "agregar");
 
-                pedidoRepository.save(pedido);
-                dto.setIdPedido(pedido.getIdPedido());
-                dto.setIdAdmin(pedido.getAdmin().getIdUsuario());
-                dto.setEstadoPedido(pedido.getEstadoPedido().name());
-                dto.setFechaCreado(pedido.getFechaCreado());
-                dto.setFechaCierre(pedido.getFechaCierre());
+        Producto producto = productoRepository.findById(productoDTO.getIdProducto())
+                .orElseThrow(() -> new PedidoBusinessException(PedidoConstants.ERROR_PRODUCTO_NO_ENCONTRADO));
 
-                // Registrar creación de pedido en logs
-                logService.registrarLog(idAdmin,
-                                "Pedido creado - ID: " + pedido.getIdPedido() +
-                                                ", Estado: " + pedido.getEstadoPedido() +
-                                                ", Productos: " + dto.getProductos().size());
+        helper.validarProductoNoExiste(pedido, productoDTO.getIdProducto());
 
-                // Notificar a usuarios CLI si el pedido se crea en estado activo
-                if (pedido.getEstadoPedido() == EstadoPedidoEnum.ACT) {
-                        whatsAppService.notificarNuevoPedidoActivo(pedido);
-                }
+        ProductoPedido pp = helper.crearProductoPedido(
+                pedido,
+                producto,
+                productoDTO.getCantidadMin(),
+                productoDTO.getCantidadMax());
 
-                return dto;
+        pedido.getProductos().add(pp);
+        return mapToDTO(pedidoRepository.save(pedido));
+    }
+
+    @Override
+    public PedidoDTO eliminarProducto(Integer idPedido, Integer idProducto) {
+        Pedido pedido = pedidoRepository.findById(idPedido)
+                .orElseThrow(() -> new PedidoBusinessException(PedidoConstants.ERROR_PEDIDO_NO_ENCONTRADO));
+
+        validator.validarPedidoEstadoCreado(pedido, "eliminar");
+
+        ProductoPedido pp = helper.buscarProductoEnPedido(pedido, idProducto);
+        pedido.getProductos().remove(pp);
+
+        return mapToDTO(pedidoRepository.save(pedido));
+    }
+
+    @Override
+    public PedidoDTO modificarProducto(Integer idPedido, Integer idProducto, ProductoPedidoDTO productoDTO) {
+        Pedido pedido = pedidoRepository.findById(idPedido)
+                .orElseThrow(() -> new PedidoBusinessException(PedidoConstants.ERROR_PEDIDO_NO_ENCONTRADO));
+
+        validator.validarPedidoEstadoCreado(pedido, "modificar");
+
+        ProductoPedido pp = helper.buscarProductoEnPedido(pedido, idProducto);
+        helper.actualizarCantidades(pp, productoDTO);
+
+        return mapToDTO(pedidoRepository.save(pedido));
+    }
+
+    @Override
+    public void cancelarPedido(Integer idPedido) {
+        Pedido pedido = pedidoRepository.findById(idPedido)
+                .orElseThrow(() -> new PedidoBusinessException(PedidoConstants.ERROR_PEDIDO_NO_ENCONTRADO));
+
+        cambiarEstadoPedido(pedido, EstadoPedidoEnum.CRM);
+        cancelarSolicitudesAsociadas(idPedido);
+        whatsAppService.notificarCancelacionPedido(pedido);
+    }
+
+    private void cambiarEstadoPedido(Pedido pedido, EstadoPedidoEnum nuevoEstado) {
+        pedido.setEstadoPedido(nuevoEstado);
+        pedidoRepository.save(pedido);
+    }
+
+    private void cancelarSolicitudesAsociadas(Integer idPedido) {
+        List<Solicitud> solicitudes = solicitudRepository.findByPedido_IdPedido(idPedido);
+        solicitudes.stream()
+                .filter(solicitud -> solicitud.getEstadoSolicitud() != EstadoSolicitudEnum.CAN)
+                .forEach(solicitud -> {
+                    solicitud.setEstadoSolicitud(EstadoSolicitudEnum.CAN);
+                    solicitudRepository.save(solicitud);
+                });
+    }
+
+    @Override
+    public List<PedidoDTO> listarPedidos() {
+        return pedidoRepository.findAll().stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public PedidoDTO obtenerPedidoPorId(Integer id) {
+        return mapToDTO(pedidoRepository.findById(id)
+                .orElseThrow(() -> new PedidoBusinessException(PedidoConstants.ERROR_PEDIDO_NO_ENCONTRADO)));
+    }
+
+    @Override
+    public String generarUrlHash(Integer idPedido) {
+        Pedido pedido = pedidoRepository.findById(idPedido)
+                .orElseThrow(() -> new PedidoBusinessException(PedidoConstants.ERROR_PEDIDO_NO_ENCONTRADO));
+
+        validator.validarPedidoEstadoActivo(pedido);
+
+        // Si ya tiene hash, devolverlo (idempotente)
+        if (pedido.getUrlHash() != null && !pedido.getUrlHash().isEmpty()) {
+            return pedido.getUrlHash();
         }
 
-        @Override
-        public PedidoDTO actualizarEstado(Integer idPedido, String nuevoEstado) {
-                Pedido pedido = pedidoRepository.findById(idPedido)
-                                .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+        String hash = generarHashDeId(idPedido);
+        guardarHash(pedido, hash);
+        registrarGeneracionHash(pedido, hash);
 
-                EstadoPedidoEnum estadoActual = pedido.getEstadoPedido();
-                EstadoPedidoEnum estadoNuevo = EstadoPedidoEnum.valueOf(nuevoEstado);
+        return hash;
+    }
 
-                // Validar transición de estado
-                validarTransicionEstado(estadoActual, estadoNuevo);
+    private String generarHashDeId(Integer idPedido) {
+        // Genera hash usando Hashids - convierte el ID numérico en string ofuscado
+        // Ejemplo: ID 123 -> "5N6y2Kl" (reversible con la misma salt)
+        return hashids.encode(idPedido.longValue());
+    }
 
-                pedido.setEstadoPedido(estadoNuevo);
-                Pedido pedidoGuardado = pedidoRepository.save(pedido);
+    private void guardarHash(Pedido pedido, String hash) {
+        pedido.setUrlHash(hash);
+        pedidoRepository.save(pedido);
+    }
 
-                // Registrar cambio de estado en logs (usar registrarCambioEstadoPedido)
-                Integer adminId = pedido.getAdmin().getIdUsuario();
-                logService.registrarCambioEstadoPedido(adminId, idPedido,
-                                estadoActual.name(), estadoNuevo.name());
+    private void registrarGeneracionHash(Pedido pedido, String hash) {
+        logService.registrarLog(
+                pedido.getAdmin().getIdUsuario(),
+                String.format(PedidoConstants.LOG_HASH_GENERADO, pedido.getIdPedido(), hash));
+    }
 
-                // Notificar a clientes con solicitudes sobre el cambio de estado
-                whatsAppService.notificarCambioEstadoPedido(pedidoGuardado, estadoActual.name());
+    @Override
+    public PedidoDTO obtenerPedidoPorHash(String hash) {
+        validarHashNoVacio(hash);
 
-                // Si el pedido pasa a activo, notificar a todos los usuarios CLI
-                if (estadoNuevo == EstadoPedidoEnum.ACT && estadoActual != EstadoPedidoEnum.ACT) {
-                        // Generar URL hash única para el pedido
-                        generarUrlHash(idPedido);
-                        whatsAppService.notificarNuevoPedidoActivo(pedidoGuardado);
-                }
+        Integer idPedido = decodificarHash(hash);
+        Pedido pedido = obtenerPedido(idPedido);
 
-                return mapToDTO(pedidoGuardado);
+        validator.validarPedidoEstadoActivo(pedido);
+
+        return mapToDTO(pedido);
+    }
+
+    private void validarHashNoVacio(String hash) {
+        if (hash == null || hash.isEmpty()) {
+            throw new PedidoBusinessException(PedidoConstants.ERROR_HASH_VACIO);
         }
+    }
 
-        /**
-         * Valida que la transición entre estados de pedido sea válida según el flujo de
-         * negocio
-         * Flujo: CRT → ACT → (CRM|CRA) → [PRD → RCP] → RTA → ADU → ENT
-         */
-        private void validarTransicionEstado(EstadoPedidoEnum actual, EstadoPedidoEnum nuevo) {
-                // Matriz de transiciones válidas
-                Map<EstadoPedidoEnum, List<EstadoPedidoEnum>> transicionesPermitidas = new HashMap<>();
-
-                // CRT (Creado) puede ir a: ACT (Activo) o CRM (Cerrado Manual)
-                transicionesPermitidas.put(EstadoPedidoEnum.CRT,
-                                Arrays.asList(EstadoPedidoEnum.ACT, EstadoPedidoEnum.CRM));
-
-                // ACT (Activo) puede ir a: CRM (Cerrado Manual), CRA (Cerrado Automático)
-                transicionesPermitidas.put(EstadoPedidoEnum.ACT,
-                                Arrays.asList(EstadoPedidoEnum.CRM, EstadoPedidoEnum.CRA));
-
-                // CRM (Cerrado Manual) puede ir a: PRD (Perdido), RTA (En Ruta)
-                transicionesPermitidas.put(EstadoPedidoEnum.CRM,
-                                Arrays.asList(EstadoPedidoEnum.PRD, EstadoPedidoEnum.RTA));
-
-                // CRA (Cerrado Automático) puede ir a: PRD (Perdido), RTA (En Ruta)
-                transicionesPermitidas.put(EstadoPedidoEnum.CRA,
-                                Arrays.asList(EstadoPedidoEnum.PRD, EstadoPedidoEnum.RTA));
-
-                // PRD (Perdido) puede ir a: RCP (Recuperado)
-                transicionesPermitidas.put(EstadoPedidoEnum.PRD,
-                                Arrays.asList(EstadoPedidoEnum.RCP));
-
-                // RCP (Recuperado) puede ir a: RTA (En Ruta)
-                transicionesPermitidas.put(EstadoPedidoEnum.RCP,
-                                Arrays.asList(EstadoPedidoEnum.RTA));
-
-                // RTA (En Ruta) puede ir a: ADU (Aduana), PRD (Perdido - por si se pierde en
-                // ruta)
-                transicionesPermitidas.put(EstadoPedidoEnum.RTA,
-                                Arrays.asList(EstadoPedidoEnum.ADU, EstadoPedidoEnum.PRD));
-
-                // ADU (Aduana) puede ir a: ENT (Entregado), PRD (Perdido - por si se pierde en
-                // aduana)
-                transicionesPermitidas.put(EstadoPedidoEnum.ADU,
-                                Arrays.asList(EstadoPedidoEnum.ENT, EstadoPedidoEnum.PRD));
-
-                // ENT (Entregado) es estado final - no puede cambiar
-                transicionesPermitidas.put(EstadoPedidoEnum.ENT, Arrays.asList());
-
-                // Validar que la transición sea permitida
-                List<EstadoPedidoEnum> estadosPermitidos = transicionesPermitidas.get(actual);
-                if (estadosPermitidos == null || !estadosPermitidos.contains(nuevo)) {
-                        throw new RuntimeException(String.format(
-                                        "Transición de estado inválida: no se puede cambiar de %s a %s. " +
-                                                        "Estados permitidos desde %s: %s",
-                                        actual, nuevo, actual,
-                                        estadosPermitidos != null && !estadosPermitidos.isEmpty()
-                                                        ? estadosPermitidos
-                                                        : "ninguno (estado final)"));
-                }
+    private Integer decodificarHash(String hash) {
+        long[] ids = hashids.decode(hash);
+        if (ids.length == 0) {
+            throw new PedidoBusinessException(PedidoConstants.ERROR_HASH_INVALIDO);
         }
+        return (int) ids[0];
+    }
 
-        @Override
-        public PedidoDTO actualizarPedido(Integer idPedido, PedidoDTO dto) {
-                Pedido pedido = pedidoRepository.findById(idPedido)
-                                .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+    private Pedido obtenerPedido(Integer idPedido) {
+        return pedidoRepository.findById(idPedido)
+                .orElseThrow(() -> new PedidoBusinessException(PedidoConstants.ERROR_PEDIDO_NO_ENCONTRADO));
+    }
 
-                EstadoPedidoEnum estadoActual = pedido.getEstadoPedido();
+    private PedidoDTO mapToDTO(Pedido pedido) {
+        PedidoDTO dto = new PedidoDTO();
+        dto.setIdPedido(pedido.getIdPedido());
+        dto.setIdAdmin(pedido.getAdmin().getIdUsuario());
+        dto.setEstadoPedido(pedido.getEstadoPedido().name());
+        dto.setFechaCreado(pedido.getFechaCreado());
+        dto.setFechaCierre(pedido.getFechaCierre());
+        dto.setUrlHash(pedido.getUrlHash());
+        dto.setProductos(pedido.getProductos().stream()
+                .map(this::mapProductoPedidoToDTO)
+                .collect(Collectors.toList()));
+        return dto;
+    }
 
-                // Si el pedido está ACTIVO (ACT), solo permitir modificar fecha de cierre
-                if (estadoActual == EstadoPedidoEnum.ACT) {
-                        if (dto.getFechaCierre() != null) {
-                                pedido.setFechaCierre(dto.getFechaCierre());
-                        } else {
-                                throw new RuntimeException(
-                                                "El pedido está en estado ACTIVO. Solo se puede modificar la fecha de cierre");
-                        }
-                }
-                // Si el pedido está CREADO (CRT), permitir todas las modificaciones
-                else if (estadoActual == EstadoPedidoEnum.CRT) {
-                        if (dto.getFechaCierre() != null) {
-                                pedido.setFechaCierre(dto.getFechaCierre());
-                        }
-                        if (dto.getEstadoPedido() != null) {
-                                pedido.setEstadoPedido(EstadoPedidoEnum.valueOf(dto.getEstadoPedido()));
-                        }
-                        // Productos se modifican con endpoints específicos
-                }
-                // Otros estados no permiten modificación
-                else {
-                        throw new RuntimeException(
-                                        "No se puede modificar el pedido en estado: " + estadoActual);
-                }
-
-                return mapToDTO(pedidoRepository.save(pedido));
-        }
-
-        @Override
-        public PedidoDTO agregarProducto(Integer idPedido, ProductoPedidoDTO productoDTO) {
-                Pedido pedido = pedidoRepository.findById(idPedido)
-                                .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
-
-                // Validar que el pedido esté en estado CRT (Creado)
-                if (pedido.getEstadoPedido() != EstadoPedidoEnum.CRT) {
-                        throw new RuntimeException(
-                                        "Solo se pueden agregar productos a pedidos en estado CREADO (CRT). " +
-                                                        "Estado actual: " + pedido.getEstadoPedido());
-                }
-
-                Producto producto = productoRepository.findById(productoDTO.getIdProducto())
-                                .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
-
-                // Verificar si el producto ya existe en el pedido
-                boolean productoExiste = pedido.getProductos().stream()
-                                .anyMatch(pp -> pp.getProducto().getIdProducto().equals(productoDTO.getIdProducto()));
-
-                if (productoExiste) {
-                        throw new RuntimeException(
-                                        "El producto ya existe en este pedido. Use modificar para cambiar cantidades.");
-                }
-
-                ProductoPedido pp = new ProductoPedido();
-                pp.setPedido(pedido);
-                pp.setProducto(producto);
-                pp.setCantidadMin(productoDTO.getCantidadMin());
-                pp.setCantidadMax(productoDTO.getCantidadMax());
-
-                pedido.getProductos().add(pp);
-                return mapToDTO(pedidoRepository.save(pedido));
-        }
-
-        @Override
-        public PedidoDTO eliminarProducto(Integer idPedido, Integer idProducto) {
-                Pedido pedido = pedidoRepository.findById(idPedido)
-                                .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
-
-                // Validar que el pedido esté en estado CRT (Creado)
-                if (pedido.getEstadoPedido() != EstadoPedidoEnum.CRT) {
-                        throw new RuntimeException(
-                                        "Solo se pueden eliminar productos de pedidos en estado CREADO (CRT). " +
-                                                        "Estado actual: " + pedido.getEstadoPedido());
-                }
-
-                ProductoPedido pp = pedido.getProductos().stream()
-                                .filter(p -> p.getProducto().getIdProducto().equals(idProducto))
-                                .findFirst()
-                                .orElseThrow(() -> new RuntimeException("Producto no encontrado en este pedido"));
-
-                pedido.getProductos().remove(pp);
-                return mapToDTO(pedidoRepository.save(pedido));
-        }
-
-        @Override
-        public PedidoDTO modificarProducto(Integer idPedido, Integer idProducto, ProductoPedidoDTO productoDTO) {
-                Pedido pedido = pedidoRepository.findById(idPedido)
-                                .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
-
-                // Validar que el pedido esté en estado CRT (Creado)
-                if (pedido.getEstadoPedido() != EstadoPedidoEnum.CRT) {
-                        throw new RuntimeException(
-                                        "Solo se pueden modificar productos de pedidos en estado CREADO (CRT). " +
-                                                        "Estado actual: " + pedido.getEstadoPedido());
-                }
-
-                ProductoPedido pp = pedido.getProductos().stream()
-                                .filter(p -> p.getProducto().getIdProducto().equals(idProducto))
-                                .findFirst()
-                                .orElseThrow(() -> new RuntimeException("Producto no encontrado en este pedido"));
-
-                // Actualizar cantidades
-                if (productoDTO.getCantidadMin() != null) {
-                        pp.setCantidadMin(productoDTO.getCantidadMin());
-                }
-                if (productoDTO.getCantidadMax() != null) {
-                        pp.setCantidadMax(productoDTO.getCantidadMax());
-                }
-
-                return mapToDTO(pedidoRepository.save(pedido));
-        }
-
-        @Override
-        public void cancelarPedido(Integer idPedido) {
-                Pedido pedido = pedidoRepository.findById(idPedido)
-                                .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
-
-                // Cambiar estado del pedido a cancelado
-                pedido.setEstadoPedido(EstadoPedidoEnum.CRM);
-                pedidoRepository.save(pedido);
-
-                // Buscar todas las solicitudes asociadas a este pedido y cancelarlas
-                List<Solicitud> solicitudes = solicitudRepository.findByPedido_IdPedido(idPedido);
-                for (Solicitud solicitud : solicitudes) {
-                        // Cancelar solo si no están ya canceladas
-                        if (solicitud.getEstadoSolicitud() != EstadoSolicitudEnum.CAN) {
-                                solicitud.setEstadoSolicitud(EstadoSolicitudEnum.CAN);
-                                solicitudRepository.save(solicitud);
-                        }
-                }
-
-                // Notificar a clientes afectados sobre la cancelación
-                whatsAppService.notificarCancelacionPedido(pedido);
-        }
-
-        @Override
-        public List<PedidoDTO> listarPedidos() {
-                return pedidoRepository.findAll().stream().map(this::mapToDTO).collect(Collectors.toList());
-        }
-
-        @Override
-        public PedidoDTO obtenerPedidoPorId(Integer id) {
-                return mapToDTO(pedidoRepository.findById(id)
-                                .orElseThrow(() -> new RuntimeException("Pedido no encontrado")));
-        }
-
-        private PedidoDTO mapToDTO(Pedido pedido) {
-                PedidoDTO dto = new PedidoDTO();
-                dto.setIdPedido(pedido.getIdPedido());
-                dto.setIdAdmin(pedido.getAdmin().getIdUsuario());
-                dto.setEstadoPedido(pedido.getEstadoPedido().name());
-                dto.setFechaCreado(pedido.getFechaCreado());
-                dto.setFechaCierre(pedido.getFechaCierre());
-                dto.setUrlHash(pedido.getUrlHash());
-                dto.setProductos(pedido.getProductos().stream().map(pp -> {
-                        ProductoPedidoDTO ppDTO = new ProductoPedidoDTO();
-                        ppDTO.setIdProducto(pp.getProducto().getIdProducto());
-                        ppDTO.setCantidadMin(pp.getCantidadMin());
-                        ppDTO.setCantidadMax(pp.getCantidadMax());
-                        return ppDTO;
-                }).collect(Collectors.toList()));
-                return dto;
-        }
-
-        @Override
-        public String generarUrlHash(Integer idPedido) {
-                Pedido pedido = pedidoRepository.findById(idPedido)
-                                .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
-
-                // Validar que el pedido esté en estado ACTIVO
-                if (pedido.getEstadoPedido() != EstadoPedidoEnum.ACT) {
-                        throw new RuntimeException(
-                                        "Solo se puede generar URL hash para pedidos en estado ACTIVO");
-                }
-
-                // Si ya tiene hash, devolverlo (idempotente)
-                if (pedido.getUrlHash() != null && !pedido.getUrlHash().isEmpty()) {
-                        return pedido.getUrlHash();
-                }
-
-                // Generar hash usando Hashids - convierte el ID numerico en string ofuscado
-                // Ejemplo: ID 123 -> "5N6y2Kl" (reversible con la misma salt)
-                String hash = hashids.encode(idPedido.longValue());
-
-                // Guardar el hash en el pedido
-                pedido.setUrlHash(hash);
-                pedidoRepository.save(pedido);
-
-                // Registrar en logs
-                logService.registrarLog(pedido.getAdmin().getIdUsuario(),
-                                "URL hash generada para pedido ID: " + idPedido + " - Hash: " + hash);
-
-                return hash;
-        }
-
-        @Override
-        public PedidoDTO obtenerPedidoPorHash(String hash) {
-                if (hash == null || hash.isEmpty()) {
-                        throw new RuntimeException("El hash no puede estar vacío");
-                }
-
-                // Decodificar el hash para obtener el ID del pedido
-                long[] ids = hashids.decode(hash);
-                if (ids.length == 0) {
-                        throw new RuntimeException("Hash inválido");
-                }
-
-                Integer idPedido = (int) ids[0];
-
-                // Buscar el pedido por ID
-                Pedido pedido = pedidoRepository.findById(idPedido)
-                                .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
-
-                // Validar que el pedido esté en estado ACTIVO
-                if (pedido.getEstadoPedido() != EstadoPedidoEnum.ACT) {
-                        throw new RuntimeException(
-                                        "Este pedido ya no está disponible para nuevas solicitudes (Estado: "
-                                                        + pedido.getEstadoPedido() + ")");
-                }
-
-                return mapToDTO(pedido);
-        }
+    private ProductoPedidoDTO mapProductoPedidoToDTO(ProductoPedido pp) {
+        ProductoPedidoDTO ppDTO = new ProductoPedidoDTO();
+        ppDTO.setIdProducto(pp.getProducto().getIdProducto());
+        ppDTO.setCantidadMin(pp.getCantidadMin());
+        ppDTO.setCantidadMax(pp.getCantidadMax());
+        return ppDTO;
+    }
 }

@@ -2,11 +2,8 @@ package com.saferoute.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 
-/**
- * DTO para verificar un código OTP
- */
+
 public class VerificarOtpRequest {
 
     @NotBlank(message = "La cédula es obligatoria")
