@@ -4,15 +4,15 @@ FROM openjdk:21-jdk-slim
 WORKDIR /app
 
 # Copiar archivos de Maven
-COPY backend/pom.xml .
-COPY backend/mvnw .
-COPY backend/.mvn .mvn
+COPY pom.xml .
+COPY mvnw .
+COPY .mvn .mvn
 
 # Descargar dependencias
 RUN ./mvnw dependency:go-offline -B
 
 # Copiar código fuente
-COPY backend/src src
+COPY src src
 
 # Construir aplicación
 RUN ./mvnw clean package -DskipTests

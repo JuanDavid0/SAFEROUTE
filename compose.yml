@@ -5,11 +5,11 @@ services:
     image: postgres:15
     container_name: saferoute-db
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-saferoute}
-      POSTGRES_USER: ${POSTGRES_USER:-saferoute_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/seed:/docker-entrypoint-initdb.d
@@ -22,17 +22,21 @@ services:
       dockerfile: ../infra/docker/Dockerfile.backend
     container_name: saferoute-backend
     environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
-      SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/${POSTGRES_DB:-saferoute}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-saferoute_user}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
       TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID}
+      WHATSAPP_API_TOKEN: ${WHATSAPP_API_TOKEN}
+      WHATSAPP_BASE_URL: ${WHATSAPP_BASE_URL}
       JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS}
+      HASHIDS_SALT: ${HASHIDS_SALT}
     ports:
-      - "8080:8080"
+      - "${SERVER_PORT}:8080"
     depends_on:
       - database
     networks:
@@ -44,9 +48,9 @@ services:
       dockerfile: ../infra/docker/Dockerfile.frontend
     container_name: saferoute-frontend
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8080
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     ports:
-      - "3000:3000"
+      - "${NEXT_PORT}:3000"
     depends_on:
       - backend
     networks:

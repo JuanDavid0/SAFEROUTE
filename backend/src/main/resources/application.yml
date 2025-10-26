@@ -6,14 +6,14 @@ spring:
     active: dev
   
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:saferoute}
-    username: ${POSTGRES_USER:postgres}
-    password: ${POSTGRES_PASSWORD}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
   
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
@@ -50,12 +50,12 @@ whatsapp:
     url: https://graph.facebook.com/v24.0
     phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID}
     token: ${WHATSAPP_API_TOKEN}
-  base-url: ${APP_BASE_URL}
+  base-url: ${WHATSAPP_BASE_URL}
 
 # JWT Configuration
 jwt:
   secret: ${JWT_SECRET}
-  expiration: ${JWT_EXPIRATION_MS:86400000}
+  expiration: ${JWT_EXPIRATION_MS}
 
 # OTP Configuration
 otp:
