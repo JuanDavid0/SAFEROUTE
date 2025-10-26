@@ -114,8 +114,29 @@ public class EtiquetaServiceImpl implements IEtiquetaService {
     }
 
     private String construirNombreCompleto(Solicitud solicitud) {
-        return solicitud.getCliente().getNombres() + " " +
-                solicitud.getCliente().getApellidos();
+        String nombres = solicitud.getCliente().getNombres();
+        String apellidos = solicitud.getCliente().getApellidos();
+
+        // Manejar null o strings vacíos
+        String nombreLimpio = (nombres != null && !nombres.trim().isEmpty()) ? nombres.trim() : "";
+        String apellidoLimpio = (apellidos != null && !apellidos.trim().isEmpty()) ? apellidos.trim() : "";
+
+        // Si ambos están vacíos, retornar N/A
+        if (nombreLimpio.isEmpty() && apellidoLimpio.isEmpty()) {
+            return "N/A";
+        }
+
+        // Si solo uno está vacío, retornar el que tiene valor
+        if (nombreLimpio.isEmpty()) {
+            return apellidoLimpio;
+        }
+
+        if (apellidoLimpio.isEmpty()) {
+            return nombreLimpio;
+        }
+
+        // Ambos tienen valor, concatenar con espacio
+        return nombreLimpio + " " + apellidoLimpio;
     }
 
     @Override

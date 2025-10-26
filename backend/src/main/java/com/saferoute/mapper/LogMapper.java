@@ -34,6 +34,28 @@ public class LogMapper {
      * @return el nombre completo (nombres + apellidos)
      */
     private String construirNombreCompleto(Log log) {
-        return log.getUsuario().getNombres() + " " + log.getUsuario().getApellidos();
+        String nombres = log.getUsuario().getNombres();
+        String apellidos = log.getUsuario().getApellidos();
+
+        // Manejar null o strings vacíos
+        String nombreLimpio = (nombres != null && !nombres.trim().isEmpty()) ? nombres.trim() : "";
+        String apellidoLimpio = (apellidos != null && !apellidos.trim().isEmpty()) ? apellidos.trim() : "";
+
+        // Si ambos están vacíos, retornar N/A
+        if (nombreLimpio.isEmpty() && apellidoLimpio.isEmpty()) {
+            return "N/A";
+        }
+
+        // Si solo uno está vacío, retornar el que tiene valor
+        if (nombreLimpio.isEmpty()) {
+            return apellidoLimpio;
+        }
+
+        if (apellidoLimpio.isEmpty()) {
+            return nombreLimpio;
+        }
+
+        // Ambos tienen valor, concatenar con espacio
+        return nombreLimpio + " " + apellidoLimpio;
     }
 }

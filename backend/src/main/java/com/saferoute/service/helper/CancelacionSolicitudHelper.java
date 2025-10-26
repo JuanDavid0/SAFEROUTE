@@ -69,10 +69,13 @@ public class CancelacionSolicitudHelper {
      * Construye el DTO de solicitud cancelada
      */
     private SolicitudCanceladaDTO construirSolicitudCanceladaDTO(Solicitud solicitud, boolean notificacionEnviada) {
+        String nombreCompleto = construirNombreCompleto(
+                solicitud.getCliente().getNombres(),
+                solicitud.getCliente().getApellidos());
+
         return SolicitudCanceladaDTO.builder()
                 .idSolicitud(solicitud.getIdSolicitud())
-                .nombreCliente(solicitud.getCliente().getNombres() + " " +
-                        solicitud.getCliente().getApellidos())
+                .nombreCliente(nombreCompleto)
                 .telefono(solicitud.getCliente().getTelefono())
                 .notificacionEnviada(notificacionEnviada)
                 .build();
@@ -149,5 +152,32 @@ public class CancelacionSolicitudHelper {
                         totalPedidos, totalCanceladas))
                 .exitoso(true)
                 .build();
+    }
+
+    /**
+     * Construye el nombre completo del cliente manejando valores null de forma
+     * segura
+     */
+    private String construirNombreCompleto(String nombres, String apellidos) {
+        // Manejar null o strings vacíos
+        String nombreLimpio = (nombres != null && !nombres.trim().isEmpty()) ? nombres.trim() : "";
+        String apellidoLimpio = (apellidos != null && !apellidos.trim().isEmpty()) ? apellidos.trim() : "";
+
+        // Si ambos están vacíos, retornar N/A
+        if (nombreLimpio.isEmpty() && apellidoLimpio.isEmpty()) {
+            return "N/A";
+        }
+
+        // Si solo uno está vacío, retornar el que tiene valor
+        if (nombreLimpio.isEmpty()) {
+            return apellidoLimpio;
+        }
+
+        if (apellidoLimpio.isEmpty()) {
+            return nombreLimpio;
+        }
+
+        // Ambos tienen valor, concatenar con espacio
+        return nombreLimpio + " " + apellidoLimpio;
     }
 }
