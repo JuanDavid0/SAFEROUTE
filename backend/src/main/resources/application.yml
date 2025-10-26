@@ -79,7 +79,7 @@ spring.config.activate.on-profile: dev
 ---
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/saferoute
+    url: ${SPRING_DATASOURCE_URL}
 spring.config.activate.on-profile: docker
 
 ---
