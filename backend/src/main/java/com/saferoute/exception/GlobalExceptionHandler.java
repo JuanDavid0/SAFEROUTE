@@ -194,6 +194,26 @@ public class GlobalExceptionHandler {
         }
 
         /**
+         * Excepciones específicas de negocio de Cancelación de Solicitudes (400)
+         */
+        @ExceptionHandler(CancelacionBusinessException.class)
+        public ResponseEntity<ApiResponse<Void>> handleCancelacionBusinessException(
+                        CancelacionBusinessException ex, HttpServletRequest request) {
+
+                log.warn("Error de negocio en Cancelación de Solicitudes: {}", ex.getMessage());
+
+                ErrorDetails error = ErrorDetails.builder()
+                                .code("CANCELACION_BUSINESS_ERROR")
+                                .details(ex.getMessage())
+                                .build();
+
+                ApiResponse<Void> response = ApiResponse.fail("Error en cancelación de solicitudes", error);
+                response.setPath(request.getRequestURI());
+
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+
+        /**
          * Excepciones específicas de negocio de OTP (400)
          */
         @ExceptionHandler(OtpBusinessException.class)

@@ -47,7 +47,7 @@ twilio:
 # WhatsApp Business API Configuration
 whatsapp:
   api:
-    url: https://graph.facebook.com/v24.0
+    url: https://graph.facebook.com/v22.0
     phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID}
     token: ${WHATSAPP_API_TOKEN}
   base-url: ${APP_BASE_URL}

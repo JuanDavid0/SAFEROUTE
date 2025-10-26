@@ -4,14 +4,12 @@ import com.saferoute.constants.WhatsAppConstants;
 import com.saferoute.dto.SolicitudDTO;
 import com.saferoute.dto.whatsapp.*;
 import com.saferoute.exception.ResourceNotFoundException;
-import com.saferoute.exception.WhatsAppBusinessException;
 import com.saferoute.helper.ClienteWhatsAppHelper;
-import com.saferoute.helper.EstadoTraductorHelper;
 import com.saferoute.helper.SolicitudMontoHelper;
 import com.saferoute.model.Pedido;
 import com.saferoute.model.Solicitud;
 import com.saferoute.model.Usuario;
-import com.saferoute.repository.PedidoRepository;
+import com.saferoute.model.enums.EstadoSolicitudEnum;
 import com.saferoute.repository.SolicitudRepository;
 import com.saferoute.repository.UsuarioRepository;
 import com.saferoute.service.interfaces.IWhatsAppService;
@@ -52,10 +50,8 @@ public class WhatsAppServiceImpl implements IWhatsAppService {
     private final RestTemplate restTemplate;
     private final SolicitudRepository solicitudRepository;
     private final UsuarioRepository usuarioRepository;
-    private final PedidoRepository pedidoRepository;
     private final SolicitudMontoHelper montoHelper;
     private final ClienteWhatsAppHelper clienteHelper;
-    private final EstadoTraductorHelper estadoTraductor;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final NumberFormat CURRENCY_FORMATTER = NumberFormat.getCurrencyInstance(new Locale("es", "CO"));
@@ -91,132 +87,11 @@ public class WhatsAppServiceImpl implements IWhatsAppService {
         BigDecimal total = montoHelper.calcularMontoTotal(solicitud.getProductos());
         String totalFormateado = CURRENCY_FORMATTER.format(total);
         String fechaLimite = solicitud.getPedido().getFechaCierre().format(DATE_FORMATTER);
-        String urlSolicitud = baseUrl + String.format(WhatsAppConstants.URL_FORMAT_SOLICITUD,
-                solicitud.getIdSolicitud());
 
         return List.of(
                 String.valueOf(solicitud.getIdSolicitud()),
                 totalFormateado,
-                fechaLimite,
-                urlSolicitud);
-    }
-
-    @Override
-    public void notificarNuevoPedidoActivo(Pedido pedido) {
-        try {
-            log.info(WhatsAppConstants.LOG_NOTIFICANDO_PEDIDO_ACTIVO, pedido.getIdPedido());
-
-            List<Usuario> clientes = clienteHelper.filtrarClientesActivos(usuarioRepository.findAll());
-            List<String> parametros = construirParametrosNuevoPedido(pedido);
-
-            enviarNotificacionMasiva(clientes, WhatsAppConstants.TEMPLATE_NUEVO_PEDIDO_ACTIVO, parametros);
-
-            log.info(WhatsAppConstants.LOG_PEDIDO_ACTIVO_ENVIADO, clientes.size());
-        } catch (Exception e) {
-            log.error(WhatsAppConstants.LOG_ERROR_PEDIDO_ACTIVO, e.getMessage(), e);
-        }
-    }
-
-    private List<String> construirParametrosNuevoPedido(Pedido pedido) {
-        String fechaCierre = pedido.getFechaCierre().format(DATE_FORMATTER);
-        String urlPedido = construirUrlPedido(pedido);
-
-        return List.of(
-                String.valueOf(pedido.getIdPedido()),
-                fechaCierre,
-                urlPedido);
-    }
-
-    private String construirUrlPedido(Pedido pedido) {
-        if (pedido.getUrlHash() != null && !pedido.getUrlHash().isEmpty()) {
-            String url = baseUrl + String.format(WhatsAppConstants.URL_FORMAT_PEDIDO_HASH,
-                    pedido.getUrlHash());
-            log.info(WhatsAppConstants.LOG_URL_PEDIDO_HASH, url);
-            return url;
-        } else {
-            log.warn(WhatsAppConstants.LOG_PEDIDO_SIN_HASH, pedido.getIdPedido());
-            return baseUrl + String.format(WhatsAppConstants.URL_FORMAT_PEDIDO_ID,
-                    pedido.getIdPedido());
-        }
-    }
-
-    private void enviarNotificacionMasiva(List<Usuario> clientes, String nombrePlantilla,
-            List<String> parametros) {
-        for (Usuario cliente : clientes) {
-            if (clienteHelper.esTelefonoValido(cliente.getTelefono())) {
-                try {
-                    enviarMensajePlantilla(cliente.getTelefono(), nombrePlantilla, parametros);
-                } catch (Exception e) {
-                    log.error(WhatsAppConstants.LOG_ERROR_ENVIO_MENSAJE,
-                            cliente.getTelefono(), e.getMessage());
-                }
-            }
-        }
-    }
-
-    @Override
-    public void notificarCambioEstadoPedido(Pedido pedido, String estadoAnterior) {
-        try {
-            log.info(WhatsAppConstants.LOG_NOTIFICANDO_CAMBIO_ESTADO,
-                    pedido.getIdPedido(), estadoAnterior, pedido.getEstadoPedido());
-
-            List<Solicitud> solicitudes = solicitudRepository.findByPedido_IdPedido(pedido.getIdPedido());
-            List<String> telefonosNotificados = new ArrayList<>();
-            List<String> parametros = construirParametrosCambioEstado(pedido, estadoAnterior);
-
-            enviarNotificacionClientesPedido(solicitudes, WhatsAppConstants.TEMPLATE_CAMBIO_ESTADO_PEDIDO,
-                    parametros, telefonosNotificados);
-
-            log.info(WhatsAppConstants.LOG_CAMBIO_ESTADO_ENVIADO, telefonosNotificados.size());
-        } catch (Exception e) {
-            log.error(WhatsAppConstants.LOG_ERROR_CAMBIO_ESTADO, e.getMessage(), e);
-        }
-    }
-
-    private List<String> construirParametrosCambioEstado(Pedido pedido, String estadoAnterior) {
-        String estadoAnteriorTraducido = estadoTraductor.traducirEstado(estadoAnterior);
-        String estadoActualTraducido = estadoTraductor.traducirEstado(pedido.getEstadoPedido().name());
-        String mensajeSegunEstado = estadoTraductor.obtenerMensajeSegunEstado(pedido.getEstadoPedido().name());
-
-        return List.of(
-                String.valueOf(pedido.getIdPedido()),
-                estadoAnteriorTraducido,
-                estadoActualTraducido,
-                mensajeSegunEstado);
-    }
-
-    private void enviarNotificacionClientesPedido(List<Solicitud> solicitudes, String nombrePlantilla,
-            List<String> parametros, List<String> telefonosNotificados) {
-        for (Solicitud solicitud : solicitudes) {
-            String telefono = solicitud.getCliente().getTelefono();
-
-            if (clienteHelper.esTelefonoValido(telefono) && !telefonosNotificados.contains(telefono)) {
-                try {
-                    enviarMensajePlantilla(telefono, nombrePlantilla, parametros);
-                    telefonosNotificados.add(telefono);
-                } catch (Exception e) {
-                    log.error(WhatsAppConstants.LOG_ERROR_ENVIO_MENSAJE, telefono, e.getMessage());
-                }
-            }
-        }
-    }
-
-    @Override
-    public void notificarCancelacionPedido(Pedido pedido) {
-        try {
-            log.info(WhatsAppConstants.LOG_NOTIFICANDO_CANCELACION, pedido.getIdPedido());
-
-            List<Solicitud> solicitudes = solicitudRepository.findByPedido_IdPedido(pedido.getIdPedido());
-            List<String> telefonosNotificados = new ArrayList<>();
-            List<String> parametros = List.of(String.valueOf(pedido.getIdPedido()));
-
-            enviarNotificacionClientesPedido(solicitudes, WhatsAppConstants.TEMPLATE_PEDIDO_CANCELADO,
-                    parametros, telefonosNotificados);
-
-            log.info(WhatsAppConstants.LOG_CANCELACION_ENVIADA, telefonosNotificados.size());
-        } catch (Exception e) {
-            log.error(WhatsAppConstants.LOG_ERROR_CANCELACION, e.getMessage(), e);
-        }
+                fechaLimite);
     }
 
     @Override
@@ -236,13 +111,157 @@ public class WhatsAppServiceImpl implements IWhatsAppService {
         }
     }
 
+    @Override
+    public void notificarActualizacionSolicitud(Integer idSolicitud, Integer idPedido,
+            String estadoAnterior, String estadoActual, String mensaje) {
+        try {
+            log.info(WhatsAppConstants.LOG_NOTIFICANDO_ACTUALIZACION_PEDIDO, idSolicitud, idPedido);
+
+            Solicitud solicitud = obtenerSolicitud(idSolicitud);
+            List<String> parametros = construirParametrosActualizacionSolicitud(
+                    idSolicitud, idPedido, estadoAnterior, estadoActual, mensaje);
+
+            enviarMensajePlantilla(solicitud.getCliente().getTelefono(),
+                    WhatsAppConstants.TEMPLATE_ACTUALIZACION_PEDIDO, parametros);
+
+            log.info(WhatsAppConstants.LOG_ACTUALIZACION_PEDIDO_ENVIADA, idSolicitud);
+        } catch (Exception e) {
+            log.error(WhatsAppConstants.LOG_ERROR_ACTUALIZACION_PEDIDO, idSolicitud, e.getMessage(), e);
+        }
+    }
+
+    private List<String> construirParametrosActualizacionSolicitud(Integer idSolicitud, Integer idPedido,
+            String estadoAnterior, String estadoActual, String mensaje) {
+        return List.of(
+                String.valueOf(idSolicitud),
+                String.valueOf(idPedido),
+                estadoAnterior,
+                estadoActual,
+                mensaje);
+    }
+
+    @Override
+    public void notificarNuevoPedido(Pedido pedido) {
+        try {
+            log.info(WhatsAppConstants.LOG_NOTIFICANDO_NUEVO_PEDIDO, pedido.getIdPedido());
+
+            List<Usuario> clientes = clienteHelper.filtrarClientesActivos(usuarioRepository.findAll());
+            List<String> parametros = construirParametrosNuevoPedido(pedido);
+
+            enviarNotificacionMasiva(clientes, WhatsAppConstants.TEMPLATE_NUEVO_PEDIDO, parametros);
+
+            log.info(WhatsAppConstants.LOG_NUEVO_PEDIDO_ENVIADO, clientes.size());
+        } catch (Exception e) {
+            log.error(WhatsAppConstants.LOG_ERROR_NUEVO_PEDIDO, e.getMessage(), e);
+        }
+    }
+
+    private List<String> construirParametrosNuevoPedido(Pedido pedido) {
+        String fechaCierre = pedido.getFechaCierre().format(DATE_FORMATTER);
+        String urlPedido = construirUrlPedido(pedido);
+
+        return List.of(
+                String.valueOf(pedido.getIdPedido()),
+                fechaCierre,
+                urlPedido);
+    }
+
+    @Override
+    public void notificarCancelacionPedido(Pedido pedido, String motivo) {
+        try {
+            log.info(WhatsAppConstants.LOG_NOTIFICANDO_CANCELACION_PEDIDO, pedido.getIdPedido());
+
+            // Solo notificar a clientes con solicitudes PAGADAS (PGD)
+            List<Solicitud> solicitudesPagadas = solicitudRepository
+                    .findByPedido_IdPedidoAndEstadoSolicitud(pedido.getIdPedido(), EstadoSolicitudEnum.PGD);
+            List<String> telefonosNotificados = new ArrayList<>();
+
+            // Construir parámetros: {{1}} = ID pedido, {{2}} = motivo
+            List<String> parametros = List.of(
+                    String.valueOf(pedido.getIdPedido()),
+                    motivo);
+
+            enviarNotificacionClientesPedido(solicitudesPagadas, WhatsAppConstants.TEMPLATE_CANCELACION_PEDIDO,
+                    parametros, telefonosNotificados);
+
+            log.info(WhatsAppConstants.LOG_CANCELACION_PEDIDO_ENVIADA, telefonosNotificados.size());
+        } catch (Exception e) {
+            log.error(WhatsAppConstants.LOG_ERROR_CANCELACION_PEDIDO, e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void notificarCancelacionSolicitud(Integer idSolicitud, Integer idPedido) {
+        try {
+            log.info(WhatsAppConstants.LOG_NOTIFICANDO_CANCELACION_SOLICITUD, idSolicitud);
+
+            Solicitud solicitud = obtenerSolicitud(idSolicitud);
+            List<String> parametros = List.of(
+                    String.valueOf(idSolicitud),
+                    String.valueOf(idPedido));
+
+            enviarMensajePlantilla(solicitud.getCliente().getTelefono(),
+                    WhatsAppConstants.TEMPLATE_CANCELACION_SOLICITUD, parametros);
+
+            log.info(WhatsAppConstants.LOG_CANCELACION_SOLICITUD_ENVIADA);
+        } catch (Exception e) {
+            log.error(WhatsAppConstants.LOG_ERROR_CANCELACION_SOLICITUD, idSolicitud, e.getMessage(), e);
+        }
+    }
+
+    // ==================== MÉTODOS AUXILIARES ====================
+
+    private String construirUrlPedido(Pedido pedido) {
+        if (pedido.getUrlHash() != null && !pedido.getUrlHash().isEmpty()) {
+            String url = baseUrl + String.format(WhatsAppConstants.URL_FORMAT_PEDIDO_HASH, pedido.getUrlHash());
+            log.info(WhatsAppConstants.LOG_URL_PEDIDO_HASH, url);
+            return url;
+        } else {
+            log.warn(WhatsAppConstants.LOG_PEDIDO_SIN_HASH, pedido.getIdPedido());
+            return baseUrl + String.format(WhatsAppConstants.URL_FORMAT_PEDIDO_ID, pedido.getIdPedido());
+        }
+    }
+
+    private void enviarNotificacionMasiva(List<Usuario> clientes, String nombrePlantilla,
+            List<String> parametros) {
+        for (Usuario cliente : clientes) {
+            if (clienteHelper.esTelefonoValido(cliente.getTelefono())) {
+                try {
+                    enviarMensajePlantilla(cliente.getTelefono(), nombrePlantilla, parametros);
+                } catch (Exception e) {
+                    log.error(WhatsAppConstants.LOG_ERROR_ENVIO_MENSAJE, cliente.getTelefono(), e.getMessage());
+                }
+            }
+        }
+    }
+
+    private void enviarNotificacionClientesPedido(List<Solicitud> solicitudes, String nombrePlantilla,
+            List<String> parametros, List<String> telefonosNotificados) {
+        for (Solicitud solicitud : solicitudes) {
+            String telefono = solicitud.getCliente().getTelefono();
+
+            if (clienteHelper.esTelefonoValido(telefono) && !telefonosNotificados.contains(telefono)) {
+                try {
+                    enviarMensajePlantilla(telefono, nombrePlantilla, parametros);
+                    telefonosNotificados.add(telefono);
+                } catch (Exception e) {
+                    log.error(WhatsAppConstants.LOG_ERROR_ENVIO_MENSAJE, telefono, e.getMessage());
+                }
+            }
+        }
+    }
+
+    // ==================== MÉTODOS AUXILIARES ACTIVOS ====================
+
     private List<String> construirParametrosSolicitudPagada(Solicitud solicitud) {
         BigDecimal total = montoHelper.calcularMontoTotal(solicitud.getProductos());
         String totalFormateado = CURRENCY_FORMATTER.format(total);
+        String fechaConfirmacion = java.time.LocalDate.now().format(DATE_FORMATTER);
 
         return List.of(
                 String.valueOf(solicitud.getIdSolicitud()),
-                totalFormateado);
+                totalFormateado,
+                fechaConfirmacion);
     }
 
     // ==================== MÉTODOS AUXILIARES ====================
@@ -251,11 +270,26 @@ public class WhatsAppServiceImpl implements IWhatsAppService {
      * Envía un mensaje usando una plantilla de WhatsApp
      */
     private void enviarMensajePlantilla(String telefono, String nombrePlantilla, List<String> parametros) {
+        // Determinar el código de idioma según la plantilla
+        String languageCode = WhatsAppConstants.TEMPLATE_SOLICITUD_PAGADA.equals(nombrePlantilla)
+                ? WhatsAppConstants.LANGUAGE_CODE_ES
+                : WhatsAppConstants.LANGUAGE_CODE_ES_CO;
+
+        enviarMensajePlantillaConIdioma(telefono, nombrePlantilla, parametros, languageCode);
+    }
+
+    /**
+     * Envía un mensaje usando una plantilla de WhatsApp con código de idioma
+     * específico
+     */
+    private void enviarMensajePlantillaConIdioma(String telefono, String nombrePlantilla,
+            List<String> parametros, String languageCode) {
         try {
             String url = String.format(WhatsAppConstants.URL_FORMAT_MESSAGES_API, whatsappApiUrl, phoneNumberId);
             String numeroFormateado = clienteHelper.formatearNumeroTelefono(telefono);
 
-            WhatsAppMessageRequest request = construirMensajeRequest(numeroFormateado, nombrePlantilla, parametros);
+            WhatsAppMessageRequest request = construirMensajeRequest(numeroFormateado, nombrePlantilla,
+                    parametros, languageCode);
             HttpHeaders headers = construirHeaders();
             HttpEntity<WhatsAppMessageRequest> entity = new HttpEntity<>(request, headers);
 
@@ -274,16 +308,19 @@ public class WhatsAppServiceImpl implements IWhatsAppService {
 
         } catch (org.springframework.web.client.HttpClientErrorException e) {
             manejarErrorHttp(e, telefono, nombrePlantilla);
-            throw new WhatsAppBusinessException(WhatsAppConstants.EXCEPTION_ERROR_ENVIAR_PLANTILLA, e);
+            // No lanzamos excepción para no interrumpir el flujo principal
+            log.warn("⚠️ Notificación de WhatsApp no enviada, pero el proceso continúa normalmente");
         } catch (Exception e) {
             log.error(WhatsAppConstants.ERROR_INESPERADO, telefono, e.getMessage());
-            throw new WhatsAppBusinessException(WhatsAppConstants.EXCEPTION_ERROR_ENVIAR_PLANTILLA, e);
+            // No lanzamos excepción para no interrumpir el flujo principal
+            log.warn("⚠️ Notificación de WhatsApp no enviada, pero el proceso continúa normalmente");
         }
     }
 
     private WhatsAppMessageRequest construirMensajeRequest(String numeroFormateado,
             String nombrePlantilla,
-            List<String> parametros) {
+            List<String> parametros,
+            String languageCode) {
         List<WhatsAppParameter> parameters = parametros.stream()
                 .map(WhatsAppParameter::text)
                 .toList();
@@ -295,7 +332,7 @@ public class WhatsAppServiceImpl implements IWhatsAppService {
 
         WhatsAppTemplate template = WhatsAppTemplate.builder()
                 .name(nombrePlantilla)
-                .language(WhatsAppLanguage.spanish())
+                .language(new WhatsAppLanguage(languageCode))
                 .components(List.of(component))
                 .build();
 
