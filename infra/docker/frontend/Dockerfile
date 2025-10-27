@@ -4,13 +4,13 @@ FROM node:20-alpine3.19
 WORKDIR /app
 
 # Copiar package files
-COPY package*.json ./
+COPY frontend/package*.json ./
 
 # Instalar dependencias
-RUN npm ci
+RUN npm ci --only=production
 
 # Copiar código fuente
-COPY . .
+COPY frontend/ .
 
 # Construir aplicación
 RUN npm run build

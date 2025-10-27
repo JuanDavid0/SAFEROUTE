@@ -15,6 +15,11 @@ twilio.account-sid=YOUR_TWILIO_ACCOUNT_SID_HERE
 twilio.auth-token=YOUR_TWILIO_AUTH_TOKEN_HERE
 twilio.phone-number=YOUR_TWILIO_PHONE_NUMBER_HERE
 
+# WhatsApp Business API Configuration
+whatsapp.api.phone-number-id=YOUR_WHATSAPP_API_PHONE_NUMBER_ID
+whatsapp.api.token=YOUR_WHATSAPP_API_TOKEN
+whatsapp.base.url=YOUR_WHATSAPP_BASE_URL
+
 # JWT Configuration
 jwt.secret=YOUR_JWT_SECRET_AT_LEAST_256_BITS_LONG_HERE
 jwt.expiration=86400000
@@ -23,3 +28,6 @@ jwt.expiration=86400000
 otp.length=6
 otp.expiration-minutes=5
 otp.max-attempts=3
+
+# Hashids Configuration for URL obfuscation
+HASHIDS_SALT=YOUR_HASHIDS_SALT_HERE
