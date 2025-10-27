@@ -12,9 +12,16 @@ import { Loading } from '@/components/ui/Loading';
 
 export default function Home() {
   const router = useRouter();
-  const { isAuthenticated, user } = useAuthStore();
+  const { isAuthenticated, user, rehydrateCheck } = useAuthStore();
 
   useEffect(() => {
+    // Ensure persisted token is validated on app load
+    try {
+      rehydrateCheck();
+    } catch (e) {
+      // ignore
+    }
+
     if (!isAuthenticated) {
       // No autenticado -> Login
       router.push('/login');
