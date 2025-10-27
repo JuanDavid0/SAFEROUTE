@@ -8,6 +8,7 @@ REQUISITOS_PENDIENTES.md
 .env.*.local
 *.env
 backend/.env
+backend/docs/
 backend/src/main/resources/firebase-service-account.json
 frontend/.env
 

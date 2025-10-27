@@ -179,3 +179,11 @@ INSERT INTO ROL (tipo_rol, descripcion_rol) VALUES
     ('SAD', 'Super Administrador con todos los permisos'),
     ('CLI', 'Cliente que realiza pedidos');
 -- ======================================================
+
+
+-- ======================================================
+-- Asignar rol de Super Administrador al usuario con cédula '1722233344'
+-- ======================================================
+UPDATE USUARIO_ROL 
+SET id_rol = (SELECT id_rol FROM ROL WHERE tipo_rol = 'SAD')
+WHERE id_usuario = (SELECT id_usuario FROM USUARIO WHERE cedula = '1722233344');
