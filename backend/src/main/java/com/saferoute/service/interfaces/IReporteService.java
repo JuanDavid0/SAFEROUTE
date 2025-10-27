@@ -1,4 +1,4 @@
-package com.saferoute.service;
+package com.saferoute.service.interfaces;
 
 import com.saferoute.dto.reporte.*;
 

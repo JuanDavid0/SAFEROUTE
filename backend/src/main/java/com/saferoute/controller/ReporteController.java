@@ -1,7 +1,8 @@
 package com.saferoute.controller;
 
 import com.saferoute.dto.reporte.*;
-import com.saferoute.service.IReporteService;
+import com.saferoute.service.interfaces.IReporteService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
