@@ -8,6 +8,7 @@ REQUISITOS_PENDIENTES.md
 .env.*.local
 *.env
 backend/.env
+backend/src/main/resources/firebase-service-account.json
 frontend/.env
 
 # Spring Boot Profiles - Development configurations with credentials
@@ -61,3 +62,5 @@ yarn.lock
 .DS_Store
 Thumbs.db
 desktop.ini
+
+

@@ -309,11 +309,11 @@ public class WhatsAppServiceImpl implements IWhatsAppService {
         } catch (org.springframework.web.client.HttpClientErrorException e) {
             manejarErrorHttp(e, telefono, nombrePlantilla);
             // No lanzamos excepción para no interrumpir el flujo principal
-            log.warn("⚠️ Notificación de WhatsApp no enviada, pero el proceso continúa normalmente");
+            log.warn(" Notificación de WhatsApp no enviada, pero el proceso continúa normalmente");
         } catch (Exception e) {
             log.error(WhatsAppConstants.ERROR_INESPERADO, telefono, e.getMessage());
             // No lanzamos excepción para no interrumpir el flujo principal
-            log.warn("⚠️ Notificación de WhatsApp no enviada, pero el proceso continúa normalmente");
+            log.warn(" Notificación de WhatsApp no enviada, pero el proceso continúa normalmente");
         }
     }
 

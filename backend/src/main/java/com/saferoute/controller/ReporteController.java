@@ -34,7 +34,7 @@ public class ReporteController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
             @RequestParam(required = false, defaultValue = "TRIMESTRAL") String agrupacion) {
 
-        log.info("📊 GET /reportes/ingresos - Rango: {} a {}, Agrupación: {}",
+        log.info(" GET /reportes/ingresos - Rango: {} a {}, Agrupación: {}",
                 fechaInicio, fechaFin, agrupacion);
 
         // Validar fechas
@@ -67,7 +67,7 @@ public class ReporteController {
     public ResponseEntity<?> obtenerProductosMasVendidos(
             @RequestParam(required = false, defaultValue = "10") Integer limite) {
 
-        log.info("📊 GET /reportes/productos-mas-vendidos - Límite: {}", limite);
+        log.info(" GET /reportes/productos-mas-vendidos - Límite: {}", limite);
 
         if (limite <= 0 || limite > 100) {
             return ResponseEntity.badRequest().body(Map.of(
@@ -85,7 +85,7 @@ public class ReporteController {
     public ResponseEntity<?> obtenerProductosMayorGanancia(
             @RequestParam(required = false, defaultValue = "10") Integer limite) {
 
-        log.info("📊 GET /reportes/productos-mayor-ganancia - Límite: {}", limite);
+        log.info(" GET /reportes/productos-mayor-ganancia - Límite: {}", limite);
 
         if (limite <= 0 || limite > 100) {
             return ResponseEntity.badRequest().body(Map.of(
@@ -103,7 +103,7 @@ public class ReporteController {
     public ResponseEntity<?> obtenerClientesFrecuentes(
             @RequestParam(required = false, defaultValue = "20") Integer limite) {
 
-        log.info("📊 GET /reportes/clientes-frecuentes - Límite: {}", limite);
+        log.info(" GET /reportes/clientes-frecuentes - Límite: {}", limite);
 
         if (limite <= 0 || limite > 100) {
             return ResponseEntity.badRequest().body(Map.of(
@@ -120,7 +120,7 @@ public class ReporteController {
     @PreAuthorize("hasAnyRole('SAD', 'ADM')")
     public ResponseEntity<?> obtenerPedidosEnCurso() {
 
-        log.info("📊 GET /reportes/pedidos-en-curso");
+        log.info(" GET /reportes/pedidos-en-curso");
 
         List<PedidoEnCursoDTO> pedidos = reporteService.obtenerPedidosEnCurso();
 
@@ -131,7 +131,7 @@ public class ReporteController {
     @PreAuthorize("hasAnyRole('SAD', 'ADM')")
     public ResponseEntity<?> obtenerResumenEstadisticas() {
 
-        log.info("📊 GET /reportes/resumen");
+        log.info(" GET /reportes/resumen");
 
         ResumenEstadisticasDTO resumen = reporteService.obtenerResumenEstadisticas();
 

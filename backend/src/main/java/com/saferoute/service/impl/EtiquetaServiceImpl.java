@@ -31,21 +31,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 🏷️ IMPLEMENTACIÓN DEL SERVICIO DE ETIQUETAS
- * 
- * Genera etiquetas de entrega para pedidos entregados.
- * Cada solicitud del pedido genera una etiqueta independiente.
- * 
- * Formato PDF:
- * - 2 etiquetas por fila (cuadrícula optimizada)
- * - Diseño profesional con bordes
- * - Información clara y legible
- * - Lista para cortar e imprimir
- * 
- * @author SafeRoute Team
- * @version 1.0
- * @since 2025-10-24
- */
+ * IMPLEMENTACIÓN DEL SERVICIO DE ETIQUETAS
+*/
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -228,7 +215,7 @@ public class EtiquetaServiceImpl implements IEtiquetaService {
 
         Pedido pedido = pedidoRepository.findById(idPedido)
                 .orElseThrow(() -> {
-                    log.error("❌ Pedido no encontrado ID: {}", idPedido);
+                    log.error(" Pedido no encontrado ID: {}", idPedido);
                     return new EtiquetaBusinessException(EtiquetaConstants.ERROR_PEDIDO_NO_ENCONTRADO);
                 });
 

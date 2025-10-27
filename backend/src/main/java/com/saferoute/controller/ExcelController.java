@@ -38,7 +38,7 @@ public class ExcelController {
         headers.setContentDispositionFormData("attachment", filename);
         headers.setContentLength(excel.size());
 
-        log.info("✅ Excel de compras del cliente #{} generado exitosamente - {} bytes",
+        log.info(" Excel de compras del cliente #{} generado exitosamente - {} bytes",
                 idCliente, excel.size());
 
         return ResponseEntity.ok()
@@ -62,7 +62,7 @@ public class ExcelController {
         headers.setContentDispositionFormData("attachment", filename);
         headers.setContentLength(excel.size());
 
-        log.info("✅ Excel del pedido #{} generado exitosamente - {} bytes", idPedido, excel.size());
+        log.info(" Excel del pedido #{} generado exitosamente - {} bytes", idPedido, excel.size());
 
         return ResponseEntity.ok()
                 .headers(headers)
