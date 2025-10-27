@@ -170,3 +170,12 @@ CREATE INDEX idx_sp_producto ON SOLICITUD_PRODUCTO(id_producto);
 
 UPDATE USUARIO SET estado_usuario = 'ACTIVO' WHERE estado_usuario IS NULL;
 UPDATE PRODUCTO SET estado_producto = 'ACTIVO' WHERE estado_producto IS NULL;
+
+-- ======================================================
+-- Insertar datos iniciales en la tabla ROL
+-- ======================================================
+INSERT INTO ROL (tipo_rol, descripcion_rol) VALUES
+    ('ADM', 'Administrador del sistema con permisos limitados'),
+    ('SAD', 'Super Administrador con todos los permisos'),
+    ('CLI', 'Cliente que realiza pedidos');
+-- ======================================================
