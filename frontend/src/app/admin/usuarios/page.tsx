@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Página de Gestión de Usuarios - SUPERADMIN
+ * Página de Gestión de Usuarios - ADMIN
  * Permite ver y eliminar administradores del sistema
  */
 
@@ -141,7 +141,7 @@ export default function UsuariosPage() {
     // ===========================
 
     return (
-        <DashboardLayout role="SAD">
+        <DashboardLayout role="ADM">
             <div className="usuarios-container">
                 {/* Header */}
                 <div className="usuarios-header">

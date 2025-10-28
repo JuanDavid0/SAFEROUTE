@@ -10,6 +10,7 @@ public class UsuarioDTO {
     private String cedula;
     private String direccion;
     private List<String> roles;
+    private String estado; // ACT (Activo) o INA (Inactivo)
 
     // Getters y setters
     public Integer getIdUsuario() {
@@ -66,5 +67,13 @@ public class UsuarioDTO {
 
     public void setRoles(List<String> roles) {
         this.roles = roles;
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
     }
 }

@@ -1,10 +1,11 @@
-/**
- * Configuración - Super Administrador
- */
-
 'use client';
 
-import { useState } from 'react';
+/**
+ * Página de Configuración - ADMIN
+ * Permite cambiar la contraseña del usuario
+ */
+
+import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useAuthStore } from '@/stores/authStore';
 import configuracionService from '@/services/configuracionService';
@@ -113,7 +114,7 @@ export default function ConfiguracionPage() {
     // ===========================
 
     return (
-        <DashboardLayout role="SAD">
+        <DashboardLayout role="ADM">
             <div className="configuracion-container">
                 {/* Header */}
                 <div className="configuracion-header">

@@ -139,9 +139,6 @@ export default function PedidosPage() {
             return;
         }
 
-        console.log('Usuario completo:', user);
-        console.log('ID del usuario:', user?.idUsuario);
-
         if (user?.idUsuario === null || user?.idUsuario === undefined) {
             mostrarMensaje('error', 'No se pudo obtener el ID del usuario. Por favor, inicie sesión nuevamente.');
             console.error('Usuario no tiene idUsuario:', user);
@@ -166,7 +163,6 @@ export default function PedidosPage() {
                 fechaCierre: fechaCierre
             };
 
-            console.log('Enviando pedido con idAdmin:', user.idUsuario);
             await pedidosService.crearPedido(user.idUsuario, datos);
 
             mostrarMensaje('success', 'Pedido creado exitosamente');

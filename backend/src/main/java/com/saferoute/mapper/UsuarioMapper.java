@@ -29,6 +29,7 @@ public class UsuarioMapper {
         dto.setCedula(usuario.getCedula());
         dto.setDireccion(usuario.getDireccion());
         dto.setRoles(extraerRoles(usuario));
+        dto.setEstado(usuario.getEstadoUsuario()); // Mapear estado del usuario
         return dto;
     }
 

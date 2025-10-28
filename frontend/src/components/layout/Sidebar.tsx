@@ -87,6 +87,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, user }) => {
             label: 'Etiquetas',
             path: '/admin/etiquetas',
         },
+        {
+            label: 'Configuración',
+            path: '/admin/configuracion',
+        },
     ];
 
     const handleLogout = () => {

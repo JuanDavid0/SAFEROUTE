@@ -17,7 +17,6 @@ public class ClienteFrecuenteDTO {
 
     private String cedula;
     private String nombreCompleto;
-    private String email;
     private String telefono;
 
     private Integer totalSolicitudes;

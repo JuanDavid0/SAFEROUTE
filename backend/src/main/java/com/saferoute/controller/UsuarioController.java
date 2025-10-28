@@ -39,7 +39,7 @@ public class UsuarioController {
      * Listar todos los usuarios
      */
     @GetMapping
-    @PreAuthorize("hasRole('SAD')")
+    @PreAuthorize("hasAnyRole('SAD', 'ADM')")
     public ResponseEntity<ApiResponse<List<UsuarioDTO>>> listarUsuarios() {
         List<UsuarioDTO> usuarios = usuarioService.listarTodos();
 

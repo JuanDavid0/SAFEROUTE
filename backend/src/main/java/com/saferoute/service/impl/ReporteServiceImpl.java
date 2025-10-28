@@ -216,7 +216,6 @@ public class ReporteServiceImpl implements IReporteService {
         ClienteFrecuenteDTO dto = new ClienteFrecuenteDTO();
         dto.setCedula(cliente.getCedula());
         dto.setNombreCompleto(cliente.getNombres() + " " + cliente.getApellidos());
-        dto.setEmail(cliente.getTelefono());
         dto.setTelefono(cliente.getTelefono());
         dto.setTotalSolicitudes(0);
         dto.setSolicitudesPagadas(0);
