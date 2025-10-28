@@ -21,6 +21,7 @@ export interface UsuarioInforme {
 	telefono?: string;
 	direccion?: string;
 	roles?: string[];
+	estado?: string; // ACTIVO o INACTIVO
 }
 
 /**

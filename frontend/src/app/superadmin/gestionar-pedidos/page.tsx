@@ -45,12 +45,19 @@ interface PedidoConSolicitudes extends pedidosService.PedidoResponse {
     consolidado?: boolean;
 }
 
+type OrdenColumna = 'fechaCreado' | 'fechaCierre' | 'cantidadSolicitudes' | null;
+type DireccionOrden = 'asc' | 'desc';
+
 export default function GestionarPedidosPage() {
     const [pedidos, setPedidos] = useState<PedidoConSolicitudes[]>([]);
     const [cargando, setCargando] = useState(false);
     const [mensaje, setMensaje] = useState<{ tipo: 'success' | 'error'; texto: string } | null>(null);
     const [mostrarModalEstado, setMostrarModalEstado] = useState(false);
     const [pedidoSeleccionado, setPedidoSeleccionado] = useState<PedidoConSolicitudes | null>(null);
+
+    // Estados para ordenamiento
+    const [ordenColumna, setOrdenColumna] = useState<OrdenColumna>(null);
+    const [direccionOrden, setDireccionOrden] = useState<DireccionOrden>('desc');
 
     useEffect(() => {
         cargarPedidos();
@@ -93,6 +100,61 @@ export default function GestionarPedidosPage() {
     const mostrarMensaje = (tipo: 'success' | 'error', texto: string) => {
         setMensaje({ tipo, texto });
         setTimeout(() => setMensaje(null), 5000);
+    };
+
+    // Función para ordenar pedidos
+    const handleOrdenar = (columna: OrdenColumna) => {
+        if (ordenColumna === columna) {
+            // Si ya está ordenada por esta columna, cambiar dirección
+            setDireccionOrden(direccionOrden === 'asc' ? 'desc' : 'asc');
+        } else {
+            // Nueva columna, ordenar descendente por defecto
+            setOrdenColumna(columna);
+            setDireccionOrden('desc');
+        }
+    };
+
+    // Obtener pedidos ordenados
+    const obtenerPedidosOrdenados = (): PedidoConSolicitudes[] => {
+        if (!ordenColumna) return pedidos;
+
+        const pedidosOrdenados = [...pedidos].sort((a, b) => {
+            let valorA: any;
+            let valorB: any;
+
+            switch (ordenColumna) {
+                case 'fechaCreado':
+                    valorA = new Date(a.fechaCreado).getTime();
+                    valorB = new Date(b.fechaCreado).getTime();
+                    break;
+                case 'fechaCierre':
+                    valorA = new Date(a.fechaCierre).getTime();
+                    valorB = new Date(b.fechaCierre).getTime();
+                    break;
+                case 'cantidadSolicitudes':
+                    valorA = a.cantidadSolicitudes || 0;
+                    valorB = b.cantidadSolicitudes || 0;
+                    break;
+                default:
+                    return 0;
+            }
+
+            if (direccionOrden === 'asc') {
+                return valorA > valorB ? 1 : valorA < valorB ? -1 : 0;
+            } else {
+                return valorA < valorB ? 1 : valorA > valorB ? -1 : 0;
+            }
+        });
+
+        return pedidosOrdenados;
+    };
+
+    // Copiar URL al portapapeles
+    const copiarURL = (hash: string | null) => {
+        if (!hash) return;
+        const url = `${window.location.origin}/pedido/${hash}`;
+        navigator.clipboard.writeText(url);
+        mostrarMensaje('success', '✅ URL copiada al portapapeles');
     };
 
     const handleConsolidar = async (pedido: PedidoConSolicitudes) => {
@@ -201,14 +263,48 @@ export default function GestionarPedidosPage() {
                                     <tr>
                                         <th>ID</th>
                                         <th>Estado</th>
-                                        <th>Fecha Creación</th>
-                                        <th>Fecha Cierre</th>
-                                        <th>Solicitudes</th>
+                                        <th
+                                            className="th-ordenable"
+                                            onClick={() => handleOrdenar('fechaCreado')}
+                                            title="Ordenar por fecha de creación"
+                                        >
+                                            Fecha Creación
+                                            {ordenColumna === 'fechaCreado' && (
+                                                <span className="icono-orden">
+                                                    {direccionOrden === 'asc' ? ' ▲' : ' ▼'}
+                                                </span>
+                                            )}
+                                        </th>
+                                        <th
+                                            className="th-ordenable"
+                                            onClick={() => handleOrdenar('fechaCierre')}
+                                            title="Ordenar por fecha de cierre"
+                                        >
+                                            Fecha Cierre
+                                            {ordenColumna === 'fechaCierre' && (
+                                                <span className="icono-orden">
+                                                    {direccionOrden === 'asc' ? ' ▲' : ' ▼'}
+                                                </span>
+                                            )}
+                                        </th>
+                                        <th
+                                            className="th-ordenable"
+                                            onClick={() => handleOrdenar('cantidadSolicitudes')}
+                                            title="Ordenar por número de solicitudes"
+                                        >
+                                            Solicitudes
+                                            {ordenColumna === 'cantidadSolicitudes' && (
+                                                <span className="icono-orden">
+                                                    {direccionOrden === 'asc' ? ' ▲' : ' ▼'}
+                                                </span>
+                                            )}
+                                        </th>
+                                        <th>URL Pedido</th>
                                         <th>Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {pedidos.map((pedido) => (
+                                    {obtenerPedidosOrdenados().map((pedido) => (
                                         <tr key={pedido.idPedido}>
                                             <td className="td-id">#{pedido.idPedido}</td>
                                             <td>
@@ -220,6 +316,23 @@ export default function GestionarPedidosPage() {
                                             <td>{pedido.fechaCierre}</td>
                                             <td className="td-solicitudes">
                                                 {pedido.cantidadSolicitudes || 0}
+                                            </td>
+                                            <td className="td-url">
+                                                <div className="url-container">
+                                                    <input
+                                                        type="text"
+                                                        className="input-url"
+                                                        value={`${typeof window !== 'undefined' ? window.location.origin : ''}/pedido/${pedido.urlHash}`}
+                                                        readOnly
+                                                    />
+                                                    <button
+                                                        className="btn-copiar-url"
+                                                        onClick={() => copiarURL(pedido.urlHash)}
+                                                        title="Copiar URL"
+                                                    >
+                                                        📋
+                                                    </button>
+                                                </div>
                                             </td>
                                             <td className="td-acciones">
                                                 <div className="acciones-grupo">

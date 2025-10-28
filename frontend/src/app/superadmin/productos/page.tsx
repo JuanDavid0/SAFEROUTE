@@ -246,7 +246,7 @@ export default function ProductosPage() {
                                     <label className="form-label">Nombre del Producto *</label>
                                     <Input
                                         type="text"
-                                        placeholder="Ej: Leche Deslactosada"
+                                        placeholder="Ej: Audifonos, Maletas ..."
                                         value={nombreProducto}
                                         onChange={(e) => setNombreProducto(e.target.value)}
                                     />
@@ -256,7 +256,7 @@ export default function ProductosPage() {
                                     <label className="form-label">Tipo de Producto *</label>
                                     <Input
                                         type="text"
-                                        placeholder="Ej: Lácteos, Panadería, Cereales..."
+                                        placeholder="Ej: Electrónica, Ropa, Alimentos..."
                                         value={tipoProducto}
                                         onChange={(e) => setTipoProducto(e.target.value)}
                                     />

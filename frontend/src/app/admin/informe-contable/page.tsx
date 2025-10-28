@@ -49,12 +49,23 @@ export default function InformeContablePage() {
             if (tipoInforme === 'cliente') {
                 console.log('👥 Cargando clientes...');
                 const data = await informeService.obtenerUsuarios();
-                setClientes(data);
+                // Filtrar solo clientes ACTIVOS
+                const clientesActivos = data.filter(
+                    (usuario) =>
+                        usuario.roles?.includes('CLI') && usuario.estado === 'ACTIVO'
+                );
+                console.log(`✅ ${clientesActivos.length} clientes activos encontrados`);
+                setClientes(clientesActivos);
                 setClienteSeleccionado(null);
             } else {
                 console.log('📦 Cargando pedidos entregados...');
                 const data = await informeService.obtenerPedidosEntregados();
-                setPedidos(data);
+                // Filtrar solo pedidos con estado ENT (Entregados)
+                const pedidosEntregados = data.filter(
+                    (pedido) => pedido.estadoPedido === 'ENT'
+                );
+                console.log(`✅ ${pedidosEntregados.length} pedidos entregados encontrados`);
+                setPedidos(pedidosEntregados);
                 setPedidoSeleccionado(null);
             }
         } catch (error: any) {

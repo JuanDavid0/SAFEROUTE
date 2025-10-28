@@ -65,10 +65,16 @@ export default function EtiquetasPage() {
                 return;
             }
 
-            setPedidos(data);
+            // Filtrar solo pedidos con estado ENT (Entregados)
+            const pedidosEntregados = data.filter(
+                (pedido) => pedido.estadoPedido === 'ENT'
+            );
+            console.log(`✅ ${pedidosEntregados.length} pedidos entregados encontrados`);
 
-            if (data.length === 0) {
-                mostrarMensaje('info', 'No hay pedidos disponibles');
+            setPedidos(pedidosEntregados);
+
+            if (pedidosEntregados.length === 0) {
+                mostrarMensaje('info', 'No hay pedidos entregados disponibles');
             }
         } catch (error: any) {
             console.error('❌ Error al cargar pedidos:', error);

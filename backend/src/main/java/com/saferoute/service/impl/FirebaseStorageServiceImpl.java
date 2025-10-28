@@ -60,7 +60,12 @@ public class FirebaseStorageServiceImpl implements IFirebaseStorageService {
                     rutaCompleta,
                     helper.obtenerContentType(archivo));
 
-            storage.create(blobInfo, helper.leerBytesArchivo(archivo));
+            Blob blob = storage.create(blobInfo, helper.leerBytesArchivo(archivo));
+
+            // Hacer el archivo público para que sea accesible sin autenticación
+            blob.createAcl(com.google.cloud.storage.Acl.of(
+                    com.google.cloud.storage.Acl.User.ofAllUsers(),
+                    com.google.cloud.storage.Acl.Role.READER));
 
             // Construir URL pública
             String urlPublica = helper.construirUrlPublica(rutaCompleta);

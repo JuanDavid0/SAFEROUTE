@@ -200,7 +200,10 @@ public class SolicitudController {
     }
 
     @DeleteMapping("/{idSolicitud}")
-    public ResponseEntity<ApiResponse<Void>> cancelarSolicitud(@PathVariable Integer idSolicitud) {
+    public ResponseEntity<ApiResponse<Void>> cancelarSolicitud(@PathVariable Integer idSolicitud, HttpServletRequest request) {
+         String cedula = getCedulaFromToken(request);
+        authorizationService.validateSolicitudOwnership(idSolicitud, cedula);
+
         solicitudService.cancelarSolicitud(idSolicitud);
 
         ApiResponse<Void> response = ApiResponse.success("Solicitud cancelada exitosamente");
