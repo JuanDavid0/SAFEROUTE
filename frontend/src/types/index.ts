@@ -53,6 +53,7 @@ export interface LoginRequest {
 export interface LoginResponse {
   token: string;
   rol: 'CLI' | 'ADM' | 'SAD';
+  idUsuario: number;
 }
 
 export interface RegistroRequest {

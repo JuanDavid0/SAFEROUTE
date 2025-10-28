@@ -34,8 +34,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, user }) => {
             label: 'Pedidos',
             path: '/superadmin/pedidos',
             subOptions: [
-                { label: 'Consultar', path: '/superadmin/pedidos/consultar' },
-                { label: 'Gestionar pedidos', path: '/superadmin/pedidos/gestionar' },
+                { label: 'Consultar Solicitudes', path: '/superadmin/pedidos/consultar' },
+                { label: 'Gestionar pedidos', path: '/superadmin/gestionar-pedidos' },
             ]
         },
         {
@@ -67,8 +67,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, user }) => {
             label: 'Pedidos',
             path: '/admin/pedidos',
             subOptions: [
-                { label: 'Consultar', path: '/admin/pedidos/consultar' },
-                { label: 'Gestionar pedidos', path: '/admin/pedidos/gestionar' },
+                { label: 'Consultar Solicitudes', path: '/admin/pedidos/consultar' },
+                { label: 'Gestionar pedidos', path: '/admin/gestionar-pedidos' },
             ]
         },
         {

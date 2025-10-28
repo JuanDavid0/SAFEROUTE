@@ -83,7 +83,7 @@ export default function LoginPage() {
             const response = await login({ cedula, contrasenia });
 
             if (response.status === 'success' && response.data) {
-                const { token, rol } = response.data;
+                const { token, rol, idUsuario } = response.data;
 
                 // Verificar que sea SAD o ADM
                 if (rol !== 'SAD' && rol !== 'ADM') {
@@ -97,7 +97,7 @@ export default function LoginPage() {
 
                 // Guardar token en el store
                 const userData = {
-                    idUsuario: 0,
+                    idUsuario: idUsuario,
                     nombres: '',
                     apellidos: '',
                     telefono: '',
@@ -113,7 +113,7 @@ export default function LoginPage() {
                 const jwtResponse = {
                     token,
                     tipo: 'Bearer',
-                    idUsuario: 0,
+                    idUsuario: idUsuario,
                     cedula,
                     nombres: '',
                     apellidos: '',
