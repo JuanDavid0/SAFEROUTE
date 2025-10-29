@@ -229,3 +229,137 @@ INSERT INTO PRODUCTO (
 -- ======================================================
 -- FIN DE INSERCIONES INICIALES
 -- ======================================================
+-- ======================================================
+-- 10. INSERCIÓN DE USUARIOS CLIENTE (ROL CLI)
+-- ======================================================
+
+-- Usuarios tipo Cliente
+INSERT INTO USUARIO (
+    nombres, apellidos, telefono, cedula, direccion, estado_usuario
+) VALUES
+    ('Andres', 'Maldonado', '3103442878', '1001001001', 'Calle 12 #45-67, Paipa', 'ACTIVO'),
+
+    ('William', 'Cely', '3133620731', '1002002002', 'Carrera 8 #23-90, Samaca','ACTIVO');
+
+-- ======================================================
+-- 11. ASIGNACIÓN DE ROL CLIENTE A LOS USUARIOS
+-- ======================================================
+
+INSERT INTO USUARIO_ROL (id_rol, id_usuario)
+SELECT
+    r.id_rol, u.id_usuario
+FROM ROL r
+JOIN USUARIO u ON u.cedula IN ('1001001001', '1002002002')
+WHERE r.tipo_rol = 'CLI';
+
+-- ======================================================
+-- FIN DE INSERCIÓN DE CLIENTES
+-- ======================================================
+
+-- ======================================================
+-- 12. INSERCIÓN DE UN PEDIDO DE PRUEBA
+-- ======================================================
+
+-- Crear pedido asociado al Super Administrador (SAD)
+INSERT INTO PEDIDO (
+    id_admin, estado_pedido, fecha_creado, fecha_cierre, url_hash
+)
+SELECT
+    u.id_usuario,
+    'ACT',
+    DATE '2025-10-01',
+    DATE '2025-10-28',
+    'SafeRtQX9zPdK123'
+FROM USUARIO u
+WHERE u.cedula = '9999999999';
+
+
+-- ======================================================
+-- 13. INSERCIÓN DE SOLICITUDES RELACIONADAS AL PEDIDO
+-- ======================================================
+
+-- Solicitud 1 - Cliente Laura Martínez (pagada)
+INSERT INTO SOLICITUD (
+    id_cliente, id_pedido, fecha_solicitud, estado_solicitud, direccion_entrega, modificaciones_restantes
+)
+SELECT
+    u.id_usuario,
+    p.id_pedido,
+    DATE '2025-10-29',
+    'PGD',
+    'Paipa',
+    3
+FROM USUARIO u, PEDIDO p
+WHERE u.cedula = '1001001001' AND p.url_hash = 'SafeRtQX9zPdK123';
+
+-- Solicitud 2 - Cliente Carlos García (pendiente de pago)
+INSERT INTO SOLICITUD (
+    id_cliente, id_pedido, fecha_solicitud, estado_solicitud, direccion_entrega, modificaciones_restantes
+)
+SELECT
+    u.id_usuario,
+    p.id_pedido,
+    DATE '2025-10-29',
+    'PDP',
+    'Tunja',
+    3
+FROM USUARIO u, PEDIDO p
+WHERE u.cedula = '1002002002' AND p.url_hash = 'SafeRtQX9zPdK123';
+
+
+-- ======================================================
+-- 14. INSERCIÓN DE PRODUCTOS ASOCIADOS AL PEDIDO
+-- ======================================================
+
+-- Relacionar algunos productos del catálogo con el pedido
+INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad_min, cantidad_max)
+SELECT
+    p.id_pedido, pr.id_producto, 10, 500
+FROM PEDIDO p, PRODUCTO pr
+WHERE p.url_hash = 'SafeRtQX9zPdK123'
+  AND pr.id_producto IN (
+      (SELECT id_producto FROM PRODUCTO WHERE nombre_producto = 'Altavoz Bluetooth Portátil' LIMIT 1),
+      (SELECT id_producto FROM PRODUCTO WHERE nombre_producto = 'Cámara de Seguridad 360°' LIMIT 1)
+  );
+
+
+-- ======================================================
+-- 15. INSERCIÓN DE PRODUCTOS SOLICITADOS POR CLIENTES
+-- ======================================================
+
+-- Solicitud de Laura Martínez (Paipa)
+INSERT INTO SOLICITUD_PRODUCTO (id_solicitud, id_producto, cantidad_solicitada, precio)
+SELECT
+    s.id_solicitud,
+    pr.id_producto,
+    150,
+    pr.precio_unitario
+FROM SOLICITUD s, PRODUCTO pr
+WHERE s.direccion_entrega = 'Paipa'
+  AND pr.nombre_producto = 'Altavoz Bluetooth Portátil';
+
+INSERT INTO SOLICITUD_PRODUCTO (id_solicitud, id_producto, cantidad_solicitada, precio)
+SELECT
+    s.id_solicitud,
+    pr.id_producto,
+    120,
+    pr.precio_unitario
+FROM SOLICITUD s, PRODUCTO pr
+WHERE s.direccion_entrega = 'Paipa'
+  AND pr.nombre_producto = 'Cámara de Seguridad 360°';
+
+
+-- Solicitud de Carlos García (Tunja)
+INSERT INTO SOLICITUD_PRODUCTO (id_solicitud, id_producto, cantidad_solicitada, precio)
+SELECT
+    s.id_solicitud,
+    pr.id_producto,
+    90,
+    pr.precio_unitario
+FROM SOLICITUD s, PRODUCTO pr
+WHERE s.direccion_entrega = 'Tunja'
+  AND pr.nombre_producto = 'Altavoz Bluetooth Portátil';
+
+-- ======================================================
+-- FIN DE INSERCIÓN DE PEDIDO Y SOLICITUDES
+-- ======================================================
