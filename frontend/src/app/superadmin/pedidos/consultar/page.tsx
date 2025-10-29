@@ -10,6 +10,8 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui';
 import * as pedidosService from '@/services/pedidosService';
 import * as solicitudesService from '@/services/solicitudesService';
+import { obtenerProductosPorIdsPublico } from '@/services/productosService';
+import { Producto } from '@/types';
 
 // Estados de solicitud
 type EstadoSolicitud = 'PDP' | 'PGD' | 'CAN';
@@ -363,6 +365,41 @@ interface ModalDetallesSolicitudProps {
 }
 
 function ModalDetallesSolicitud({ solicitud, onCerrar }: ModalDetallesSolicitudProps) {
+    const [productosEnriquecidos, setProductosEnriquecidos] = React.useState<solicitudesService.ProductoSolicitudResponse[]>([]);
+    const [cargandoProductos, setCargandoProductos] = React.useState(true);
+
+    React.useEffect(() => {
+        const cargarNombresProductos = async () => {
+            try {
+                setCargandoProductos(true);
+
+                // Obtener IDs únicos de productos
+                const idsProductos = solicitud.productos.map(p => p.idProducto);
+
+                // Obtener información completa de productos
+                const productosCompletos = await obtenerProductosPorIdsPublico(idsProductos);
+
+                // Enriquecer productos de la solicitud con nombres
+                const productosConNombres = solicitud.productos.map(prodSolicitud => {
+                    const prodCompleto = productosCompletos.find((p: Producto) => p.idProducto === prodSolicitud.idProducto);
+                    return {
+                        ...prodSolicitud,
+                        nombreProducto: prodCompleto?.nombreProducto || prodSolicitud.nombreProducto || `Producto #${prodSolicitud.idProducto}`
+                    };
+                });
+
+                setProductosEnriquecidos(productosConNombres);
+            } catch (error) {
+                // Si falla, usar los productos originales
+                setProductosEnriquecidos(solicitud.productos);
+            } finally {
+                setCargandoProductos(false);
+            }
+        };
+
+        cargarNombresProductos();
+    }, [solicitud]);
+
     const calcularTotal = (): number => {
         return solicitud.productos.reduce((total, prod) => total + prod.precio, 0);
     };
@@ -412,36 +449,42 @@ function ModalDetallesSolicitud({ solicitud, onCerrar }: ModalDetallesSolicitudP
                     {/* Productos */}
                     <div className="detalle-seccion">
                         <h3 className="detalle-titulo">Productos Solicitados</h3>
-                        <div className="tabla-productos-detalle">
-                            <table className="tabla-productos">
-                                <thead>
-                                    <tr>
-                                        <th>Producto</th>
-                                        <th>Cantidad</th>
-                                        <th>Precio</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {solicitud.productos.map((producto) => (
-                                        <tr key={producto.idProducto}>
-                                            <td>{producto.nombreProducto || 'Sin nombre'}</td>
-                                            <td>{producto.cantidadSolicitada}</td>
-                                            <td>${producto.precio.toLocaleString()}</td>
+                        {cargandoProductos ? (
+                            <div style={{ textAlign: 'center', padding: '20px' }}>
+                                <p>⏳ Cargando información de productos...</p>
+                            </div>
+                        ) : (
+                            <div className="tabla-productos-detalle">
+                                <table className="tabla-productos">
+                                    <thead>
+                                        <tr>
+                                            <th>Producto</th>
+                                            <th>Cantidad</th>
+                                            <th>Precio</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                                <tfoot>
-                                    <tr>
-                                        <td colSpan={3} style={{ textAlign: 'right', fontWeight: 'bold' }}>
-                                            Total:
-                                        </td>
-                                        <td style={{ fontWeight: 'bold', fontSize: '16px' }}>
-                                            ${calcularTotal().toLocaleString()}
-                                        </td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody>
+                                        {productosEnriquecidos.map((producto) => (
+                                            <tr key={producto.idProducto}>
+                                                <td>{producto.nombreProducto || 'Sin nombre'}</td>
+                                                <td>{producto.cantidadSolicitada}</td>
+                                                <td>${producto.precio.toLocaleString()}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <td colSpan={3} style={{ textAlign: 'right', fontWeight: 'bold' }}>
+                                                Total:
+                                            </td>
+                                            <td style={{ fontWeight: 'bold', fontSize: '16px' }}>
+                                                ${calcularTotal().toLocaleString()}
+                                            </td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        )}
                     </div>
                 </div>
 

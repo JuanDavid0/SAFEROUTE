@@ -5034,7 +5034,7 @@ p,
 .producto-info {
   padding: 20px;
   flex: 1;
-  display: row;
+  display: flow;
   flex-direction: row;
   gap: 10px;
 }

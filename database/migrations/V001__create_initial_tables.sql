@@ -182,8 +182,50 @@ INSERT INTO ROL (tipo_rol, descripcion_rol) VALUES
 
 
 -- ======================================================
--- Asignar rol de Super Administrador al usuario con cédula '1722233344'
+-- 7. INSERCIÓN DE USUARIO SUPER ADMINISTRADOR (SAD)
 -- ======================================================
-UPDATE USUARIO_ROL 
-SET id_rol = (SELECT id_rol FROM ROL WHERE tipo_rol = 'SAD')
-WHERE id_usuario = (SELECT id_usuario FROM USUARIO WHERE cedula = '1722233344');
+
+INSERT INTO USUARIO (
+    nombres, apellidos, telefono, cedula, direccion, contrasenia, estado_usuario
+) VALUES (
+    'Super',
+    'Usuario',
+    '3133121509',
+    '9999999999',
+    'Oficina SafeRoute',
+    '$2a$10$wyuI6cOYhEWUapU5aLrhKeymRXrjW9t/dy4gkggyhMICnra98Rwh2',
+    'ACTIVO'
+);
+
+-- ======================================================
+-- 8. ASIGNACIÓN DE ROL SUPER ADMINISTRADOR AL USUARIO
+-- ======================================================
+
+INSERT INTO USUARIO_ROL (id_rol, id_usuario)
+SELECT 
+    r.id_rol, u.id_usuario
+FROM ROL r, USUARIO u
+WHERE r.tipo_rol = 'SAD' AND u.cedula = '9999999999';
+
+-- ======================================================
+-- 9. INSERCIÓN DE PRODUCTOS DE IMPORTACIONES
+-- ======================================================
+
+INSERT INTO PRODUCTO (
+    nombre_producto, tipo_producto, descripcion_producto, 
+    precio_unitario, costo_unitario, url_imagen, estado_producto
+) VALUES
+    ('Smartwatch Pro X10', 'Electrónicos', 'Reloj inteligente con monitor cardíaco y GPS integrado', 480000, 320000, 'https://example.com/img/smartwatch.jpg', 'ACTIVO'),
+    ('Auriculares Inalámbricos AirBeats', 'Electrónicos', 'Auriculares Bluetooth con cancelación de ruido', 250000, 160000, 'https://example.com/img/airbeats.jpg', 'ACTIVO'),
+    ('Cámara de Seguridad 360°', 'Seguridad', 'Cámara IP con visión nocturna y detección de movimiento', 370000, 250000, 'https://example.com/img/camara360.jpg', 'ACTIVO'),
+    ('Cargador Rápido Universal', 'Accesorios', 'Cargador con puerto USB-C y compatibilidad universal', 90000, 50000, 'https://example.com/img/cargador.jpg', 'ACTIVO'),
+    ('Power Bank 20000mAh', 'Accesorios', 'Batería portátil con doble salida USB', 150000, 95000, 'https://example.com/img/powerbank.jpg', 'ACTIVO'),
+    ('Teclado Mecánico RGB', 'Computación', 'Teclado mecánico retroiluminado con switches azules', 280000, 190000, 'https://example.com/img/teclado.jpg', 'ACTIVO'),
+    ('Mouse Inalámbrico Pro', 'Computación', 'Mouse ergonómico con sensor óptico de alta precisión', 120000, 70000, 'https://example.com/img/mouse.jpg', 'ACTIVO'),
+    ('Mini Proyector LED', 'Electrónicos', 'Proyector portátil HD compatible con HDMI y USB', 550000, 380000, 'https://example.com/img/proyector.jpg', 'ACTIVO'),
+    ('Balanza Digital Portátil', 'Hogar', 'Báscula precisa para maletas y paquetes', 85000, 50000, 'https://example.com/img/balanza.jpg', 'ACTIVO'),
+    ('Altavoz Bluetooth Portátil', 'Electrónicos', 'Altavoz resistente al agua con sonido envolvente', 200000, 130000, 'https://example.com/img/altavoz.jpg', 'ACTIVO');
+
+-- ======================================================
+-- FIN DE INSERCIONES INICIALES
+-- ======================================================
