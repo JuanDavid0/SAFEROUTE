@@ -378,10 +378,12 @@ export default function EditarSolicitudPage() {
                     ℹ️ Cómo editar tu solicitud:
                 </h3>
                 <ul style={{ margin: '0', paddingLeft: '20px', lineHeight: '1.8' }}>
-                    <li><strong>Cantidades:</strong> Modifica la cantidad y presiona Enter o haz clic fuera del campo para guardar automáticamente</li>
-                    <li><strong>Dirección:</strong> Actualiza la dirección y haz clic en "💾 Guardar Dirección"</li>
-                    <li><strong>Agregar productos:</strong> Usa el botón "➕ Agregar Producto"</li>
-                    <li><strong>Eliminar productos:</strong> Haz clic en el icono 🗑️</li>
+                    <ul style={{ margin: '0', paddingLeft: '20px', lineHeight: '1.8' }}>
+                        <li><strong>Cantidades:</strong> Modifica la cantidad y presiona Enter o haz clic fuera del campo para guardar automáticamente</li>
+                        <li><strong>Dirección:</strong> Actualiza la dirección y haz clic en {`"💾 Guardar Dirección"`}</li>
+                        <li><strong>Agregar productos:</strong> Usa el botón {`"➕ Agregar Producto"`}</li>
+                        <li><strong>Eliminar productos:</strong> Haz clic en el icono 🗑️</li>
+                    </ul>
                 </ul>
             </div>
 

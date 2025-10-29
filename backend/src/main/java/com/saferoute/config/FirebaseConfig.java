@@ -27,7 +27,7 @@ import java.io.InputStream;
 @Slf4j
 public class FirebaseConfig {
 
-    @Value("${firebase.credentials.path:src/main/resources/firebase-service-account.json}")
+    @Value("${firebase.credentials.path:https://mi-firebase-credenciales-bucket.s3.us-east-2.amazonaws.com/firebase-service-account.json}")
     private String credentialsPath;
 
     @Value("${firebase.storage.bucket:}")
