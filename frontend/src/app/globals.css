@@ -1596,6 +1596,28 @@ p,
   display: flex;
   flex-direction: column;
   gap: 8px;
+  max-height: 250px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Scrollbar para lista de productos en tarjetas */
+.pedido-productos-lista::-webkit-scrollbar {
+  width: 6px;
+}
+
+.pedido-productos-lista::-webkit-scrollbar-track {
+  background: var(--gris-claro);
+  border-radius: var(--radius-sm);
+}
+
+.pedido-productos-lista::-webkit-scrollbar-thumb {
+  background: var(--azul-petroleo);
+  border-radius: var(--radius-sm);
+}
+
+.pedido-productos-lista::-webkit-scrollbar-thumb:hover {
+  background: var(--coral-rojo);
 }
 
 .pedido-producto-item {
@@ -1650,7 +1672,10 @@ p,
   max-width: 600px;
   width: 100%;
   max-height: 90vh;
-  overflow-y: auto;
+  overflow: hidden;
+  /* Cambiado de overflow-y: auto */
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-lg {
@@ -1689,6 +1714,10 @@ p,
 
 .modal-body {
   padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  /* Importante para que funcione el scroll */
 }
 
 .modal-section {
@@ -1715,14 +1744,35 @@ p,
 .productos-pedido-lista {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 8px;
+  /* Espacio para el scrollbar */
+}
+
+/* Scrollbar personalizado para la lista de productos */
+.productos-pedido-lista::-webkit-scrollbar {
+  width: 8px;
+}
+
+.productos-pedido-lista::-webkit-scrollbar-track {
+  background: var(--gris-claro);
+  border-radius: var(--radius-sm);
+}
+
+.productos-pedido-lista::-webkit-scrollbar-thumb {
+  background: var(--azul-petroleo);
+  border-radius: var(--radius-sm);
+}
+
+.productos-pedido-lista::-webkit-scrollbar-thumb:hover {
+  background: var(--coral-rojo);
 }
 
 .producto-pedido-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
   background: var(--gris-claro);
   border-radius: var(--radius-md);
   gap: 12px;
@@ -1731,7 +1781,6 @@ p,
 .producto-info {
   display: flex;
   align-items: center;
-  gap: 12px;
   flex: 1;
 }
 
@@ -4348,10 +4397,50 @@ p,
 
   .modal-content {
     padding: 24px;
+    max-width: 95%;
+    max-height: 85vh;
+  }
+
+  .modal-lg {
+    max-width: 95%;
   }
 
   .modal-titulo {
     font-size: 20px;
+  }
+
+  .modal-body {
+    padding: 16px;
+  }
+
+  .productos-pedido-lista {
+    max-height: 300px;
+  }
+
+  .producto-pedido-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .producto-info {
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .producto-cantidades-edit {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .producto-cantidades-edit input {
+    max-width: 100%;
+  }
+
+  .producto-acciones {
+    width: 100%;
+    justify-content: flex-end;
   }
 
   .modal-acciones {
@@ -4395,6 +4484,23 @@ p,
   .modal-content {
     padding: 20px;
     width: 95%;
+    max-height: 80vh;
+  }
+
+  .modal-lg {
+    max-width: 95%;
+  }
+
+  .modal-header {
+    padding: 16px;
+  }
+
+  .modal-body {
+    padding: 12px;
+  }
+
+  .productos-pedido-lista {
+    max-height: 250px;
   }
 
   .modal-icon {
@@ -4928,8 +5034,9 @@ p,
 .producto-info {
   padding: 20px;
   flex: 1;
-  display: flex;
-  flex-direction: column;
+  display: row;
+  flex-direction: row;
+  gap: 10px;
 }
 
 .producto-nombre {
