@@ -39,18 +39,18 @@ export const cambiarContrasenia = async (
 	datos: CambiarContraseniaRequest
 ): Promise<CambiarContraseniaResponse> => {
 	try {
-		console.log('🔐 Cambiando contraseña para:', datos.cedula);
+		
 
 		const response = await apiClient.post(
 			'/auth/cambiar-contrasenia',
 			datos
 		);
 
-		console.log('✅ Contraseña cambiada:', response.data);
+		
 
 		return response.data;
 	} catch (error: unknown) {
-		console.error('❌ Error al cambiar contraseña:', error);
+		
 
 		// Propagar el error con mensaje claro
 		if (axios.isAxiosError(error)) {

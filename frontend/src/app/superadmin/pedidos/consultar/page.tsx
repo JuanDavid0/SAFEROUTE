@@ -77,7 +77,7 @@ export default function ConsultarSolicitudesPage() {
 
             setPedidos(pedidosConInfo);
         } catch (error) {
-            console.error('Error al cargar pedidos:', error);
+
             mostrarMensaje('error', 'Error al cargar pedidos');
         } finally {
             setCargando(false);
@@ -92,7 +92,7 @@ export default function ConsultarSolicitudesPage() {
             setPedidoSeleccionado(idPedido);
             setFiltroEstado('TODOS');
         } catch (error) {
-            console.error('Error al cargar solicitudes:', error);
+
             mostrarMensaje('error', 'Error al cargar solicitudes');
         } finally {
             setCargando(false);
@@ -142,7 +142,7 @@ export default function ConsultarSolicitudesPage() {
             await cargarPedidos();
 
         } catch (error: any) {
-            console.error('Error al marcar solicitud como pagada:', error);
+
             mostrarMensaje('error', error.message || 'Error al actualizar el estado de la solicitud');
         } finally {
             setCargando(false);
@@ -416,7 +416,6 @@ function ModalDetallesSolicitud({ solicitud, onCerrar }: ModalDetallesSolicitudP
                             <table className="tabla-productos">
                                 <thead>
                                     <tr>
-                                        <th>ID</th>
                                         <th>Producto</th>
                                         <th>Cantidad</th>
                                         <th>Precio</th>
@@ -425,7 +424,6 @@ function ModalDetallesSolicitud({ solicitud, onCerrar }: ModalDetallesSolicitudP
                                 <tbody>
                                     {solicitud.productos.map((producto) => (
                                         <tr key={producto.idProducto}>
-                                            <td>#{producto.idProducto}</td>
                                             <td>{producto.nombreProducto || 'Sin nombre'}</td>
                                             <td>{producto.cantidadSolicitada}</td>
                                             <td>${producto.precio.toLocaleString()}</td>

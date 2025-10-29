@@ -77,7 +77,7 @@ export default function ConsultarSolicitudesPage() {
 
             setPedidos(pedidosConInfo);
         } catch (error) {
-            console.error('Error al cargar pedidos:', error);
+            
             mostrarMensaje('error', 'Error al cargar pedidos');
         } finally {
             setCargando(false);
@@ -92,7 +92,7 @@ export default function ConsultarSolicitudesPage() {
             setPedidoSeleccionado(idPedido);
             setFiltroEstado('TODOS');
         } catch (error) {
-            console.error('Error al cargar solicitudes:', error);
+            
             mostrarMensaje('error', 'Error al cargar solicitudes');
         } finally {
             setCargando(false);
@@ -142,7 +142,7 @@ export default function ConsultarSolicitudesPage() {
             await cargarPedidos();
 
         } catch (error: any) {
-            console.error('Error al marcar solicitud como pagada:', error);
+            
             mostrarMensaje('error', error.message || 'Error al actualizar el estado de la solicitud');
         } finally {
             setCargando(false);

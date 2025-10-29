@@ -15,7 +15,7 @@ import {
     type SolicitudCliente,
     type ProductoSolicitud,
 } from '@/services/solicitudClienteService';
-import { obtenerProductos } from '@/services/productosService';
+import { obtenerProductosPorIdsPublico } from '@/services/productosService';
 import solicitudPublicaService from '@/services/solicitudPublicaService';
 import { type Producto } from '@/types';
 import { Loading } from '@/components/ui';
@@ -90,7 +90,8 @@ export default function EditarSolicitudPage() {
                         localStorage.removeItem(`otp_session_${hashPedido}`);
                     }
                 } catch (error) {
-                    console.error('Error al recuperar sesión OTP:', error);
+                    // Sesión corrupta, limpiar
+                    localStorage.removeItem(`otp_session_${hashPedido}`);
                 }
             }
         }
@@ -131,20 +132,25 @@ export default function EditarSolicitudPage() {
         try {
             // 1. Obtener los productos del pedido usando el hash
             const pedidoData = await solicitudPublicaService.obtenerPedidoPorHash(hashPedido);
-            const idsProductosPedido = pedidoData.data.productos.map(p => p.idProducto);
+            const idsProductosPedido = pedidoData.data.productos.map((p: any) => p.idProducto);
             setProductosPedido(idsProductosPedido);
 
-            // 2. Obtener todos los productos del catálogo
-            const todosLosProductos = await obtenerProductos();
-
-            // 3. Filtrar solo los productos que están en el pedido
-            const productosDelPedido = todosLosProductos.filter(producto =>
-                idsProductosPedido.includes(producto.idProducto)
-            );
+            // 2. Obtener los productos del catálogo usando método público
+            const productosDelPedido = await obtenerProductosPorIdsPublico(idsProductosPedido);
 
             setProductosDisponibles(productosDelPedido);
+
+            // 3. Enriquecer los productos actuales con los nombres completos
+            setProductosActuales(prevProductos =>
+                prevProductos.map(prodActual => {
+                    const prodCompleto = productosDelPedido.find((p: Producto) => p.idProducto === prodActual.idProducto);
+                    return {
+                        ...prodActual,
+                        nombreProducto: prodCompleto?.nombreProducto || prodActual.nombreProducto || 'Producto'
+                    };
+                })
+            );
         } catch (error) {
-            console.error('Error al cargar productos del pedido:', error);
             mostrarMensaje('error', 'No se pudieron cargar los productos del pedido');
         }
     };
@@ -162,7 +168,7 @@ export default function EditarSolicitudPage() {
 
         setGuardando(true);
         try {
-            await modificarSolicitud(
+            const response = await modificarSolicitud(
                 idSolicitud,
                 { direccionEntrega: direccion },
                 tokenOtp
@@ -170,8 +176,7 @@ export default function EditarSolicitudPage() {
             setModificacionesRestantes(modificacionesRestantes - 1);
             mostrarMensaje('success', '✅ Dirección actualizada exitosamente');
         } catch (error: any) {
-            console.error('Error al modificar dirección:', error);
-            const errorMsg = error.error?.details || error.message || 'Error al actualizar dirección';
+            const errorMsg = error.response?.data?.message || error.message || 'Error al actualizar dirección';
             mostrarMensaje('error', errorMsg);
         } finally {
             setGuardando(false);
@@ -191,7 +196,7 @@ export default function EditarSolicitudPage() {
 
         setGuardando(true);
         try {
-            await actualizarCantidadProducto(
+            const response = await actualizarCantidadProducto(
                 idSolicitud,
                 idProducto,
                 { cantidad: nuevaCantidad },
@@ -209,8 +214,7 @@ export default function EditarSolicitudPage() {
             setModificacionesRestantes(modificacionesRestantes - 1);
             mostrarMensaje('success', '✅ Cantidad actualizada');
         } catch (error: any) {
-            console.error('Error al actualizar cantidad:', error);
-            const errorMsg = error.error?.details || error.message || 'Error al actualizar cantidad';
+            const errorMsg = error.response?.data?.message || error.message || 'Error al actualizar cantidad';
             mostrarMensaje('error', errorMsg);
         } finally {
             setGuardando(false);
@@ -259,8 +263,7 @@ export default function EditarSolicitudPage() {
             setCantidadNueva(1);
             mostrarMensaje('success', '✅ Producto agregado exitosamente');
         } catch (error: any) {
-            console.error('Error al agregar producto:', error);
-            const errorMsg = error.error?.details || error.message || 'Error al agregar producto';
+            const errorMsg = error.message || 'Error al agregar producto';
             mostrarMensaje('error', errorMsg);
         } finally {
             setGuardando(false);
@@ -290,8 +293,7 @@ export default function EditarSolicitudPage() {
             setModalEliminar({ visible: false, idProducto: null, nombreProducto: '' });
             mostrarMensaje('success', '✅ Producto eliminado exitosamente');
         } catch (error: any) {
-            console.error('Error al eliminar producto:', error);
-            const errorMsg = error.error?.details || error.message || 'Error al eliminar producto';
+            const errorMsg = error.message || 'Error al eliminar producto';
             mostrarMensaje('error', errorMsg);
         } finally {
             setGuardando(false);
@@ -336,6 +338,22 @@ export default function EditarSolicitudPage() {
                 <p className="solicitud-publica-descripcion">
                     Modificaciones restantes: <strong>{modificacionesRestantes}</strong>
                 </p>
+                <button
+                    className="btn-volver"
+                    onClick={() => router.push(`/pedido/${hashPedido}/mis-solicitudes`)}
+                    style={{
+                        marginTop: '16px',
+                        padding: '10px 20px',
+                        background: 'linear-gradient(135deg, #6c757d 0%, #5a6268 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: '600',
+                    }}
+                >
+                    ← Volver a Mis Solicitudes
+                </button>
             </div>
 
             {/* Mensajes */}
@@ -347,6 +365,25 @@ export default function EditarSolicitudPage() {
                     {mensaje.texto}
                 </div>
             )}
+
+            {/* Información de ayuda */}
+            <div className="info-ayuda" style={{
+                background: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
+                padding: '16px',
+                borderRadius: '8px',
+                marginBottom: '24px',
+                border: '2px solid #2196f3',
+            }}>
+                <h3 style={{ margin: '0 0 8px 0', color: '#1976d2', fontSize: '16px' }}>
+                    ℹ️ Cómo editar tu solicitud:
+                </h3>
+                <ul style={{ margin: '0', paddingLeft: '20px', lineHeight: '1.8' }}>
+                    <li><strong>Cantidades:</strong> Modifica la cantidad y presiona Enter o haz clic fuera del campo para guardar automáticamente</li>
+                    <li><strong>Dirección:</strong> Actualiza la dirección y haz clic en "💾 Guardar Dirección"</li>
+                    <li><strong>Agregar productos:</strong> Usa el botón "➕ Agregar Producto"</li>
+                    <li><strong>Eliminar productos:</strong> Haz clic en el icono 🗑️</li>
+                </ul>
+            </div>
 
             {/* Sección: Modificar Dirección */}
             <div className="solicitud-seccion">
@@ -457,11 +494,14 @@ export default function EditarSolicitudPage() {
                                         <td>{producto.nombreProducto || 'Producto'}</td>
                                         <td>
                                             <input
-                                                type="number"
+                                                type="text"
+                                                inputMode="numeric"
+                                                pattern="[0-9]*"
                                                 className="input-cantidad-tabla"
                                                 value={producto.cantidadSolicitada}
                                                 onChange={(e) => {
-                                                    const nuevaCantidad = parseInt(e.target.value) || 1;
+                                                    const valor = e.target.value.replace(/\D/g, '');
+                                                    const nuevaCantidad = valor ? parseInt(valor) : 1;
                                                     setProductosActuales(
                                                         productosActuales.map((p) =>
                                                             p.idProducto === producto.idProducto
@@ -471,12 +511,17 @@ export default function EditarSolicitudPage() {
                                                     );
                                                 }}
                                                 onBlur={() => {
-                                                    if (producto.cantidadSolicitada !== productosActuales.find(p => p.idProducto === producto.idProducto)?.cantidadSolicitada) {
-                                                        handleActualizarCantidad(producto.idProducto, producto.cantidadSolicitada);
+                                                    // Guardar automáticamente cuando pierde el foco
+                                                    handleActualizarCantidad(producto.idProducto, producto.cantidadSolicitada);
+                                                }}
+                                                onKeyDown={(e) => {
+                                                    // Guardar al presionar Enter
+                                                    if (e.key === 'Enter') {
+                                                        e.currentTarget.blur();
                                                     }
                                                 }}
-                                                min="1"
                                                 disabled={guardando || modificacionesRestantes === 0}
+                                                placeholder="1"
                                             />
                                         </td>
                                         <td>${(producto.precio / producto.cantidadSolicitada).toLocaleString()}</td>

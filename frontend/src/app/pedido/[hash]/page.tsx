@@ -8,7 +8,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import solicitudPublicaService from '@/services/solicitudPublicaService';
-import { obtenerProductoPorId } from '@/services/productosService';
+import { obtenerProductoPorIdPublico } from '@/services/productosService';
 import type { Producto, SolicitudProductoDTO } from '@/types';
 import { Loading } from '@/components/ui';
 
@@ -87,7 +87,7 @@ export default function PedidoPublicoPage() {
                 // Cargar información completa de cada producto
                 const productosConInfo = await Promise.all(
                     productosData.map(async (p) => {
-                        const productoInfo = await obtenerProductoPorId(p.idProducto);
+                        const productoInfo = await obtenerProductoPorIdPublico(p.idProducto);
                         return {
                             idProducto: p.idProducto,
                             producto: productoInfo,
@@ -116,6 +116,24 @@ export default function PedidoPublicoPage() {
         const producto = productos.find((p) => p.idProducto === idProducto);
         if (!producto || producto.cantidadSeleccionada === 0) {
             mostrarMensaje('error', 'Debe indicar una cantidad válida');
+            return;
+        }
+
+        // Validar cantidad mínima
+        if (producto.cantidadSeleccionada < producto.cantidadMin) {
+            mostrarMensaje(
+                'error',
+                `La cantidad debe ser al menos ${producto.cantidadMin}`
+            );
+            return;
+        }
+
+        // Validar cantidad máxima solo si existe
+        if (producto.cantidadMax !== null && producto.cantidadSeleccionada > producto.cantidadMax) {
+            mostrarMensaje(
+                'error',
+                `La cantidad no puede exceder ${producto.cantidadMax}`
+            );
             return;
         }
 
@@ -156,21 +174,9 @@ export default function PedidoPublicoPage() {
     };
 
     /**
-     * Actualizar cantidad de producto
+     * Actualizar cantidad de producto (sin validación, solo actualiza el estado)
      */
     const actualizarCantidad = (idProducto: number, cantidad: number) => {
-        const producto = productos.find((p) => p.idProducto === idProducto);
-        if (!producto) return;
-
-        // Validar rango
-        if (cantidad < producto.cantidadMin || cantidad > producto.cantidadMax) {
-            mostrarMensaje(
-                'error',
-                `La cantidad debe estar entre ${producto.cantidadMin} y ${producto.cantidadMax}`
-            );
-            return;
-        }
-
         setProductos(
             productos.map((p) =>
                 p.idProducto === idProducto ? { ...p, cantidadSeleccionada: cantidad } : p
@@ -242,9 +248,20 @@ export default function PedidoPublicoPage() {
             if (response.exito) {
                 mostrarMensaje('success', '✅ Solicitud creada exitosamente');
 
-                // Limpiar formulario después de 2 segundos y redirigir
+                // Limpiar formulario
+                setCedula('');
+                setNombres('');
+                setApellidos('');
+                setTelefono('');
+                setDireccion('');
+                setProductosEnSolicitud([]);
+
+                // Resetear cantidades seleccionadas
+                setProductos(productos.map(p => ({ ...p, cantidadSeleccionada: 0 })));
+
+                // Redirigir después de 2 segundos
                 setTimeout(() => {
-                    router.push('/');
+                    router.push(`/pedido/${hashPedido}/mis-solicitudes`);
                 }, 2000);
             }
         } catch (error: unknown) {
@@ -493,22 +510,25 @@ export default function PedidoPublicoPage() {
                                     ${item.producto?.precioUnitario.toFixed(2) || '0.00'}
                                 </p>
                                 <p className="producto-rango">
-                                    Cantidad: {item.cantidadMin} - {item.cantidadMax} unidades
+                                    Cantidad: {item.cantidadMin}{item.cantidadMax !== null ? ` - ${item.cantidadMax}` : '+'} unidades
                                 </p>
 
                                 {/* Selector de cantidad */}
                                 <div className="cantidad-selector">
                                     <label className="cantidad-label">Cantidad:</label>
                                     <input
-                                        type="number"
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
                                         className="cantidad-input"
-                                        min={item.cantidadMin}
-                                        max={item.cantidadMax}
                                         value={item.cantidadSeleccionada || ''}
-                                        onChange={(e) =>
-                                            actualizarCantidad(item.idProducto, parseInt(e.target.value) || 0)
-                                        }
+                                        onChange={(e) => {
+                                            const valor = e.target.value.replace(/\D/g, '');
+                                            const numero = valor ? parseInt(valor) : 0;
+                                            actualizarCantidad(item.idProducto, numero);
+                                        }}
                                         onClick={(e) => e.stopPropagation()}
+                                        placeholder="0"
                                     />
                                 </div>
 

@@ -86,6 +86,7 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/solicitudes/**").permitAll()
                         .requestMatchers("/pedidos/pedido-disponible/{hash}**").permitAll()
+                        .requestMatchers("/productos/**").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .authenticationProvider(authenticationProvider())

@@ -1,5 +1,5 @@
 /**
- * Configuración - Super Administrador
+ * Configuraci�n - Super Administrador
  */
 
 'use client';
@@ -68,7 +68,7 @@ export default function ConfiguracionPage() {
     };
 
     /**
-     * Manejar cambio de contraseña
+     * Manejar cambio de contrase�a
      */
     const handleCambiarContrasenia = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -91,7 +91,7 @@ export default function ConfiguracionPage() {
             setContraseniaNueva('');
             setConfirmarContrasenia('');
         } catch (error: unknown) {
-            console.error('❌ Error:', error);
+            
             const errorMessage = error instanceof Error ? error.message : 'Error al cambiar la contraseña';
             mostrarMensaje('error', errorMessage);
         } finally {
@@ -155,7 +155,7 @@ export default function ConfiguracionPage() {
                             />
                         </div>
 
-                        {/* Contraseña Actual */}
+                        {/* Contrase�a Actual */}
                         <div className="form-group">
                             <label htmlFor="contraseniaActual" className="form-label">
                                 Contraseña Actual <span className="required">*</span>

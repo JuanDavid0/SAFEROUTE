@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -16,37 +16,70 @@ interface UseDashboardOptions {
 
 export const useDashboard = ({ requiredRole, redirectTo = '/login' }: UseDashboardOptions) => {
     const router = useRouter();
-    const { isAuthenticated, user } = useAuthStore();
+    const { isAuthenticated, user, checkTokenExpiration } = useAuthStore();
+    const [isMounted, setIsMounted] = useState(false);
+    const hasChecked = useRef(false);
+
+    // Marcar como montado
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     useEffect(() => {
-        // Verificar autenticación
-        if (!isAuthenticated) {
-            console.warn('⚠️ Usuario no autenticado. Redirigiendo a login...');
-            router.push(redirectTo);
-            return;
-        }
+        // No ejecutar durante SSR o antes de montar
+        if (!isMounted) return;
 
-        // Verificar rol
-        const userRole = user?.rol?.nombreRol;
-        if (userRole !== requiredRole) {
-            console.warn(`⚠️ Acceso denegado. Se requiere rol: ${requiredRole}, rol actual: ${userRole}`);
+        // Esperar a que Zustand hidrate completamente
+        const timeoutId = setTimeout(() => {
+            if (hasChecked.current) return;
+            hasChecked.current = true;
+
             
-            // Redirigir según el rol actual
-            switch (userRole) {
-                case 'SAD':
-                    router.push('/superadmin/dashboard');
-                    break;
-                case 'ADM':
-                    router.push('/admin/dashboard');
-                    break;
-                case 'CLI':
-                    router.push('/cliente/dashboard');
-                    break;
-                default:
-                    router.push('/login');
+
+            // Verificar autenticación
+            if (!isAuthenticated) {
+                console.warn('⚠️ Usuario no autenticado. Redirigiendo a login...');
+                router.push(redirectTo);
+                return;
             }
-        }
-    }, [isAuthenticated, user, requiredRole, router, redirectTo]);
+
+            // Verificar expiración del token
+            const isTokenValid = checkTokenExpiration();
+            if (!isTokenValid) {
+                console.warn('⚠️ Token expirado. Redirigiendo a login...');
+                router.push(redirectTo);
+                return;
+            }
+
+            // Verificar rol
+            const userRole = user?.rol?.nombreRol;
+            if (userRole !== requiredRole) {
+                console.warn(`⚠️ Acceso denegado. Se requiere rol: ${requiredRole}, rol actual: ${userRole}`);
+                
+                // Redirigir según el rol actual
+                switch (userRole) {
+                    case 'SAD':
+                        router.push('/superadmin/dashboard');
+                        break;
+                    case 'ADM':
+                        router.push('/admin/dashboard');
+                        break;
+                    case 'CLI':
+                        router.push('/cliente/dashboard');
+                        break;
+                    default:
+                        router.push('/login');
+                }
+                return;
+            }
+
+            
+        }, 200); // Delay para hidratación
+
+        return () => {
+            clearTimeout(timeoutId);
+        };
+    }, [isMounted]); // Solo depender de isMounted
 
     return {
         isAuthenticated,

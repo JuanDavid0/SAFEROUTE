@@ -47,29 +47,29 @@ export default function InformeContablePage() {
         try {
             setCargando(true);
             if (tipoInforme === 'cliente') {
-                console.log('👥 Cargando clientes...');
+                
                 const data = await informeService.obtenerUsuarios();
                 // Filtrar solo clientes ACTIVOS
                 const clientesActivos = data.filter(
                     (usuario) =>
                         usuario.roles?.includes('CLI') && usuario.estado === 'ACTIVO'
                 );
-                console.log(`✅ ${clientesActivos.length} clientes activos encontrados`);
+                
                 setClientes(clientesActivos);
                 setClienteSeleccionado(null);
             } else {
-                console.log('📦 Cargando pedidos entregados...');
+                
                 const data = await informeService.obtenerPedidosEntregados();
                 // Filtrar solo pedidos con estado ENT (Entregados)
                 const pedidosEntregados = data.filter(
                     (pedido) => pedido.estadoPedido === 'ENT'
                 );
-                console.log(`✅ ${pedidosEntregados.length} pedidos entregados encontrados`);
+                
                 setPedidos(pedidosEntregados);
                 setPedidoSeleccionado(null);
             }
         } catch (error: any) {
-            console.error('❌ Error al cargar datos:', error);
+            
             mostrarMensaje('error', error.message || 'Error al cargar datos');
         } finally {
             setCargando(false);
@@ -103,7 +103,7 @@ export default function InformeContablePage() {
             );
             mostrarMensaje('success', '✅ Informe descargado exitosamente');
         } catch (error: any) {
-            console.error('❌ Error al descargar informe:', error);
+            
             mostrarMensaje('error', error.message || 'Error al descargar informe');
         } finally {
             setCargando(false);
@@ -118,7 +118,7 @@ export default function InformeContablePage() {
             await informeService.descargarInformePedido(pedidoSeleccionado);
             mostrarMensaje('success', '✅ Informe descargado exitosamente');
         } catch (error: any) {
-            console.error('❌ Error al descargar informe:', error);
+            
             mostrarMensaje('error', error.message || 'Error al descargar informe');
         } finally {
             setCargando(false);

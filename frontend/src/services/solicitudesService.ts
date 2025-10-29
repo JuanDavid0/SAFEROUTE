@@ -55,7 +55,7 @@ export const contarSolicitudesPagadas = async (idPedido: number): Promise<number
         const solicitudes = await obtenerSolicitudesPorPedido(idPedido, 'PGD');
         return solicitudes.length;
     } catch (error) {
-        console.error('Error al contar solicitudes pagadas:', error);
+        
         return 0;
     }
 };

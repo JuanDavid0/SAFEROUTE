@@ -35,7 +35,7 @@ const decodeJWT = (token: string): { exp?: number } => {
     );
     return JSON.parse(jsonPayload);
   } catch (error) {
-    console.error('Error al decodificar JWT:', error);
+    
     return {};
   }
 };
@@ -60,10 +60,10 @@ export const useAuthStore = create<AuthState>()(
           }
         }
         
-        console.log('✅ Sesión guardada en localStorage');
+        
         if (expirationTimestamp) {
           const expiresIn = Math.round((expirationTimestamp - Date.now()) / 1000 / 60);
-          console.log(`⏰ Token expira en ${expiresIn} minutos`);
+          
         }
         
         set({
@@ -79,7 +79,7 @@ export const useAuthStore = create<AuthState>()(
           localStorage.removeItem('token');
           localStorage.removeItem('tokenExpiration');
         }
-        console.log('👋 Sesión cerrada');
+        
         set({
           user: null,
           token: null,
@@ -129,11 +129,16 @@ export const useAuthStore = create<AuthState>()(
       // Al hidratar el estado desde localStorage, validar expiración
       onRehydrateStorage: () => (state) => {
         if (state) {
+          
           const isValid = state.checkTokenExpiration();
           if (!isValid) {
-            console.log('🔄 Token expirado al cargar, limpiando sesión');
+            
           } else {
-            console.log('✅ Sesión restaurada desde localStorage');
+            
+            const timeRemaining = state.tokenExpiration 
+              ? Math.round((state.tokenExpiration - Date.now()) / 1000 / 60)
+              : 0;
+            
           }
         }
       },

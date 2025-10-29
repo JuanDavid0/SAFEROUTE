@@ -50,13 +50,10 @@ export default function EtiquetasPage() {
             setCargando(true);
             const data = await etiquetasService.obtenerPedidos();
 
-            console.log('📦 Pedidos cargados:', data);
-            console.log('📦 Total:', data.length);
-            console.log('📦 Es array?:', Array.isArray(data));
 
             // Validar que sea un array
             if (!Array.isArray(data)) {
-                console.error('❌ La respuesta no es un array:', data);
+                
                 setPedidos([]);
                 mostrarMensaje(
                     'error',
@@ -69,7 +66,7 @@ export default function EtiquetasPage() {
             const pedidosEntregados = data.filter(
                 (pedido) => pedido.estadoPedido === 'ENT'
             );
-            console.log(`✅ ${pedidosEntregados.length} pedidos entregados encontrados`);
+            
 
             setPedidos(pedidosEntregados);
 
@@ -77,7 +74,7 @@ export default function EtiquetasPage() {
                 mostrarMensaje('info', 'No hay pedidos entregados disponibles');
             }
         } catch (error: any) {
-            console.error('❌ Error al cargar pedidos:', error);
+            
             setPedidos([]);
             mostrarMensaje(
                 'error',
@@ -99,9 +96,9 @@ export default function EtiquetasPage() {
 
             const data = await etiquetasService.obtenerEtiquetasPedido(idPedido);
             setEtiquetasPreview(data);
-            console.log('🏷️ Etiquetas cargadas:', data.totalEtiquetas);
+            
         } catch (error: any) {
-            console.error('❌ Error al cargar etiquetas:', error);
+            
             mostrarMensaje(
                 'error',
                 error.message || 'Error al cargar las etiquetas'
@@ -129,7 +126,7 @@ export default function EtiquetasPage() {
 
             mostrarMensaje('success', '✅ PDF de etiquetas descargado exitosamente');
         } catch (error: any) {
-            console.error('❌ Error al descargar PDF:', error);
+            
             mostrarMensaje('error', error.message || 'Error al descargar el PDF');
         } finally {
             setCargando(false);

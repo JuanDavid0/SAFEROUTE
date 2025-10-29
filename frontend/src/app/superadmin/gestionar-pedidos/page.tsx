@@ -90,7 +90,7 @@ export default function GestionarPedidosPage() {
 
             setPedidos(pedidosConInfo);
         } catch (error) {
-            console.error('Error al cargar pedidos:', error);
+            
             mostrarMensaje('error', 'Error al cargar pedidos');
         } finally {
             setCargando(false);
@@ -181,7 +181,7 @@ export default function GestionarPedidosPage() {
             await cargarPedidos();
         } catch (error: any) {
             mostrarMensaje('error', error.message || 'Error al consolidar pedido');
-            console.error('Error:', error);
+            
         } finally {
             setCargando(false);
         }
@@ -208,7 +208,7 @@ export default function GestionarPedidosPage() {
             await cargarPedidos();
         } catch (error: any) {
             mostrarMensaje('error', error.message || 'Error al actualizar estado');
-            console.error('Error:', error);
+            
         } finally {
             setCargando(false);
         }
@@ -226,7 +226,7 @@ export default function GestionarPedidosPage() {
             await cargarPedidos();
         } catch (error: any) {
             mostrarMensaje('error', error.message || 'Error al cerrar pedido');
-            console.error('Error:', error);
+            
         } finally {
             setCargando(false);
         }

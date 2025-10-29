@@ -144,8 +144,8 @@ function ReporteResumen({ cargando, setCargando, mostrarMensaje }: ReporteProps)
             const data = await reportesService.obtenerResumenGeneral();
             setDatos(data);
         } catch (error: any) {
-            console.error('❌ Error al cargar resumen:', error);
-            console.error('Error completo:', error.response || error);
+            
+            
             mostrarMensaje('error', error.message || 'Error al cargar resumen');
         } finally {
             setCargando(false);
@@ -297,7 +297,7 @@ function ReporteProductosMasVendidos({ cargando, setCargando, mostrarMensaje }: 
             const data = await reportesService.obtenerProductosMasVendidos(limite);
             setDatos(data);
         } catch (error: any) {
-            console.error('❌ Error al cargar productos más vendidos:', error);
+            
             mostrarMensaje('error', error.message || 'Error al cargar productos más vendidos');
         } finally {
             setCargando(false);
@@ -394,7 +394,7 @@ function ReporteIngresos({ cargando, setCargando, mostrarMensaje }: ReporteProps
             const data = await reportesService.obtenerReporteIngresos(fechaInicio, fechaFin, agrupacion);
             setDatos(data);
         } catch (error: any) {
-            console.error('❌ Error al cargar ingresos:', error);
+            
             mostrarMensaje('error', error.message || 'Error al cargar reporte de ingresos');
         } finally {
             setCargando(false);
@@ -487,7 +487,7 @@ function ReporteMayorGanancia({ cargando, setCargando, mostrarMensaje }: Reporte
             const data = await reportesService.obtenerProductosMayorGanancia();
             setDatos(data);
         } catch (error: any) {
-            console.error('❌ Error al cargar productos con mayor ganancia:', error);
+            
             mostrarMensaje('error', error.message || 'Error al cargar productos con mayor ganancia');
         } finally {
             setCargando(false);
@@ -578,7 +578,7 @@ function ReporteClientesFrecuentes({ cargando, setCargando, mostrarMensaje }: Re
             const data = await reportesService.obtenerClientesFrecuentes();
             setDatos(data);
         } catch (error: any) {
-            console.error('❌ Error al cargar clientes frecuentes:', error);
+            
             mostrarMensaje('error', error.message || 'Error al cargar clientes frecuentes');
         } finally {
             setCargando(false);

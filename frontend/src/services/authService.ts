@@ -47,12 +47,12 @@ export const cambiarContrasenia = async (
 };
 
 /**
- * POST /auth/crear-admin
+ * POST /auth/crear-administrador
  * Crea un nuevo administrador (solo SAD)
  * Requiere: Token JWT con rol SAD
  */
-export const crearAdmin = async (data: RegistroRequest): Promise<ApiResponse<Usuario>> => {
-  const response = await api.post<ApiResponse<Usuario>>('/auth/crear-admin', data);
+export const crearAdministrador = async (data: RegistroRequest): Promise<ApiResponse<Usuario>> => {
+  const response = await api.post<ApiResponse<Usuario>>('/auth/crear-administrador', data);
   return response.data;
 };
 
@@ -60,5 +60,5 @@ export default {
   login,
   registro,
   cambiarContrasenia,
-  crearAdmin,
+  crearAdministrador,
 };

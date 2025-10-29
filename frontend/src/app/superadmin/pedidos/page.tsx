@@ -60,7 +60,7 @@ export default function PedidosPage() {
             }));
             setProductosFormulario(productosConFormato);
         } catch (error) {
-            console.error('Error al cargar productos:', error);
+
             mostrarMensaje('error', 'Error al cargar la lista de productos');
         }
     };
@@ -71,7 +71,7 @@ export default function PedidosPage() {
             const data = await obtenerPedidos();
             setPedidos(data);
         } catch (error) {
-            console.error('Error al cargar pedidos:', error);
+
             mostrarMensaje('error', 'Error al cargar la lista de pedidos');
         } finally {
             setCargando(false);
@@ -115,7 +115,7 @@ export default function PedidosPage() {
 
         if (user?.idUsuario === null || user?.idUsuario === undefined) {
             mostrarMensaje('error', 'No se pudo obtener el ID del usuario. Por favor, inicie sesión nuevamente.');
-            console.error('Usuario no tiene idUsuario:', user);
+
             return;
         }
 
@@ -152,7 +152,7 @@ export default function PedidosPage() {
             // Recargar lista de pedidos
             cargarPedidos();
         } catch (error: any) {
-            console.error('Error al crear pedido:', error);
+
             mostrarMensaje('error', error.message || 'Error al crear el pedido. Por favor, intente nuevamente.');
         } finally {
             setCargando(false);
@@ -169,7 +169,7 @@ export default function PedidosPage() {
             await cargarPedidos();
         } catch (error: any) {
             mostrarMensaje('error', error.message || 'Error al activar pedido');
-            console.error('Error:', error);
+
         } finally {
             setCargando(false);
         }
@@ -202,7 +202,7 @@ export default function PedidosPage() {
             await cargarPedidos();
         } catch (error: any) {
             mostrarMensaje('error', error.message || 'Error al agregar producto');
-            console.error('Error:', error);
+
         } finally {
             setCargando(false);
         }
@@ -227,7 +227,7 @@ export default function PedidosPage() {
             await cargarPedidos();
         } catch (error: any) {
             mostrarMensaje('error', error.message || 'Error al actualizar cantidades');
-            console.error('Error:', error);
+
         } finally {
             setCargando(false);
         }
@@ -245,7 +245,7 @@ export default function PedidosPage() {
             await cargarPedidos();
         } catch (error: any) {
             mostrarMensaje('error', error.message || 'Error al eliminar producto');
-            console.error('Error:', error);
+
         } finally {
             setCargando(false);
         }
@@ -263,7 +263,7 @@ export default function PedidosPage() {
             mostrarMensaje('success', 'Pedido cancelado exitosamente');
             cargarPedidos();
         } catch (error: any) {
-            console.error('Error al cancelar pedido:', error);
+
             mostrarMensaje('error', error.message || 'Error al cancelar el pedido. Por favor, intente nuevamente.');
         } finally {
             setCargando(false);
@@ -537,15 +537,21 @@ export default function PedidosPage() {
                                     <div className="pedido-productos">
                                         <h4 className="pedido-productos-titulo">Productos ({pedido.productos.length})</h4>
                                         <div className="pedido-productos-lista">
-                                            {pedido.productos.map((producto, index) => (
-                                                <div key={index} className="pedido-producto-item">
-                                                    <span className="producto-id">ID: {producto.idProducto}</span>
-                                                    <span className="producto-cantidad">
-                                                        Min: {producto.cantidadMin}
-                                                        {producto.cantidadMax && ` | Max: ${producto.cantidadMax}`}
-                                                    </span>
-                                                </div>
-                                            ))}
+                                            {pedido.productos.map((producto, index) => {
+                                                // Buscar el nombre del producto en productosFormulario
+                                                const productoInfo = productosFormulario.find(p => p.idProducto === producto.idProducto);
+                                                return (
+                                                    <div key={index} className="pedido-producto-item">
+                                                        <span className="producto-nombre">
+                                                            {productoInfo?.nombreProducto || `Producto #${producto.idProducto}`}
+                                                        </span>
+                                                        <span className="producto-cantidad">
+                                                            Min: {producto.cantidadMin}
+                                                            {producto.cantidadMax && ` | Max: ${producto.cantidadMax}`}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
 
@@ -659,68 +665,75 @@ function ModalEdicionPedido({
                     <div className="modal-section">
                         <h3 className="modal-section-title">Productos del Pedido</h3>
                         <div className="productos-pedido-lista">
-                            {pedido.productos.map((prod) => (
-                                <div key={prod.idProducto} className="producto-pedido-item">
-                                    {productoEditando?.idProducto === prod.idProducto ? (
-                                        <>
-                                            <div className="producto-info">
-                                                <span className="producto-id-badge">ID: {prod.idProducto}</span>
-                                            </div>
-                                            <div className="producto-cantidades-edit">
-                                                <Input
-                                                    type="number"
-                                                    placeholder="Mín"
-                                                    value={productoEditando.cantidadMin}
-                                                    onChange={(e) => setProductoEditando({ ...productoEditando, cantidadMin: e.target.value })}
-                                                />
-                                                <Input
-                                                    type="number"
-                                                    placeholder="Máx"
-                                                    value={productoEditando.cantidadMax}
-                                                    onChange={(e) => setProductoEditando({ ...productoEditando, cantidadMax: e.target.value })}
-                                                />
-                                            </div>
-                                            <div className="producto-acciones">
-                                                <button className="btn-sm btn-success" onClick={handleModificar} disabled={cargando}>
-                                                    ✓
-                                                </button>
-                                                <button className="btn-sm btn-secondary" onClick={() => setProductoEditando(null)} disabled={cargando}>
-                                                    ✕
-                                                </button>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div className="producto-info">
-                                                <span className="producto-id-badge">ID: {prod.idProducto}</span>
-                                                <span className="producto-cantidades-texto">
-                                                    Mín: {prod.cantidadMin} {prod.cantidadMax && `| Máx: ${prod.cantidadMax}`}
-                                                </span>
-                                            </div>
-                                            <div className="producto-acciones">
-                                                <button
-                                                    className="btn-sm btn-edit"
-                                                    onClick={() => setProductoEditando({
-                                                        idProducto: prod.idProducto,
-                                                        cantidadMin: prod.cantidadMin.toString(),
-                                                        cantidadMax: prod.cantidadMax?.toString() || ''
-                                                    })}
-                                                    disabled={cargando}
-                                                >
-                                                    ✏️
-                                                </button>
-                                                <button
-                                                    className="btn-sm btn-delete"
-                                                    onClick={() => onEliminarProducto(prod.idProducto)}
-                                                    disabled={cargando}
-                                                >
-                                                    🗑️
-                                                </button>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            ))}
+                            {pedido.productos.map((prod) => {
+                                const productoInfo = productosDisponibles.find(p => p.idProducto === prod.idProducto);
+                                return (
+                                    <div key={prod.idProducto} className="producto-pedido-item">
+                                        {productoEditando?.idProducto === prod.idProducto ? (
+                                            <>
+                                                <div className="producto-info">
+                                                    <span className="producto-nombre-badge">
+                                                        {productoInfo?.nombreProducto || `Producto #${prod.idProducto}`}
+                                                    </span>
+                                                </div>
+                                                <div className="producto-cantidades-edit">
+                                                    <Input
+                                                        type="number"
+                                                        placeholder="Mín"
+                                                        value={productoEditando.cantidadMin}
+                                                        onChange={(e) => setProductoEditando({ ...productoEditando, cantidadMin: e.target.value })}
+                                                    />
+                                                    <Input
+                                                        type="number"
+                                                        placeholder="Máx"
+                                                        value={productoEditando.cantidadMax}
+                                                        onChange={(e) => setProductoEditando({ ...productoEditando, cantidadMax: e.target.value })}
+                                                    />
+                                                </div>
+                                                <div className="producto-acciones">
+                                                    <button className="btn-sm btn-success" onClick={handleModificar} disabled={cargando}>
+                                                        ✓
+                                                    </button>
+                                                    <button className="btn-sm btn-secondary" onClick={() => setProductoEditando(null)} disabled={cargando}>
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="producto-info">
+                                                    <span className="producto-nombre-badge">
+                                                        {productoInfo?.nombreProducto || `Producto #${prod.idProducto}`}
+                                                    </span>
+                                                    <span className="producto-cantidades-texto">
+                                                        Mín: {prod.cantidadMin} {prod.cantidadMax && `| Máx: ${prod.cantidadMax}`}
+                                                    </span>
+                                                </div>
+                                                <div className="producto-acciones">
+                                                    <button
+                                                        className="btn-sm btn-edit"
+                                                        onClick={() => setProductoEditando({
+                                                            idProducto: prod.idProducto,
+                                                            cantidadMin: prod.cantidadMin.toString(),
+                                                            cantidadMax: prod.cantidadMax?.toString() || ''
+                                                        })}
+                                                        disabled={cargando}
+                                                    >
+                                                        ✏️
+                                                    </button>
+                                                    <button
+                                                        className="btn-sm btn-delete"
+                                                        onClick={() => onEliminarProducto(prod.idProducto)}
+                                                        disabled={cargando}
+                                                    >
+                                                        🗑️
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
 

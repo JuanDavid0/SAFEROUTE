@@ -4,7 +4,10 @@
  */
 
 import apiClient from '@/lib/axios';
+import axios from 'axios';
 import { BackendResponse, Producto } from '@/types';
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 /**
  * Listar todos los productos activos
@@ -20,7 +23,7 @@ export const obtenerProductos = async (): Promise<Producto[]> => {
 };
 
 /**
- * Obtener un producto por ID
+ * Obtener un producto por ID (requiere autenticación)
  */
 export const obtenerProductoPorId = async (id: number): Promise<Producto | null> => {
     const response = await apiClient.get<BackendResponse<Producto>>(`/productos/${id}`);
@@ -30,6 +33,50 @@ export const obtenerProductoPorId = async (id: number): Promise<Producto | null>
     }
     
     return null;
+};
+
+/**
+ * Obtener un producto por ID (versión pública - SIN autenticación)
+ * Usar desde rutas públicas como /pedido/[hash]
+ */
+export const obtenerProductoPorIdPublico = async (id: number): Promise<Producto | null> => {
+    try {
+        // Crear instancia de axios SIN interceptores que añadan token
+        const response = await axios.get<BackendResponse<Producto>>(
+            `${BASE_URL}/productos/${id}`,
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                timeout: 30000,
+            }
+        );
+        
+        if (response.data.status === 'success' && response.data.data) {
+            return response.data.data;
+        }
+        
+        return null;
+    } catch (error) {
+        return null;
+    }
+};
+
+/**
+ * Obtener múltiples productos por IDs (versión pública - SIN autenticación)
+ * Usar desde rutas públicas como /pedido/[hash]/editar-solicitud
+ */
+export const obtenerProductosPorIdsPublico = async (ids: number[]): Promise<Producto[]> => {
+    try {
+        const productos = await Promise.all(
+            ids.map(id => obtenerProductoPorIdPublico(id))
+        );
+        
+        // Filtrar nulls
+        return productos.filter((p): p is Producto => p !== null);
+    } catch (error) {
+        return [];
+    }
 };
 
 /**

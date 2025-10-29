@@ -15,16 +15,6 @@ export default function AdminDashboardPage() {
             <div className="dashboard-page-header">
                 <h1 className="dashboard-page-title">Panel de Administrador</h1>
             </div>
-
-            {/* Contenido principal */}
-            <div className="dashboard-content">
-                <div className="dashboard-module-card">
-                    <h2 className="dashboard-module-title">Gestión de Pedidos</h2>
-                    <p className="dashboard-module-description">
-                        Aquí irá el módulo de gestión de pedidos...
-                    </p>
-                </div>
-            </div>
         </DashboardLayout>
     );
 }

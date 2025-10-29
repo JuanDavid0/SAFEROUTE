@@ -46,7 +46,7 @@ export default function ProductosPage() {
             setProductos(data);
         } catch (error) {
             mostrarMensaje('error', 'Error al cargar productos');
-            console.error('Error:', error);
+            
         } finally {
             setCargando(false);
         }
@@ -139,7 +139,7 @@ export default function ProductosPage() {
             await cargarProductos();
         } catch (error: any) {
             mostrarMensaje('error', error.message || 'Error al guardar producto');
-            console.error('Error:', error);
+            
         } finally {
             setCargando(false);
         }
@@ -168,7 +168,7 @@ export default function ProductosPage() {
             await cargarProductos();
         } catch (error: any) {
             mostrarMensaje('error', error.message || 'Error al eliminar producto');
-            console.error('Error:', error);
+            
         } finally {
             setCargando(false);
         }

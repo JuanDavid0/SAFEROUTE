@@ -47,7 +47,7 @@ export interface PedidoInforme {
 export const obtenerUsuarios = async (): Promise<UsuarioInforme[]> => {
 	const response = await apiClient.get('/usuarios');
 
-	console.log('👥 Respuesta usuarios:', response.data);
+	
 
 	// Si la respuesta tiene el formato BackendResponse
 	if (response.data.status === 'success' && response.data.data) {
@@ -68,7 +68,7 @@ export const obtenerUsuarios = async (): Promise<UsuarioInforme[]> => {
 export const obtenerPedidosEntregados = async (): Promise<PedidoInforme[]> => {
 	const response = await apiClient.get('/pedidos');
 
-	console.log('📦 Respuesta pedidos:', response.data);
+	
 
 	// Si la respuesta tiene el formato BackendResponse
 	if (response.data.status === 'success' && response.data.data) {
@@ -95,7 +95,7 @@ export const descargarInformeCliente = async (
 			responseType: 'blob', // Importante para archivos binarios
 		});
 
-		console.log('📥 Descargando informe de cliente:', idCliente);
+		
 
 		// Crear un blob con el contenido
 		const blob = new Blob([response.data], {
@@ -116,9 +116,9 @@ export const descargarInformeCliente = async (
 		document.body.removeChild(link);
 		window.URL.revokeObjectURL(url);
 
-		console.log('✅ Informe descargado exitosamente');
+		
 	} catch (error: any) {
-		console.error('❌ Error al descargar informe de cliente:', error);
+		
 
 		// Intentar extraer el mensaje de error del backend si viene en formato JSON
 		if (error.response?.data instanceof Blob) {
@@ -127,7 +127,7 @@ export const descargarInformeCliente = async (
 				const errorText = await error.response.data.text();
 				const errorJson = JSON.parse(errorText);
 
-				console.log('📋 Error parseado del backend:', errorJson);
+				
 
 				// Extraer el mensaje específico del backend
 				if (errorJson.error?.details) {
@@ -157,7 +157,7 @@ export const descargarInformePedido = async (idPedido: number) => {
 			responseType: 'blob', // Importante para archivos binarios
 		});
 
-		console.log('📥 Descargando informe de pedido:', idPedido);
+		
 
 		// Crear un blob con el contenido
 		const blob = new Blob([response.data], {
@@ -178,9 +178,9 @@ export const descargarInformePedido = async (idPedido: number) => {
 		document.body.removeChild(link);
 		window.URL.revokeObjectURL(url);
 
-		console.log('✅ Informe descargado exitosamente');
+		
 	} catch (error: any) {
-		console.error('❌ Error al descargar informe de pedido:', error);
+		
 
 		// Intentar extraer el mensaje de error del backend si viene en formato JSON
 		if (error.response?.data instanceof Blob) {
@@ -189,7 +189,7 @@ export const descargarInformePedido = async (idPedido: number) => {
 				const errorText = await error.response.data.text();
 				const errorJson = JSON.parse(errorText);
 
-				console.log('📋 Error parseado del backend:', errorJson);
+				
 
 				// Extraer el mensaje específico del backend
 				if (errorJson.error?.details) {

@@ -118,10 +118,7 @@ export const agregarProductoASolicitud = async (
     if (error.response) {
       throw error.response.data;
     }
-    throw {
-      status: 'error',
-      message: 'Error al agregar producto',
-    };
+    throw error;
   }
 };
 
@@ -151,10 +148,7 @@ export const modificarSolicitud = async (
     if (error.response) {
       throw error.response.data;
     }
-    throw {
-      status: 'error',
-      message: 'Error al modificar solicitud',
-    };
+    throw error;
   }
 };
 
@@ -186,10 +180,7 @@ export const actualizarCantidadProducto = async (
     if (error.response) {
       throw error.response.data;
     }
-    throw {
-      status: 'error',
-      message: 'Error al actualizar cantidad',
-    };
+    throw error;
   }
 };
 

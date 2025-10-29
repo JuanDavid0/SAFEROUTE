@@ -61,10 +61,6 @@ export const obtenerPedidos = async (): Promise<PedidoEtiqueta[]> => {
 			}
 		});
 
-		console.log('📦 Respuesta pedidos ENT:', response.data);
-		console.log('📦 Tipo de respuesta:', typeof response.data);
-		console.log('📦 Es array?:', Array.isArray(response.data));
-
 		// Asegurar que siempre retornemos un array
 		if (Array.isArray(response.data)) {
 			return response.data;
@@ -83,7 +79,7 @@ export const obtenerPedidos = async (): Promise<PedidoEtiqueta[]> => {
 		console.warn('⚠️ Respuesta inesperada del servidor:', response.data);
 		return [];
 	} catch (error) {
-		console.error('❌ Error al obtener pedidos:', error);
+		
 		return [];
 	}
 };
@@ -98,7 +94,7 @@ export const obtenerEtiquetasPedido = async (
 		`/etiquetas/pedido/${idPedido}/json`
 	);
 
-	console.log('🏷️ Respuesta etiquetas:', response.data);
+	
 
 	return response.data;
 };
@@ -151,9 +147,9 @@ export const descargarEtiquetasPDF = async (
 		link.remove();
 		window.URL.revokeObjectURL(url);
 
-		console.log(`✅ PDF descargado: ${fileName}`);
+		
 	} catch (error: any) {
-		console.error('❌ Error al descargar PDF:', error);
+		
 
 		// Propagar el error con mensaje claro
 		if (error.response?.data) {

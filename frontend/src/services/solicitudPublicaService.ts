@@ -83,17 +83,17 @@ const obtenerPedidoPorHash = async (
 	hash: string
 ): Promise<PedidoDisponibleResponse> => {
 	try {
-		console.log('🔍 Obteniendo pedido con hash:', hash);
+		
 
 		const response = await apiClient.get(
 			`/pedidos/pedido-disponible/${hash}`
 		);
 
-		console.log('✅ Pedido obtenido:', response.data);
+		
 
 		return response.data;
 	} catch (error: unknown) {
-		console.error('❌ Error al obtener pedido:', error);
+		
 
 		if (axios.isAxiosError(error)) {
 			const response = error.response;
@@ -115,15 +115,15 @@ const crearSolicitudPublica = async (
 	datos: CrearSolicitudPublicaRequest
 ): Promise<CrearSolicitudPublicaResponse> => {
 	try {
-		console.log('📝 Creando solicitud pública:', datos);
+		
 
 		const response = await apiClient.post('/solicitudes/public/nueva', datos);
 
-		console.log('✅ Solicitud creada:', response.data);
+		
 
 		return response.data;
 	} catch (error: unknown) {
-		console.error('❌ Error al crear solicitud:', error);
+		
 
 		if (axios.isAxiosError(error)) {
 			const response = error.response;

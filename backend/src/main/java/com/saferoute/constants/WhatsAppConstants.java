@@ -59,7 +59,7 @@ public final class WhatsAppConstants {
     // Plantillas en Spanish (COL)
     public static final String TEMPLATE_RESUMEN_SOLICITUD = "resumen_solicitud";
     public static final String TEMPLATE_ACTUALIZACION_PEDIDO = "actualizacion_pedido";
-    public static final String TEMPLATE_NUEVO_PEDIDO = "nuevo_pedido";
+    public static final String TEMPLATE_NUEVO_PEDIDO = "pedido_nuevo";
     public static final String TEMPLATE_CANCELACION_PEDIDO = "cancelacion_pedido";
     public static final String TEMPLATE_CANCELACION_SOLICITUD = "cancelacion_solicitud";
 
@@ -108,7 +108,7 @@ public final class WhatsAppConstants {
 
     // ========== FORMATOS DE URL ==========
     public static final String URL_FORMAT_SOLICITUD = "/solicitud/%d";
-    public static final String URL_FORMAT_PEDIDO_HASH = "/pedidos/pedido-disponible/%s";
+    public static final String URL_FORMAT_PEDIDO_HASH = "/pedido/%s";
     public static final String URL_FORMAT_PEDIDO_ID = "/pedidos/pedido/%d";
     public static final String URL_FORMAT_MESSAGES_API = "%s/%s/messages";
 }

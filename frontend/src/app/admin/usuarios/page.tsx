@@ -45,12 +45,12 @@ export default function UsuariosPage() {
             setCargando(true);
             const data = await usuariosService.obtenerUsuarios();
 
-            console.log('👥 Usuarios cargados:', data);
-            console.log('👥 Total:', data.length);
+            
+            
 
             // Validar que sea un array
             if (!Array.isArray(data)) {
-                console.error('❌ La respuesta no es un array:', data);
+                
                 setUsuarios([]);
                 mostrarMensaje(
                     'error',
@@ -70,7 +70,7 @@ export default function UsuariosPage() {
                 mostrarMensaje('info', 'No hay administradores registrados');
             }
         } catch (error: any) {
-            console.error('❌ Error al cargar usuarios:', error);
+            
             setUsuarios([]);
             mostrarMensaje(
                 'error',
@@ -118,7 +118,7 @@ export default function UsuariosPage() {
             // Cerrar modal
             handleCerrarModal();
         } catch (error: any) {
-            console.error('❌ Error al eliminar usuario:', error);
+            
             mostrarMensaje('error', error.message || 'Error al eliminar el usuario');
         } finally {
             setCargando(false);

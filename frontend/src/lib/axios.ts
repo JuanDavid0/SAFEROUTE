@@ -53,28 +53,37 @@ api.interceptors.response.use(
       if (status === 401) {
         // Token inválido o expirado
         if (typeof window !== 'undefined') {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          window.location.href = '/login';
+          // NO redirigir si estamos en una ruta pública (pedidos con hash)
+          const currentPath = window.location.pathname;
+          const isPublicRoute = currentPath.startsWith('/pedido/');
+          
+          if (!isPublicRoute) {
+            console.warn('⚠️ Token inválido (401), redirigiendo a login');
+            localStorage.removeItem('token');
+            localStorage.removeItem('tokenExpiration');
+            window.location.href = '/login';
+          } else {
+            
+          }
         }
       }
       
       if (status === 403) {
-        console.error('Acceso denegado');
+        
       }
       
       // Retornar el mensaje de error del backend
       return Promise.reject(error.response.data);
     } else if (error.request) {
       // La petición se hizo pero no hubo respuesta
-      console.error('Error de red:', error.request);
+      
       return Promise.reject({
         exito: false,
         mensaje: 'Error de conexión. Verifique su conexión a internet.',
       });
     } else {
       // Error al configurar la petición
-      console.error('Error:', error.message);
+      
       return Promise.reject({
         exito: false,
         mensaje: 'Error inesperado. Intente nuevamente.',

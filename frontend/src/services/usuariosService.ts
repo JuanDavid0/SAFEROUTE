@@ -36,10 +36,6 @@ export const obtenerUsuarios = async (): Promise<Usuario[]> => {
 	try {
 		const response = await apiClient.get('/usuarios');
 
-		console.log('👥 Respuesta usuarios:', response.data);
-		console.log('👥 Tipo de respuesta:', typeof response.data);
-		console.log('👥 Es array?:', Array.isArray(response.data));
-
 		let usuarios: Usuario[] = [];
 
 		// Asegurar que siempre retornemos un array
@@ -65,11 +61,11 @@ export const obtenerUsuarios = async (): Promise<Usuario[]> => {
 			return esAdmin && estaActivo;
 		});
 
-		console.log(`✅ Usuarios ADM activos: ${usuariosAdminActivos.length} de ${usuarios.length} totales`);
+		
 
 		return usuariosAdminActivos;
 	} catch (error) {
-		console.error('❌ Error al obtener usuarios:', error);
+		
 		return [];
 	}
 };
@@ -79,13 +75,13 @@ export const obtenerUsuarios = async (): Promise<Usuario[]> => {
  */
 export const eliminarUsuario = async (idUsuario: number): Promise<void> => {
 	try {
-		console.log(`🗑️ Eliminando usuario ID: ${idUsuario}`);
+		
 		
 		const response = await apiClient.delete(`/usuarios/${idUsuario}`);
 
-		console.log('✅ Usuario eliminado:', response.data);
+		
 	} catch (error: any) {
-		console.error('❌ Error al eliminar usuario:', error);
+		
 		
 		// Propagar el error con mensaje claro
 		if (error.response?.data?.message) {

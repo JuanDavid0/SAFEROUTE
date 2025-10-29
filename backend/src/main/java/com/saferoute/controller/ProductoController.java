@@ -93,7 +93,6 @@ public class ProductoController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("hasAnyRole('SAD', 'ADM')")
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<ProductoDTO>> obtenerProducto(@PathVariable Integer id) {
         ProductoDTO producto = productoService.obtenerProductoPorId(id);

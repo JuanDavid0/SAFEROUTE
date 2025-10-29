@@ -92,7 +92,7 @@ export default function ConfiguracionPage() {
             setContraseniaNueva('');
             setConfirmarContrasenia('');
         } catch (error: unknown) {
-            console.error('❌ Error:', error);
+            
             const errorMessage = error instanceof Error ? error.message : 'Error al cambiar la contraseña';
             mostrarMensaje('error', errorMessage);
         } finally {

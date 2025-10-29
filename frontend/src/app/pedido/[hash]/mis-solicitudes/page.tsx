@@ -69,11 +69,9 @@ export default function MisSolicitudesPage() {
                     setTokenOtp(datos.token);
                     setAutenticado(true);
                     setCedula(datos.cedula);
-                    console.log('✅ Sesión OTP recuperada desde localStorage');
                 } else {
                     // Sesión expirada, limpiar
                     localStorage.removeItem(`otp_session_${hashPedido}`);
-                    console.log('⚠️ Sesión OTP expirada');
                 }
             } catch (error) {
                 console.error('Error al recuperar sesión OTP:', error);
@@ -175,7 +173,6 @@ export default function MisSolicitudesPage() {
                     expiracion: Date.now() + (60 * 60 * 1000), // 1 hora
                 };
                 localStorage.setItem(`otp_session_${hashPedido}`, JSON.stringify(sesionOtp));
-                console.log('✅ Sesión OTP guardada en localStorage');
 
                 mostrarMensaje('success', '✅ Autenticación exitosa');
             } else {
