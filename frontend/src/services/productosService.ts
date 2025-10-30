@@ -7,7 +7,7 @@ import apiClient from '@/lib/axios';
 import axios from 'axios';
 import { BackendResponse, Producto } from '@/types';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 /**
  * Listar todos los productos activos
