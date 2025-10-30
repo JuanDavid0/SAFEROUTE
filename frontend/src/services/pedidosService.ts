@@ -119,6 +119,25 @@ export const actualizarEstadoPedido = async (
 };
 
 /**
+ * Actualizar fecha de cierre del pedido (solo para pedidos activos)
+ */
+export const actualizarFechaCierre = async (
+    idPedido: number,
+    fechaCierre: string // formato: YYYY-MM-DD
+): Promise<PedidoResponse> => {
+    const response = await apiClient.put<BackendResponse<PedidoResponse>>(
+        `/pedidos/${idPedido}`,
+        { fechaCierre }
+    );
+
+    if (response.data.status === 'success' && response.data.data) {
+        return response.data.data;
+    }
+
+    throw new Error(response.data.message || 'Error al actualizar fecha de cierre');
+};
+
+/**
  * Cancelar pedido
  */
 export const cancelarPedido = async (idPedido: number): Promise<void> => {

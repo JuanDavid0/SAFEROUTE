@@ -23,10 +23,14 @@ export const extractErrorInfo = (error: any): ErrorInfo => {
 
         // Caso 1: Error con formato BackendResponse
         if (data && typeof data === 'object') {
+            // Extraer detalles: priorizar error.details, si no existe usar el message como details
+            const details = data.error?.details || undefined;
+            const errorCode = data.error?.code || 'UNKNOWN_ERROR';
+            
             const errorInfo: ErrorInfo = {
                 message: data.message || 'Error en la operación',
-                details: data.error?.details,
-                errorCode: data.error?.code
+                details: details,
+                errorCode: errorCode
             };
 
             // Caso 2: Error de validación con errores por campo

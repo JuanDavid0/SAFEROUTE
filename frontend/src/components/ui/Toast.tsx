@@ -71,7 +71,9 @@ export const Toast: React.FC<ToastProps> = ({
                 <div className="toast-message-container">
                     <div className="toast-message">{message}</div>
                     {details && <div className="toast-details">{details}</div>}
-                    {errorCode && (
+                    
+                    {/* Mostrar errorCode solo si NO hay details */}
+                    {!details && errorCode && errorCode !== 'UNKNOWN_ERROR' && (
                         <span className="toast-error-code">
                             {errorCode}
                         </span>

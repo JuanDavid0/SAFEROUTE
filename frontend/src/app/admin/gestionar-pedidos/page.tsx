@@ -55,7 +55,9 @@ export default function GestionarPedidosPage() {
     const [pedidos, setPedidos] = useState<PedidoConSolicitudes[]>([]);
     const [cargando, setCargando] = useState(false);
     const [mostrarModalEstado, setMostrarModalEstado] = useState(false);
+    const [mostrarModalFecha, setMostrarModalFecha] = useState(false);
     const [pedidoSeleccionado, setPedidoSeleccionado] = useState<PedidoConSolicitudes | null>(null);
+    const [nuevaFechaCierre, setNuevaFechaCierre] = useState('');
 
     // Estados para ordenamiento
     const [ordenColumna, setOrdenColumna] = useState<OrdenColumna>(null);
@@ -238,6 +240,50 @@ export default function GestionarPedidosPage() {
         }
     };
 
+    const handleAbrirModalFecha = (pedido: PedidoConSolicitudes) => {
+        setPedidoSeleccionado(pedido);
+        // Convertir fecha actual a formato YYYY-MM-DD
+        const fechaActual = pedido.fechaCierre.split(' ')[0]; // Tomar solo la fecha sin hora
+        setNuevaFechaCierre(fechaActual);
+        setMostrarModalFecha(true);
+    };
+
+    const handleCerrarModalFecha = () => {
+        setPedidoSeleccionado(null);
+        setNuevaFechaCierre('');
+        setMostrarModalFecha(false);
+    };
+
+    const handleActualizarFechaCierre = async () => {
+        if (!pedidoSeleccionado || !nuevaFechaCierre) return;
+
+        // Validar que la nueva fecha sea futura
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        const fechaSeleccionada = new Date(nuevaFechaCierre);
+
+        if (fechaSeleccionada < hoy) {
+            showWarning('Fecha inválida', 'La fecha de cierre debe ser futura');
+            return;
+        }
+
+        try {
+            setCargando(true);
+            await pedidosService.actualizarFechaCierre(pedidoSeleccionado.idPedido, nuevaFechaCierre);
+            showSuccess(
+                'Fecha actualizada',
+                `La fecha de cierre se ha actualizado a ${nuevaFechaCierre}`
+            );
+            handleCerrarModalFecha();
+            await cargarPedidos();
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
+        } finally {
+            setCargando(false);
+        }
+    };
+
     return (
         <DashboardLayout role="ADM">
             {/* Los mensajes ahora se muestran con el sistema de Toast */}
@@ -337,6 +383,18 @@ export default function GestionarPedidosPage() {
                                             </td>
                                             <td className="td-acciones">
                                                 <div className="acciones-grupo">
+                                                    {/* Cambiar Fecha - Solo para pedidos ACT */}
+                                                    {pedido.estadoPedido === 'ACT' && (
+                                                        <button
+                                                            className="btn-tabla btn-fecha"
+                                                            onClick={() => handleAbrirModalFecha(pedido)}
+                                                            disabled={cargando}
+                                                            title="Cambiar fecha de cierre"
+                                                        >
+                                                            📅 Fecha
+                                                        </button>
+                                                    )}
+
                                                     {/* Consolidar - Solo una vez y si es ACT */}
                                                     {!pedido.consolidado && pedido.estadoPedido === 'ACT' && (
                                                         <button
@@ -387,6 +445,18 @@ export default function GestionarPedidosPage() {
                     pedido={pedidoSeleccionado}
                     onCerrar={handleCerrarModalEstado}
                     onActualizar={handleActualizarEstado}
+                    cargando={cargando}
+                />
+            )}
+
+            {/* Modal de Cambiar Fecha de Cierre */}
+            {mostrarModalFecha && pedidoSeleccionado && (
+                <ModalCambiarFecha
+                    pedido={pedidoSeleccionado}
+                    onCerrar={handleCerrarModalFecha}
+                    onActualizar={handleActualizarFechaCierre}
+                    nuevaFecha={nuevaFechaCierre}
+                    setNuevaFecha={setNuevaFechaCierre}
                     cargando={cargando}
                 />
             )}
@@ -446,6 +516,74 @@ function ModalActualizarEstado({ pedido, onCerrar, onActualizar, cargando }: Mod
                 <div className="modal-footer">
                     <Button variant="outline" onClick={onCerrar} disabled={cargando}>
                         Cancelar
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// Modal para cambiar fecha de cierre
+interface ModalCambiarFechaProps {
+    pedido: PedidoConSolicitudes;
+    onCerrar: () => void;
+    onActualizar: () => void;
+    nuevaFecha: string;
+    setNuevaFecha: (fecha: string) => void;
+    cargando: boolean;
+}
+
+function ModalCambiarFecha({ pedido, onCerrar, onActualizar, nuevaFecha, setNuevaFecha, cargando }: ModalCambiarFechaProps) {
+    // Obtener la fecha mínima (mañana)
+    const obtenerFechaMinima = () => {
+        const manana = new Date();
+        manana.setDate(manana.getDate() + 1);
+        return manana.toISOString().split('T')[0];
+    };
+
+    return (
+        <div className="modal-overlay" onClick={onCerrar}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h2 className="modal-title">Cambiar Fecha de Cierre - Pedido #{pedido.idPedido}</h2>
+                    <button className="modal-close" onClick={onCerrar}>✕</button>
+                </div>
+
+                <div className="modal-body">
+                    <div className="form-group">
+                        <label htmlFor="fechaCierre"><strong>Fecha de Cierre Actual:</strong></label>
+                        <p className="text-muted">{pedido.fechaCierre}</p>
+                    </div>
+
+                    <div className="form-group">
+                        <label htmlFor="nuevaFechaCierre">
+                            <strong>Nueva Fecha de Cierre:</strong>
+                        </label>
+                        <input
+                            id="nuevaFechaCierre"
+                            type="date"
+                            className="form-input"
+                            value={nuevaFecha}
+                            onChange={(e) => setNuevaFecha(e.target.value)}
+                            min={obtenerFechaMinima()}
+                            disabled={cargando}
+                        />
+                        <p className="text-muted" style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
+                            La fecha debe ser futura
+                        </p>
+                    </div>
+                </div>
+
+                <div className="modal-footer">
+                    <Button variant="outline" onClick={onCerrar} disabled={cargando}>
+                        Cancelar
+                    </Button>
+                    <Button
+                        variant="primary"
+                        onClick={onActualizar}
+                        disabled={cargando || !nuevaFecha}
+                    >
+                        {cargando ? 'Actualizando...' : 'Actualizar Fecha'}
                     </Button>
                 </div>
             </div>
