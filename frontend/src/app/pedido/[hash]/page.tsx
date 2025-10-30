@@ -23,7 +23,7 @@ interface ProductoConInfo {
 }
 
 export default function PedidoPublicoPage() {
-    const { showSuccess, showError, showInfo } = useToast();
+    const { showSuccess, showError, showInfo, showWarning } = useToast();
     const params = useParams();
     const router = useRouter();
     const hashPedido = params.hash as string;
@@ -242,13 +242,17 @@ export default function PedidoPublicoPage() {
                 productos: productosParaEnviar,
             });
 
-            if (response.exito) {
+            // Verificar si la solicitud fue exitosa
+            if (response.exito || (response as any).status === 'success') {
                 showSuccess('Solicitud Creada', 'Solicitud creada exitosamente');
 
                 // Recargar la página después de 2 segundos para mostrar el Toast
                 setTimeout(() => {
                     window.location.reload();
                 }, 2000);
+            } else {
+                // Si no hay exito pero tampoco error, mostrar advertencia
+                showWarning('Atención', response.mensaje || 'La solicitud se procesó pero verifique el resultado');
             }
         } catch (error: unknown) {
             console.error('❌ Error:', error);
