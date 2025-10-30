@@ -7,17 +7,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { useToast } from '@/components/ui';
+import { extractErrorInfo } from '@/utils/errorHandler';
 import * as informeService from '@/services/informeService';
 
 type TipoInforme = 'cliente' | 'pedido';
 
 export default function InformeContablePage() {
+    const { showSuccess, showError } = useToast();
     const [tipoInforme, setTipoInforme] = useState<TipoInforme>('cliente');
     const [cargando, setCargando] = useState(false);
-    const [mensaje, setMensaje] = useState<{
-        tipo: 'success' | 'error';
-        texto: string;
-    } | null>(null);
 
     // Estados para clientes
     const [clientes, setClientes] = useState<informeService.UsuarioInforme[]>(
@@ -32,11 +31,6 @@ export default function InformeContablePage() {
     const [pedidoSeleccionado, setPedidoSeleccionado] = useState<number | null>(
         null
     );
-
-    const mostrarMensaje = (tipo: 'success' | 'error', texto: string) => {
-        setMensaje({ tipo, texto });
-        setTimeout(() => setMensaje(null), 5000);
-    };
 
     // Cargar datos al cambiar tipo de informe
     useEffect(() => {
@@ -68,9 +62,9 @@ export default function InformeContablePage() {
                 setPedidos(pedidosEntregados);
                 setPedidoSeleccionado(null);
             }
-        } catch (error: any) {
-            
-            mostrarMensaje('error', error.message || 'Error al cargar datos');
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -101,10 +95,10 @@ export default function InformeContablePage() {
                 clienteSeleccionado,
                 nombreArchivo
             );
-            mostrarMensaje('success', '✅ Informe descargado exitosamente');
-        } catch (error: any) {
-            
-            mostrarMensaje('error', error.message || 'Error al descargar informe');
+            showSuccess('Informe descargado', 'El informe se ha generado exitosamente');
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -116,10 +110,10 @@ export default function InformeContablePage() {
         try {
             setCargando(true);
             await informeService.descargarInformePedido(pedidoSeleccionado);
-            mostrarMensaje('success', '✅ Informe descargado exitosamente');
-        } catch (error: any) {
-            
-            mostrarMensaje('error', error.message || 'Error al descargar informe');
+            showSuccess('Informe descargado', 'El informe se ha generado exitosamente');
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -127,12 +121,7 @@ export default function InformeContablePage() {
 
     return (
         <DashboardLayout role="ADM">
-            {/* Mensaje de feedback */}
-            {mensaje && (
-                <div className={`alert alert-${mensaje.tipo}`}>
-                    {mensaje.texto}
-                </div>
-            )}
+            {/* Los mensajes ahora se muestran con el sistema de Toast */}
 
             {/* Encabezado */}
             <div className="dashboard-page-header">

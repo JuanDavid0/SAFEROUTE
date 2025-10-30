@@ -9,8 +9,12 @@ import { useEffect, useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import usuariosService, { Usuario } from '@/services/usuariosService';
 import authService from '@/services/authService';
+import { useToast } from '@/components/ui';
+import { extractErrorInfo } from '@/utils/errorHandler';
 
 export default function UsuariosPage() {
+    const { showSuccess, showError, showWarning, showInfo } = useToast();
+
     // ===========================
     // ESTADOS - LISTA DE USUARIOS
     // ===========================
@@ -20,10 +24,6 @@ export default function UsuariosPage() {
     );
     const [mostrarModal, setMostrarModal] = useState<boolean>(false);
     const [cargando, setCargando] = useState<boolean>(false);
-    const [mensaje, setMensaje] = useState<{
-        tipo: 'success' | 'error' | 'info';
-        texto: string;
-    } | null>(null);
 
     // ===========================
     // ESTADOS - CREAR ADMINISTRADOR
@@ -68,9 +68,9 @@ export default function UsuariosPage() {
             if (!Array.isArray(data)) {
                 
                 setUsuarios([]);
-                mostrarMensaje(
-                    'error',
-                    'Error: La respuesta del servidor no tiene el formato esperado'
+                showError(
+                    'Error de formato',
+                    'La respuesta del servidor no tiene el formato esperado'
                 );
                 return;
             }
@@ -83,15 +83,13 @@ export default function UsuariosPage() {
             setUsuarios(administradores);
 
             if (administradores.length === 0) {
-                mostrarMensaje('info', 'No hay administradores registrados');
+                showInfo('Sin registros', 'No hay administradores registrados');
             }
         } catch (error: any) {
             
             setUsuarios([]);
-            mostrarMensaje(
-                'error',
-                error.message || 'Error al cargar los usuarios'
-            );
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -123,9 +121,9 @@ export default function UsuariosPage() {
             setCargando(true);
             await usuariosService.eliminarUsuario(usuarioSeleccionado.idUsuario);
 
-            mostrarMensaje(
-                'success',
-                `✅ Administrador ${usuarioSeleccionado.nombres} ${usuarioSeleccionado.apellidos} eliminado exitosamente`
+            showSuccess(
+                'Administrador eliminado',
+                `${usuarioSeleccionado.nombres} ${usuarioSeleccionado.apellidos} ha sido eliminado exitosamente`
             );
 
             // Recargar lista de usuarios
@@ -135,21 +133,11 @@ export default function UsuariosPage() {
             handleCerrarModal();
         } catch (error: any) {
             
-            mostrarMensaje('error', error.message || 'Error al eliminar el usuario');
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
-    };
-
-    /**
-     * Mostrar mensaje temporal
-     */
-    const mostrarMensaje = (
-        tipo: 'success' | 'error' | 'info',
-        texto: string
-    ) => {
-        setMensaje({ tipo, texto });
-        setTimeout(() => setMensaje(null), 5000);
     };
 
     /**
@@ -157,47 +145,47 @@ export default function UsuariosPage() {
      */
     const validarFormularioAdmin = (): boolean => {
         if (!nombreAdmin.trim()) {
-            mostrarMensaje('error', 'El nombre es obligatorio');
+            showError('Formulario incompleto', 'El nombre es obligatorio');
             return false;
         }
 
         if (!apellidoAdmin.trim()) {
-            mostrarMensaje('error', 'El apellido es obligatorio');
+            showError('Formulario incompleto', 'El apellido es obligatorio');
             return false;
         }
 
         if (!cedulaAdmin.trim()) {
-            mostrarMensaje('error', 'La cédula es obligatoria');
+            showError('Formulario incompleto', 'La cédula es obligatoria');
             return false;
         }
 
         if (cedulaAdmin.length !== 10) {
-            mostrarMensaje('error', 'La cédula debe tener 10 dígitos');
+            showError('Cédula inválida', 'La cédula debe tener exactamente 10 dígitos');
             return false;
         }
 
         if (!telefonoAdmin.trim()) {
-            mostrarMensaje('error', 'El teléfono es obligatorio');
+            showError('Formulario incompleto', 'El teléfono es obligatorio');
             return false;
         }
 
         if (telefonoAdmin.length !== 10) {
-            mostrarMensaje('error', 'El teléfono debe tener 10 dígitos');
+            showError('Teléfono inválido', 'El teléfono debe tener exactamente 10 dígitos');
             return false;
         }
 
         if (!contraseniaAdmin.trim()) {
-            mostrarMensaje('error', 'La contraseña es obligatoria');
+            showError('Formulario incompleto', 'La contraseña es obligatoria');
             return false;
         }
 
         if (contraseniaAdmin.length < 8) {
-            mostrarMensaje('error', 'La contraseña debe tener al menos 8 caracteres');
+            showError('Contraseña débil', 'La contraseña debe tener al menos 8 caracteres');
             return false;
         }
 
         if (contraseniaAdmin !== confirmarContraseniaAdmin) {
-            mostrarMensaje('error', 'Las contraseñas no coinciden');
+            showError('Contraseñas no coinciden', 'Por favor, verifica que ambas contraseñas sean iguales');
             return false;
         }
 
@@ -224,7 +212,10 @@ export default function UsuariosPage() {
                 contrasenia: contraseniaAdmin,
             });
 
-            mostrarMensaje('success', '✅ Administrador creado exitosamente');
+            showSuccess(
+                'Administrador creado',
+                `${nombreAdmin} ${apellidoAdmin} ha sido creado exitosamente`
+            );
 
             // Limpiar formulario
             handleCancelarCreacion();
@@ -233,8 +224,8 @@ export default function UsuariosPage() {
             await cargarUsuarios();
         } catch (error: unknown) {
             
-            const errorMessage = error instanceof Error ? error.message : 'Error al crear el administrador';
-            mostrarMensaje('error', errorMessage);
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode, errorInfo.validationErrors);
         } finally {
             setCargandoAdmin(false);
         }
@@ -281,12 +272,7 @@ export default function UsuariosPage() {
                     </div>
                 </div>
 
-                {/* Mensajes */}
-                {mensaje && (
-                    <div className={`mensaje mensaje-${mensaje.tipo}`}>
-                        {mensaje.texto}
-                    </div>
-                )}
+                {/* Los mensajes ahora se muestran con el sistema de Toast */}
 
                 {/* Formulario de Crear Administrador */}
                 {mostrarFormulario && (

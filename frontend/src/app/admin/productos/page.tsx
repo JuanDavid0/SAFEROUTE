@@ -7,11 +7,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Button, Input, Card } from '@/components/ui';
+import { Button, Input, Card, useToast } from '@/components/ui';
 import { Producto } from '@/types';
 import * as productosService from '@/services/productosService';
+import { extractErrorInfo } from '@/utils/errorHandler';
 
 export default function ProductosPage() {
+    const { showSuccess, showError } = useToast();
+
     // Estados del formulario
     const [nombreProducto, setNombreProducto] = useState('');
     const [tipoProducto, setTipoProducto] = useState('');
@@ -32,7 +35,6 @@ export default function ProductosPage() {
     // Estados de datos
     const [productos, setProductos] = useState<Producto[]>([]);
     const [cargando, setCargando] = useState(false);
-    const [mensaje, setMensaje] = useState<{ tipo: 'success' | 'error'; texto: string } | null>(null);
 
     // Cargar productos al montar el componente
     useEffect(() => {
@@ -45,16 +47,11 @@ export default function ProductosPage() {
             const data = await productosService.obtenerProductos();
             setProductos(data);
         } catch (error) {
-            mostrarMensaje('error', 'Error al cargar productos');
-            
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
-    };
-
-    const mostrarMensaje = (tipo: 'success' | 'error', texto: string) => {
-        setMensaje({ tipo, texto });
-        setTimeout(() => setMensaje(null), 5000);
     };
 
     const handleSeleccionarImagen = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -82,18 +79,28 @@ export default function ProductosPage() {
         setProductoEditando(null);
     };
 
-    const validarFormulario = (): string | null => {
-        if (!nombreProducto.trim()) return 'El nombre del producto es obligatorio';
-        if (!tipoProducto.trim()) return 'El tipo de producto es obligatorio';
-        if (!precioUnitario || parseFloat(precioUnitario) <= 0) return 'El precio debe ser mayor a 0';
-        if (!costoUnitario || parseFloat(costoUnitario) <= 0) return 'El costo debe ser mayor a 0';
-        return null;
+    const validarFormulario = (): boolean => {
+        if (!nombreProducto.trim()) {
+            showError('Formulario incompleto', 'El nombre del producto es obligatorio');
+            return false;
+        }
+        if (!tipoProducto.trim()) {
+            showError('Formulario incompleto', 'El tipo de producto es obligatorio');
+            return false;
+        }
+        if (!precioUnitario || parseFloat(precioUnitario) <= 0) {
+            showError('Precio inválido', 'El precio debe ser mayor a 0');
+            return false;
+        }
+        if (!costoUnitario || parseFloat(costoUnitario) <= 0) {
+            showError('Costo inválido', 'El costo debe ser mayor a 0');
+            return false;
+        }
+        return true;
     };
 
     const handleCrearProducto = async () => {
-        const error = validarFormulario();
-        if (error) {
-            mostrarMensaje('error', error);
+        if (!validarFormulario()) {
             return;
         }
 
@@ -123,7 +130,10 @@ export default function ProductosPage() {
                         productoData
                     );
                 }
-                mostrarMensaje('success', 'Producto actualizado exitosamente');
+                showSuccess(
+                    'Producto actualizado',
+                    `${nombreProducto} se ha actualizado correctamente`
+                );
             } else {
                 // Crear producto
                 if (imagenSeleccionada) {
@@ -131,15 +141,18 @@ export default function ProductosPage() {
                 } else {
                     await productosService.crearProductoSinImagen(productoData);
                 }
-                mostrarMensaje('success', 'Producto creado exitosamente');
+                showSuccess(
+                    'Producto creado',
+                    `${nombreProducto} se ha creado exitosamente`
+                );
             }
 
             handleLimpiarFormulario();
             setMostrarFormulario(false);
             await cargarProductos();
-        } catch (error: any) {
-            mostrarMensaje('error', error.message || 'Error al guardar producto');
-            
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -163,12 +176,16 @@ export default function ProductosPage() {
 
         try {
             setCargando(true);
+            const producto = productos.find(p => p.idProducto === id);
             await productosService.eliminarProducto(id);
-            mostrarMensaje('success', 'Producto eliminado exitosamente');
+            showSuccess(
+                'Producto eliminado',
+                `${producto?.nombreProducto || 'El producto'} ha sido eliminado correctamente`
+            );
             await cargarProductos();
-        } catch (error: any) {
-            mostrarMensaje('error', error.message || 'Error al eliminar producto');
-            
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -199,12 +216,7 @@ export default function ProductosPage() {
             </div>
 
             <div className="dashboard-content">
-                {/* Mensaje de feedback */}
-                {mensaje && (
-                    <div className={`alert alert-${mensaje.tipo}`}>
-                        {mensaje.texto}
-                    </div>
-                )}
+                {/* Los mensajes ahora se muestran con el sistema de Toast */}
 
                 {/* Barra de búsqueda */}
                 <div className="productos-search-bar">

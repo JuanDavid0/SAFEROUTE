@@ -7,6 +7,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { useToast } from '@/components/ui';
+import { extractErrorInfo } from '@/utils/errorHandler';
 import * as reportesService from '@/services/reportesService';
 import {
     BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -20,23 +22,13 @@ type TipoReporte = 'resumen' | 'mas-vendidos' | 'ingresos' | 'mayor-ganancia' | 
 const COLORES = ['#1F4E5F', '#E46B6B', '#6BBF8E', '#F57C00', '#7B1FA2', '#1976D2', '#388E3C'];
 
 export default function ReportesPage() {
+    const { showSuccess, showError } = useToast();
     const [reporteActivo, setReporteActivo] = useState<TipoReporte>('resumen');
     const [cargando, setCargando] = useState(false);
-    const [mensaje, setMensaje] = useState<{ tipo: 'success' | 'error'; texto: string } | null>(null);
-
-    const mostrarMensaje = (tipo: 'success' | 'error', texto: string) => {
-        setMensaje({ tipo, texto });
-        setTimeout(() => setMensaje(null), 5000);
-    };
 
     return (
         <DashboardLayout role="SAD">
-            {/* Mensaje de feedback */}
-            {mensaje && (
-                <div className={`alert alert-${mensaje.tipo}`}>
-                    {mensaje.texto}
-                </div>
-            )}
+            {/* Los mensajes ahora se muestran con el sistema de Toast */}
 
             {/* Encabezado */}
             <div className="dashboard-page-header">
@@ -86,35 +78,35 @@ export default function ReportesPage() {
                     <ReporteResumen
                         cargando={cargando}
                         setCargando={setCargando}
-                        mostrarMensaje={mostrarMensaje}
+                        showError={showError}
                     />
                 )}
                 {reporteActivo === 'mas-vendidos' && (
                     <ReporteProductosMasVendidos
                         cargando={cargando}
                         setCargando={setCargando}
-                        mostrarMensaje={mostrarMensaje}
+                        showError={showError}
                     />
                 )}
                 {reporteActivo === 'ingresos' && (
                     <ReporteIngresos
                         cargando={cargando}
                         setCargando={setCargando}
-                        mostrarMensaje={mostrarMensaje}
+                        showError={showError}
                     />
                 )}
                 {reporteActivo === 'mayor-ganancia' && (
                     <ReporteMayorGanancia
                         cargando={cargando}
                         setCargando={setCargando}
-                        mostrarMensaje={mostrarMensaje}
+                        showError={showError}
                     />
                 )}
                 {reporteActivo === 'clientes' && (
                     <ReporteClientesFrecuentes
                         cargando={cargando}
                         setCargando={setCargando}
-                        mostrarMensaje={mostrarMensaje}
+                        showError={showError}
                     />
                 )}
             </div>
@@ -128,10 +120,10 @@ export default function ReportesPage() {
 interface ReporteProps {
     cargando: boolean;
     setCargando: (value: boolean) => void;
-    mostrarMensaje: (tipo: 'success' | 'error', texto: string) => void;
+    showError: (message: string, details?: string, errorCode?: string) => void;
 }
 
-function ReporteResumen({ cargando, setCargando, mostrarMensaje }: ReporteProps) {
+function ReporteResumen({ cargando, setCargando, showError }: ReporteProps) {
     const [datos, setDatos] = useState<reportesService.ReporteResumen | null>(null);
 
     useEffect(() => {
@@ -143,8 +135,9 @@ function ReporteResumen({ cargando, setCargando, mostrarMensaje }: ReporteProps)
             setCargando(true);
             const data = await reportesService.obtenerResumenGeneral();
             setDatos(data);
-        } catch (error: any) {
-            mostrarMensaje('error', error.message || 'Error al cargar resumen');
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -200,7 +193,7 @@ function ReporteResumen({ cargando, setCargando, mostrarMensaje }: ReporteProps)
                 <div className="metrica-card metrica-clientes">
                     <div className="metrica-icon">👥</div>
                     <div className="metrica-info">
-                        <h3>Clientes Activos</h3>
+                        <h3>Clientes Frecuentes</h3>
                         <p className="metrica-valor">{datos.clientesActivos} / {datos.totalClientes}</p>
                     </div>
                 </div>
@@ -281,7 +274,7 @@ function ReporteResumen({ cargando, setCargando, mostrarMensaje }: ReporteProps)
 // ===========================
 // COMPONENTE: Productos Más Vendidos
 // ===========================
-function ReporteProductosMasVendidos({ cargando, setCargando, mostrarMensaje }: ReporteProps) {
+function ReporteProductosMasVendidos({ cargando, setCargando, showError }: ReporteProps) {
     const [datos, setDatos] = useState<reportesService.ProductoMasVendido[]>([]);
     const [limite, setLimite] = useState<number>(10);
 
@@ -294,8 +287,9 @@ function ReporteProductosMasVendidos({ cargando, setCargando, mostrarMensaje }: 
             setCargando(true);
             const data = await reportesService.obtenerProductosMasVendidos(limite);
             setDatos(data);
-        } catch (error: any) {
-            mostrarMensaje('error', error.message || 'Error al cargar productos más vendidos');
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -375,7 +369,7 @@ function ReporteProductosMasVendidos({ cargando, setCargando, mostrarMensaje }: 
 // ===========================
 // COMPONENTE: Ingresos
 // ===========================
-function ReporteIngresos({ cargando, setCargando, mostrarMensaje }: ReporteProps) {
+function ReporteIngresos({ cargando, setCargando, showError }: ReporteProps) {
     const [datos, setDatos] = useState<reportesService.ReporteIngresos | null>(null);
     const [fechaInicio, setFechaInicio] = useState<string>('2025-01-01');
     const [fechaFin, setFechaFin] = useState<string>('2025-12-31');
@@ -390,8 +384,9 @@ function ReporteIngresos({ cargando, setCargando, mostrarMensaje }: ReporteProps
             setCargando(true);
             const data = await reportesService.obtenerReporteIngresos(fechaInicio, fechaFin, agrupacion);
             setDatos(data);
-        } catch (error: any) {
-            mostrarMensaje('error', error.message || 'Error al cargar reporte de ingresos');
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -470,7 +465,7 @@ function ReporteIngresos({ cargando, setCargando, mostrarMensaje }: ReporteProps
 // ===========================
 // COMPONENTE: Mayor Ganancia
 // ===========================
-function ReporteMayorGanancia({ cargando, setCargando, mostrarMensaje }: ReporteProps) {
+function ReporteMayorGanancia({ cargando, setCargando, showError }: ReporteProps) {
     const [datos, setDatos] = useState<reportesService.ProductoMayorGanancia[]>([]);
 
     useEffect(() => {
@@ -482,8 +477,9 @@ function ReporteMayorGanancia({ cargando, setCargando, mostrarMensaje }: Reporte
             setCargando(true);
             const data = await reportesService.obtenerProductosMayorGanancia();
             setDatos(data);
-        } catch (error: any) {
-            mostrarMensaje('error', error.message || 'Error al cargar productos con mayor ganancia');
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -560,7 +556,7 @@ function ReporteMayorGanancia({ cargando, setCargando, mostrarMensaje }: Reporte
 // ===========================
 // COMPONENTE: Clientes Frecuentes
 // ===========================
-function ReporteClientesFrecuentes({ cargando, setCargando, mostrarMensaje }: ReporteProps) {
+function ReporteClientesFrecuentes({ cargando, setCargando, showError }: ReporteProps) {
     const [datos, setDatos] = useState<reportesService.ClienteFrecuente[]>([]);
 
     useEffect(() => {
@@ -572,8 +568,9 @@ function ReporteClientesFrecuentes({ cargando, setCargando, mostrarMensaje }: Re
             setCargando(true);
             const data = await reportesService.obtenerClientesFrecuentes();
             setDatos(data);
-        } catch (error: any) {
-            mostrarMensaje('error', error.message || 'Error al cargar clientes frecuentes');
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }

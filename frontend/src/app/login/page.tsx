@@ -5,7 +5,7 @@
  * Funcionalidades:
  * - Validación de cédula (10 dígitos)
  * - Autenticación con backend
- * - Manejo de errores
+ * - Manejo de errores con sistema de Toast
  * - Redirección según rol
  */
 
@@ -13,15 +13,17 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Logo, Input, Button } from '@/components/ui';
+import { Logo, Input, Button, useToast } from '@/components/ui';
 import { useAuthStore } from '@/stores/authStore';
 import { login } from '@/services/authService';
 import { validarCedula } from '@/utils/validators';
 import { MENSAJES_ERROR } from '@/utils/constants';
+import { extractErrorInfo } from '@/utils/errorHandler';
 
 export default function LoginPage() {
     const router = useRouter();
     const setAuth = useAuthStore((state) => state.setAuth);
+    const { showSuccess, showError, showWarning } = useToast();
 
     // Estados del formulario
     const [cedula, setCedula] = useState('');
@@ -31,7 +33,6 @@ export default function LoginPage() {
     const [errores, setErrores] = useState({
         cedula: '',
         contrasenia: '',
-        general: '',
     });
     const [isLoading, setIsLoading] = useState(false);
 
@@ -42,7 +43,6 @@ export default function LoginPage() {
         const nuevosErrores = {
             cedula: '',
             contrasenia: '',
-            general: '',
         };
 
         // Validar cédula
@@ -66,13 +66,14 @@ export default function LoginPage() {
      */
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        e.stopPropagation(); // Prevenir propagación del evento
-
-        // Limpiar error general previo
-        setErrores(prev => ({ ...prev, general: '' }));
+        e.stopPropagation();
 
         // Validar formulario
         if (!validarFormulario()) {
+            showWarning(
+                'Formulario incompleto',
+                'Por favor, corrija los errores antes de continuar'
+            );
             return;
         }
 
@@ -87,10 +88,11 @@ export default function LoginPage() {
 
                 // Verificar que sea SAD o ADM
                 if (rol !== 'SAD' && rol !== 'ADM') {
-                    setErrores(prev => ({
-                        ...prev,
-                        general: 'Acceso denegado. Solo administradores pueden ingresar.',
-                    }));
+                    showError(
+                        'Acceso denegado',
+                        'Solo administradores (SAD/ADM) pueden ingresar al sistema',
+                        'ACCESS_DENIED'
+                    );
                     setIsLoading(false);
                     return;
                 }
@@ -122,36 +124,40 @@ export default function LoginPage() {
 
                 setAuth(jwtResponse, userData);
 
+                // Mostrar mensaje de éxito
+                showSuccess(
+                    '¡Bienvenido!',
+                    `Redirigiendo al panel de ${rol === 'SAD' ? 'Super Administrador' : 'Administrador'}...`
+                );
+
                 // Redirigir según el rol
-                if (rol === 'SAD') {
-                    router.push('/superadmin/dashboard');
-                } else {
-                    router.push('/admin/dashboard');
-                }
+                setTimeout(() => {
+                    if (rol === 'SAD') {
+                        router.push('/superadmin/dashboard');
+                    } else {
+                        router.push('/admin/dashboard');
+                    }
+                }, 1000);
             } else {
                 // Respuesta no exitosa
-                setErrores(prev => ({
-                    ...prev,
-                    general: response.message || 'Error al iniciar sesión',
-                }));
+                showError(
+                    'Error al iniciar sesión',
+                    response.message || 'Credenciales inválidas'
+                );
                 setIsLoading(false);
             }
         } catch (error: any) {
-            // Manejo de errores
-            let mensajeError = 'Error al iniciar sesión';
-
-            // El backend devuelve ApiResponse con { status: 'fail', message, error }
-            if (error.status === 'fail' || error.status === 'error') {
-                mensajeError = error.message || 'Credenciales inválidas';
-            } else if (error.message && typeof error.message === 'string') {
-                mensajeError = error.message;
-            } else if (error.response?.data?.message) {
-                mensajeError = error.response.data.message;
-            } else {
-                mensajeError = MENSAJES_ERROR.NETWORK_ERROR;
-            }
-
-            setErrores(prev => ({ ...prev, general: mensajeError }));
+            // Extraer información detallada del error
+            const errorInfo = extractErrorInfo(error);
+            
+            // Mostrar error con toda la información del backend
+            showError(
+                errorInfo.message,
+                errorInfo.details,
+                errorInfo.errorCode,
+                errorInfo.validationErrors
+            );
+            
             setIsLoading(false);
         }
     };
@@ -192,27 +198,6 @@ export default function LoginPage() {
                     <h2 className="text-3xl font-bold text-azul-petroleo mb-8 text-center">
                         Iniciar Sesión
                     </h2>
-
-                    {/* Mensaje de error general */}
-                    {errores.general && (
-                        <div className="mb-6 p-4 bg-red-50 border border-rojo-intenso rounded-lg">
-                            <p className="text-rojo-intenso text-sm font-medium flex items-center gap-2">
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-5 w-5"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                >
-                                    <path
-                                        fillRule="evenodd"
-                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                                        clipRule="evenodd"
-                                    />
-                                </svg>
-                                {errores.general}
-                            </p>
-                        </div>
-                    )}
 
                     {/* Formulario de Login */}
                     <form onSubmit={handleSubmit} className="space-y-6">

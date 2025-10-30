@@ -7,10 +7,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Button, Input } from '@/components/ui';
+import { Button, Input, useToast } from '@/components/ui';
 import { obtenerProductos } from '@/services/productosService';
 import { crearPedido, obtenerPedidos, cancelarPedido, actualizarEstadoPedido, agregarProductoAlPedido, modificarProductoDelPedido, eliminarProductoDelPedido, type PedidoResponse, type ProductoPedidoRequest } from '@/services/pedidosService';
 import { useAuthStore } from '@/stores/authStore';
+import { extractErrorInfo } from '@/utils/errorHandler';
 
 // Tipo temporal para productos en el formulario
 interface ProductoFormulario {
@@ -23,6 +24,8 @@ interface ProductoFormulario {
 }
 
 export default function PedidosPage() {
+    const { showSuccess, showError, showWarning, showInfo } = useToast();
+
     // Estados del formulario
     const [fechaCierre, setFechaCierre] = useState('');
     const [busquedaProducto, setBusquedaProducto] = useState('');
@@ -31,7 +34,6 @@ export default function PedidosPage() {
     // Estados de la lista de pedidos
     const [pedidos, setPedidos] = useState<PedidoResponse[]>([]);
     const [cargando, setCargando] = useState(false);
-    const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
 
     // Estados de la UI
     const [mostrarFormulario, setMostrarFormulario] = useState(false);
@@ -60,8 +62,8 @@ export default function PedidosPage() {
             }));
             setProductosFormulario(productosConFormato);
         } catch (error) {
-
-            mostrarMensaje('error', 'Error al cargar la lista de productos');
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         }
     };
 
@@ -71,51 +73,61 @@ export default function PedidosPage() {
             const data = await obtenerPedidos();
             setPedidos(data);
         } catch (error) {
-
-            mostrarMensaje('error', 'Error al cargar la lista de pedidos');
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
     };
 
-    const validarFormulario = (): string | null => {
+    const validarFormulario = (): boolean => {
         if (!fechaCierre) {
-            return 'Debe seleccionar una fecha de cierre';
+            showError('Formulario incompleto', 'Debe seleccionar una fecha de cierre');
+            return false;
         }
 
         const productosSeleccionados = productosFormulario.filter(p => p.seleccionado);
         if (productosSeleccionados.length === 0) {
-            return 'Debe seleccionar al menos un producto';
+            showError('Sin productos', 'Debe seleccionar al menos un producto');
+            return false;
         }
 
         for (const producto of productosSeleccionados) {
             if (!producto.cantidadMin || parseInt(producto.cantidadMin) <= 0) {
-                return `El producto "${producto.nombreProducto}" debe tener una cantidad mínima válida`;
+                showError(
+                    'Cantidad inválida',
+                    `El producto "${producto.nombreProducto}" debe tener una cantidad mínima válida`
+                );
+                return false;
             }
 
             if (producto.cantidadMax) {
                 const min = parseInt(producto.cantidadMin);
                 const max = parseInt(producto.cantidadMax);
                 if (max < min) {
-                    return `El producto "${producto.nombreProducto}" tiene una cantidad máxima menor a la mínima`;
+                    showError(
+                        'Cantidades inconsistentes',
+                        `El producto "${producto.nombreProducto}" tiene una cantidad máxima menor a la mínima`
+                    );
+                    return false;
                 }
             }
         }
 
-        return null;
+        return true;
     };
 
     const handleCrearPedido = async () => {
         // Validar formulario
-        const errorValidacion = validarFormulario();
-        if (errorValidacion) {
-            mostrarMensaje('error', errorValidacion);
+        if (!validarFormulario()) {
             return;
         }
 
         if (user?.idUsuario === null || user?.idUsuario === undefined) {
-            mostrarMensaje('error', 'No se pudo obtener el ID del usuario. Por favor, inicie sesión nuevamente.');
-
+            showError(
+                'Sesión inválida',
+                'No se pudo obtener el ID del usuario. Por favor, inicie sesión nuevamente.'
+            );
             return;
         }
 
@@ -137,7 +149,10 @@ export default function PedidosPage() {
                 fechaCierre
             });
 
-            mostrarMensaje('success', 'Pedido creado exitosamente');
+            showSuccess(
+                'Pedido creado',
+                `Se ha creado el pedido con ${productosSeleccionados.length} producto(s)`
+            );
 
             // Limpiar formulario
             setFechaCierre('');
@@ -151,9 +166,9 @@ export default function PedidosPage() {
 
             // Recargar lista de pedidos
             cargarPedidos();
-        } catch (error: any) {
-
-            mostrarMensaje('error', error.message || 'Error al crear el pedido. Por favor, intente nuevamente.');
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -165,11 +180,11 @@ export default function PedidosPage() {
         try {
             setCargando(true);
             await actualizarEstadoPedido(idPedido, 'ACT');
-            mostrarMensaje('success', 'Pedido activado exitosamente');
+            showSuccess('Pedido activado', 'El pedido ha sido activado correctamente');
             await cargarPedidos();
-        } catch (error: any) {
-            mostrarMensaje('error', error.message || 'Error al activar pedido');
-
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -198,11 +213,11 @@ export default function PedidosPage() {
 
             const pedidoActualizado = await agregarProductoAlPedido(pedidoEditando.idPedido, producto);
             setPedidoEditando(pedidoActualizado);
-            mostrarMensaje('success', 'Producto agregado exitosamente');
+            showSuccess('Producto agregado', 'El producto se ha agregado al pedido correctamente');
             await cargarPedidos();
-        } catch (error: any) {
-            mostrarMensaje('error', error.message || 'Error al agregar producto');
-
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -223,11 +238,11 @@ export default function PedidosPage() {
                 datos
             );
             setPedidoEditando(pedidoActualizado);
-            mostrarMensaje('success', 'Cantidades actualizadas exitosamente');
+            showSuccess('Cantidades actualizadas', 'Las cantidades del producto se han actualizado correctamente');
             await cargarPedidos();
-        } catch (error: any) {
-            mostrarMensaje('error', error.message || 'Error al actualizar cantidades');
-
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -241,11 +256,11 @@ export default function PedidosPage() {
             setCargando(true);
             const pedidoActualizado = await eliminarProductoDelPedido(pedidoEditando.idPedido, idProducto);
             setPedidoEditando(pedidoActualizado);
-            mostrarMensaje('success', 'Producto eliminado exitosamente');
+            showSuccess('Producto eliminado', 'El producto ha sido eliminado del pedido');
             await cargarPedidos();
-        } catch (error: any) {
-            mostrarMensaje('error', error.message || 'Error al eliminar producto');
-
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -259,20 +274,14 @@ export default function PedidosPage() {
         try {
             setCargando(true);
             await cancelarPedido(idPedido);
-
-            mostrarMensaje('success', 'Pedido cancelado exitosamente');
+            showSuccess('Pedido cancelado', 'El pedido ha sido cancelado exitosamente');
             cargarPedidos();
-        } catch (error: any) {
-
-            mostrarMensaje('error', error.message || 'Error al cancelar el pedido. Por favor, intente nuevamente.');
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
-    };
-
-    const mostrarMensaje = (tipo: 'success' | 'error', texto: string) => {
-        setMensaje({ tipo, texto });
-        setTimeout(() => setMensaje({ tipo: '', texto: '' }), 5000);
     };
 
     const handleToggleProducto = (idProducto: number) => {
@@ -312,12 +321,7 @@ export default function PedidosPage() {
 
     return (
         <DashboardLayout role="SAD">
-            {/* Mensaje de éxito/error */}
-            {mensaje.texto && (
-                <div className={`alert alert-${mensaje.tipo}`}>
-                    {mensaje.texto}
-                </div>
-            )}
+            {/* Los mensajes ahora se muestran con el sistema de Toast */}
 
             {/* Encabezado */}
             <div className="dashboard-page-header">

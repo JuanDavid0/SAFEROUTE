@@ -7,6 +7,8 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useToast } from '@/components/ui';
+import { extractErrorInfo } from '@/utils/errorHandler';
 import solicitudPublicaService from '@/services/solicitudPublicaService';
 import { obtenerProductoPorIdPublico } from '@/services/productosService';
 import type { Producto, SolicitudProductoDTO } from '@/types';
@@ -21,6 +23,7 @@ interface ProductoConInfo {
 }
 
 export default function PedidoPublicoPage() {
+    const { showSuccess, showError, showInfo } = useToast();
     const params = useParams();
     const router = useRouter();
     const hashPedido = params.hash as string;
@@ -50,12 +53,6 @@ export default function PedidoPublicoPage() {
     const [productosEnSolicitud, setProductosEnSolicitud] = useState<
         Array<{ idProducto: number; cantidadSolicitada: number; producto: Producto | null }>
     >([]);
-
-    // Mensajes
-    const [mensaje, setMensaje] = useState<{
-        tipo: 'success' | 'error' | 'info';
-        texto: string;
-    } | null>(null);
 
     // ===========================
     // EFECTOS
@@ -102,8 +99,8 @@ export default function PedidoPublicoPage() {
             }
         } catch (error: unknown) {
             console.error('❌ Error:', error);
-            const errorMessage = error instanceof Error ? error.message : 'Error al cargar el pedido';
-            mostrarMensaje('error', errorMessage);
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -115,14 +112,14 @@ export default function PedidoPublicoPage() {
     const agregarProducto = (idProducto: number) => {
         const producto = productos.find((p) => p.idProducto === idProducto);
         if (!producto || producto.cantidadSeleccionada === 0) {
-            mostrarMensaje('error', 'Debe indicar una cantidad válida');
+            showError('Cantidad Inválida', 'Debe indicar una cantidad válida');
             return;
         }
 
         // Validar cantidad mínima
         if (producto.cantidadSeleccionada < producto.cantidadMin) {
-            mostrarMensaje(
-                'error',
+            showError(
+                'Cantidad Insuficiente',
                 `La cantidad debe ser al menos ${producto.cantidadMin}`
             );
             return;
@@ -130,8 +127,8 @@ export default function PedidoPublicoPage() {
 
         // Validar cantidad máxima solo si existe
         if (producto.cantidadMax !== null && producto.cantidadSeleccionada > producto.cantidadMax) {
-            mostrarMensaje(
-                'error',
+            showError(
+                'Cantidad Excedida',
                 `La cantidad no puede exceder ${producto.cantidadMax}`
             );
             return;
@@ -140,7 +137,7 @@ export default function PedidoPublicoPage() {
         // Verificar si ya está en la solicitud
         const yaExiste = productosEnSolicitud.find((p) => p.idProducto === idProducto);
         if (yaExiste) {
-            mostrarMensaje('error', 'Este producto ya está en la solicitud');
+            showError('Producto Duplicado', 'Este producto ya está en la solicitud');
             return;
         }
 
@@ -162,7 +159,7 @@ export default function PedidoPublicoPage() {
         );
 
         setProductoSeleccionado(null);
-        mostrarMensaje('success', '✅ Producto agregado a la solicitud');
+        showSuccess('Producto Agregado', 'Producto agregado a la solicitud');
     };
 
     /**
@@ -170,7 +167,7 @@ export default function PedidoPublicoPage() {
      */
     const eliminarProducto = (idProducto: number) => {
         setProductosEnSolicitud(productosEnSolicitud.filter((p) => p.idProducto !== idProducto));
-        mostrarMensaje('info', 'Producto eliminado de la solicitud');
+        showInfo('Producto Eliminado', 'Producto eliminado de la solicitud');
     };
 
     /**
@@ -189,32 +186,32 @@ export default function PedidoPublicoPage() {
      */
     const validarFormulario = (): boolean => {
         if (!cedula.trim() || cedula.length !== 10) {
-            mostrarMensaje('error', 'La cédula debe tener 10 dígitos');
+            showError('Cédula Inválida', 'La cédula debe tener 10 dígitos');
             return false;
         }
 
         if (!nombres.trim()) {
-            mostrarMensaje('error', 'Los nombres son obligatorios');
+            showError('Nombres Requeridos', 'Los nombres son obligatorios');
             return false;
         }
 
         if (!apellidos.trim()) {
-            mostrarMensaje('error', 'Los apellidos son obligatorios');
+            showError('Apellidos Requeridos', 'Los apellidos son obligatorios');
             return false;
         }
 
         if (!telefono.trim() || telefono.length !== 10) {
-            mostrarMensaje('error', 'El teléfono debe tener 10 dígitos');
+            showError('Teléfono Inválido', 'El teléfono debe tener 10 dígitos');
             return false;
         }
 
         if (!direccion.trim()) {
-            mostrarMensaje('error', 'La dirección es obligatoria');
+            showError('Dirección Requerida', 'La dirección es obligatoria');
             return false;
         }
 
         if (productosEnSolicitud.length === 0) {
-            mostrarMensaje('error', 'Debe agregar al menos un producto a la solicitud');
+            showError('Sin Productos', 'Debe agregar al menos un producto a la solicitud');
             return false;
         }
 
@@ -246,39 +243,20 @@ export default function PedidoPublicoPage() {
             });
 
             if (response.exito) {
-                mostrarMensaje('success', '✅ Solicitud creada exitosamente');
+                showSuccess('Solicitud Creada', 'Solicitud creada exitosamente');
 
-                // Limpiar formulario
-                setCedula('');
-                setNombres('');
-                setApellidos('');
-                setTelefono('');
-                setDireccion('');
-                setProductosEnSolicitud([]);
-
-                // Resetear cantidades seleccionadas
-                setProductos(productos.map(p => ({ ...p, cantidadSeleccionada: 0 })));
-
-                // Redirigir después de 2 segundos
+                // Recargar la página después de 2 segundos para mostrar el Toast
                 setTimeout(() => {
-                    router.push(`/pedido/${hashPedido}/mis-solicitudes`);
+                    window.location.reload();
                 }, 2000);
             }
         } catch (error: unknown) {
             console.error('❌ Error:', error);
-            const errorMessage = error instanceof Error ? error.message : 'Error al crear la solicitud';
-            mostrarMensaje('error', errorMessage);
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setEnviando(false);
         }
-    };
-
-    /**
-     * Mostrar mensaje temporal
-     */
-    const mostrarMensaje = (tipo: 'success' | 'error' | 'info', texto: string) => {
-        setMensaje({ tipo, texto });
-        setTimeout(() => setMensaje(null), 5000);
     };
 
     /**
@@ -375,11 +353,7 @@ export default function PedidoPublicoPage() {
             </div>
 
             {/* Mensajes */}
-            {mensaje && (
-                <div className={`mensaje mensaje-${mensaje.tipo}`}>
-                    {mensaje.texto}
-                </div>
-            )}
+            {/* Los mensajes ahora se muestran mediante el Toast system */}
 
             {/* Sección 1: Datos del Cliente */}
             <div className="solicitud-seccion">

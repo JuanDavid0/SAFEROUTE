@@ -7,6 +7,8 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useToast } from '@/components/ui';
+import { extractErrorInfo } from '@/utils/errorHandler';
 import { solicitarOtp, verificarOtp } from '@/services/otpService';
 import {
     obtenerMisSolicitudes,
@@ -16,6 +18,7 @@ import {
 import { Loading } from '@/components/ui';
 
 export default function MisSolicitudesPage() {
+    const { showSuccess, showError, showInfo } = useToast();
     const params = useParams();
     const router = useRouter();
     const hashPedido = params.hash as string;
@@ -37,10 +40,6 @@ export default function MisSolicitudesPage() {
 
     // Estados de carga y mensajes
     const [cargando, setCargando] = useState(false);
-    const [mensaje, setMensaje] = useState<{
-        tipo: 'success' | 'error' | 'info';
-        texto: string;
-    } | null>(null);
 
     // Lista de solicitudes
     const [solicitudes, setSolicitudes] = useState<SolicitudCliente[]>([]);
@@ -117,7 +116,7 @@ export default function MisSolicitudesPage() {
      */
     const handleSolicitarOtp = async () => {
         if (!cedula || cedula.length !== 10) {
-            mostrarMensaje('error', 'Ingresa una cédula válida de 10 dígitos');
+            showError('Cédula Inválida', 'Ingresa una cédula válida de 10 dígitos');
             return;
         }
 
@@ -128,14 +127,14 @@ export default function MisSolicitudesPage() {
             if (response.data.exito) {
                 setOtpSolicitado(true);
                 setTiempoRestante(300); // 5 minutos
-                mostrarMensaje('success', response.data.mensaje);
+                showSuccess('Código Enviado', response.data.mensaje);
             } else {
-                mostrarMensaje('error', response.data.mensaje);
+                showError('Error al Enviar', response.data.mensaje);
             }
         } catch (error: any) {
             console.error('❌ Error al solicitar OTP:', error);
-            const errorMsg = error.error?.details || error.message || 'Error al solicitar código';
-            mostrarMensaje('error', errorMsg);
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -146,12 +145,12 @@ export default function MisSolicitudesPage() {
      */
     const handleVerificarOtp = async () => {
         if (!codigoOtp || codigoOtp.length !== 6) {
-            mostrarMensaje('error', 'Ingresa el código de 6 dígitos');
+            showError('Código Inválido', 'Ingresa el código de 6 dígitos');
             return;
         }
 
         if (intentosRestantes <= 0) {
-            mostrarMensaje('error', 'Has agotado los intentos. Solicita un nuevo código');
+            showError('Intentos Agotados', 'Has agotado los intentos. Solicita un nuevo código');
             setOtpSolicitado(false);
             setCodigoOtp('');
             setIntentosRestantes(3);
@@ -174,19 +173,23 @@ export default function MisSolicitudesPage() {
                 };
                 localStorage.setItem(`otp_session_${hashPedido}`, JSON.stringify(sesionOtp));
 
-                mostrarMensaje('success', '✅ Autenticación exitosa');
+                showSuccess('Autenticación Exitosa', 'Has iniciado sesión correctamente');
             } else {
                 setIntentosRestantes(intentosRestantes - 1);
-                mostrarMensaje(
-                    'error',
-                    `Código incorrecto. Te quedan ${intentosRestantes - 1} intentos`
+                showError(
+                    'Código Incorrecto',
+                    `Te quedan ${intentosRestantes - 1} intentos`
                 );
             }
         } catch (error: any) {
             console.error('❌ Error al verificar OTP:', error);
             setIntentosRestantes(intentosRestantes - 1);
-            const errorMsg = error.error?.details || 'Código incorrecto';
-            mostrarMensaje('error', `${errorMsg}. Intentos restantes: ${intentosRestantes - 1}`);
+            const errorInfo = extractErrorInfo(error);
+            showError(
+                errorInfo.message,
+                `${errorInfo.details}. Intentos restantes: ${intentosRestantes - 1}`,
+                errorInfo.errorCode
+            );
 
             if (intentosRestantes - 1 <= 0) {
                 setTimeout(() => {
@@ -212,8 +215,8 @@ export default function MisSolicitudesPage() {
             setSolicitudes(response.data);
         } catch (error: any) {
             console.error('❌ Error al cargar solicitudes:', error);
-            const errorMsg = error.error?.details || error.message || 'Error al cargar solicitudes';
-            mostrarMensaje('error', errorMsg);
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargandoSolicitudes(false);
         }
@@ -235,13 +238,13 @@ export default function MisSolicitudesPage() {
         setCargando(true);
         try {
             await cancelarSolicitud(modalCancelar.idSolicitud, tokenOtp);
-            mostrarMensaje('success', '✅ Solicitud cancelada exitosamente');
+            showSuccess('Solicitud Cancelada', 'Solicitud cancelada exitosamente');
             setModalCancelar({ visible: false, idSolicitud: null });
             cargarSolicitudes(); // Recargar lista
         } catch (error: any) {
             console.error('❌ Error al cancelar solicitud:', error);
-            const errorMsg = error.error?.details || 'Error al cancelar la solicitud';
-            mostrarMensaje('error', errorMsg);
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -270,7 +273,7 @@ export default function MisSolicitudesPage() {
 
             router.push(`/pedido/${hashPedido}/editar-solicitud/${solicitud.idSolicitud}`);
         } else {
-            mostrarMensaje('error', 'Sesión expirada. Por favor, autentícate nuevamente.');
+            showError('Sesión Expirada', 'Por favor, autentícate nuevamente.');
         }
     };
 
@@ -287,15 +290,7 @@ export default function MisSolicitudesPage() {
         setOtpSolicitado(false);
         setCodigoOtp('');
         setSolicitudes([]);
-        mostrarMensaje('info', '👋 Sesión cerrada exitosamente');
-    };
-
-    /**
-     * Mostrar mensaje temporal
-     */
-    const mostrarMensaje = (tipo: 'success' | 'error' | 'info', texto: string) => {
-        setMensaje({ tipo, texto });
-        setTimeout(() => setMensaje(null), 5000);
+        showInfo('Sesión Cerrada', 'Sesión cerrada exitosamente');
     };
 
     /**
@@ -369,11 +364,7 @@ export default function MisSolicitudesPage() {
             </div>
 
             {/* Mensajes */}
-            {mensaje && (
-                <div className={`otp-mensaje ${mensaje.tipo === 'success' ? 'exito' : mensaje.tipo === 'error' ? 'error' : 'info'}`}>
-                    {mensaje.texto}
-                </div>
-            )}
+            {/* Los mensajes ahora se muestran mediante el Toast system */}
 
             {/* Login OTP */}
             {!autenticado && (

@@ -7,22 +7,21 @@
 
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { useToast } from '@/components/ui';
 import { useAuthStore } from '@/stores/authStore';
+import { extractErrorInfo } from '@/utils/errorHandler';
 import configuracionService from '@/services/configuracionService';
 
 export default function ConfiguracionPage() {
     // ===========================
     // ESTADOS
     // ===========================
+    const { showSuccess, showError } = useToast();
     const { user } = useAuthStore();
     const [contraseniaActual, setContraseniaActual] = useState('');
     const [contraseniaNueva, setContraseniaNueva] = useState('');
     const [confirmarContrasenia, setConfirmarContrasenia] = useState('');
     const [cargando, setCargando] = useState(false);
-    const [mensaje, setMensaje] = useState<{
-        tipo: 'success' | 'error' | 'info';
-        texto: string;
-    } | null>(null);
     const [mostrarActual, setMostrarActual] = useState(false);
     const [mostrarNueva, setMostrarNueva] = useState(false);
     const [mostrarConfirmar, setMostrarConfirmar] = useState(false);
@@ -36,32 +35,32 @@ export default function ConfiguracionPage() {
      */
     const validarFormulario = (): boolean => {
         if (!user?.cedula) {
-            mostrarMensaje('error', 'No se pudo obtener la cédula del usuario');
+            showError('Error de validación', 'No se pudo obtener la cédula del usuario');
             return false;
         }
 
         if (!contraseniaActual.trim()) {
-            mostrarMensaje('error', 'La contraseña actual es obligatoria');
+            showError('Campo requerido', 'La contraseña actual es obligatoria');
             return false;
         }
 
         if (!contraseniaNueva.trim()) {
-            mostrarMensaje('error', 'La nueva contraseña es obligatoria');
+            showError('Campo requerido', 'La nueva contraseña es obligatoria');
             return false;
         }
 
         if (contraseniaNueva.length < 8) {
-            mostrarMensaje('error', 'La nueva contraseña debe tener al menos 8 caracteres');
+            showError('Contraseña inválida', 'La nueva contraseña debe tener al menos 8 caracteres');
             return false;
         }
 
         if (contraseniaNueva !== confirmarContrasenia) {
-            mostrarMensaje('error', 'Las contraseñas no coinciden');
+            showError('Contraseñas no coinciden', 'Las contraseñas ingresadas no son iguales');
             return false;
         }
 
         if (contraseniaActual === contraseniaNueva) {
-            mostrarMensaje('error', 'La nueva contraseña debe ser diferente a la actual');
+            showError('Contraseña inválida', 'La nueva contraseña debe ser diferente a la actual');
             return false;
         }
 
@@ -85,28 +84,18 @@ export default function ConfiguracionPage() {
                 contraseniaNueva,
             });
 
-            mostrarMensaje('success', '✅ Contraseña cambiada exitosamente');
+            showSuccess('Contraseña actualizada', 'Tu contraseña se ha cambiado exitosamente');
 
             // Limpiar solo los campos de contraseña
             setContraseniaActual('');
             setContraseniaNueva('');
             setConfirmarContrasenia('');
-        } catch (error: unknown) {
-            
-            const errorMessage = error instanceof Error ? error.message : 'Error al cambiar la contraseña';
-            mostrarMensaje('error', errorMessage);
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
-    };    /**
-     * Mostrar mensaje temporal
-     */
-    const mostrarMensaje = (
-        tipo: 'success' | 'error' | 'info',
-        texto: string
-    ) => {
-        setMensaje({ tipo, texto });
-        setTimeout(() => setMensaje(null), 5000);
     };
 
     // ===========================
@@ -124,12 +113,7 @@ export default function ConfiguracionPage() {
                     </p>
                 </div>
 
-                {/* Mensajes */}
-                {mensaje && (
-                    <div className={`mensaje mensaje-${mensaje.tipo}`}>
-                        {mensaje.texto}
-                    </div>
-                )}
+                {/* Los mensajes ahora se muestran con el sistema de Toast */}
 
                 {/* Formulario de Cambio de Contraseña */}
                 <div className="configuracion-seccion">

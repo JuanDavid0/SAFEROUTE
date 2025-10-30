@@ -7,11 +7,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Button } from '@/components/ui';
+import { Button, useToast } from '@/components/ui';
 import * as pedidosService from '@/services/pedidosService';
 import * as solicitudesService from '@/services/solicitudesService';
 import { obtenerProductosPorIdsPublico } from '@/services/productosService';
 import { Producto } from '@/types';
+import { extractErrorInfo } from '@/utils/errorHandler';
 
 // Estados de solicitud
 type EstadoSolicitud = 'PDP' | 'PGD' | 'CAN';
@@ -31,9 +32,9 @@ interface PedidoConContadores {
 }
 
 export default function ConsultarSolicitudesPage() {
+    const { showSuccess, showError } = useToast();
     const [pedidos, setPedidos] = useState<PedidoConContadores[]>([]);
     const [cargando, setCargando] = useState(false);
-    const [mensaje, setMensaje] = useState<{ tipo: 'success' | 'error'; texto: string } | null>(null);
 
     // Estado para ver solicitudes de un pedido
     const [pedidoSeleccionado, setPedidoSeleccionado] = useState<number | null>(null);
@@ -79,8 +80,8 @@ export default function ConsultarSolicitudesPage() {
 
             setPedidos(pedidosConInfo);
         } catch (error) {
-
-            mostrarMensaje('error', 'Error al cargar pedidos');
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -94,16 +95,11 @@ export default function ConsultarSolicitudesPage() {
             setPedidoSeleccionado(idPedido);
             setFiltroEstado('TODOS');
         } catch (error) {
-
-            mostrarMensaje('error', 'Error al cargar solicitudes');
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
-    };
-
-    const mostrarMensaje = (tipo: 'success' | 'error', texto: string) => {
-        setMensaje({ tipo, texto });
-        setTimeout(() => setMensaje(null), 5000);
     };
 
     const handleVolverAPedidos = () => {
@@ -133,7 +129,10 @@ export default function ConsultarSolicitudesPage() {
             await solicitudesService.actualizarEstadoSolicitud(idSolicitud, 'PGD');
 
             // Mostrar mensaje de éxito
-            mostrarMensaje('success', 'Solicitud marcada como pagada exitosamente');
+            showSuccess(
+                'Solicitud marcada como pagada',
+                'La solicitud se ha actualizado exitosamente'
+            );
 
             // Recargar las solicitudes del pedido actual primero
             if (pedidoSeleccionado) {
@@ -143,9 +142,9 @@ export default function ConsultarSolicitudesPage() {
             // Luego recargar los pedidos para actualizar contadores
             await cargarPedidos();
 
-        } catch (error: any) {
-
-            mostrarMensaje('error', error.message || 'Error al actualizar el estado de la solicitud');
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -163,12 +162,7 @@ export default function ConsultarSolicitudesPage() {
 
     return (
         <DashboardLayout role="ADM">
-            {/* Mensaje de feedback */}
-            {mensaje && (
-                <div className={`alert alert-${mensaje.tipo}`}>
-                    {mensaje.texto}
-                </div>
-            )}
+            {/* Los mensajes ahora se muestran con el sistema de Toast */}
 
             {/* Encabezado */}
             <div className="dashboard-page-header">

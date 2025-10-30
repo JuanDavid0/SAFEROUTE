@@ -7,6 +7,8 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useToast } from '@/components/ui';
+import { extractErrorInfo } from '@/utils/errorHandler';
 import {
     modificarSolicitud,
     agregarProductoASolicitud,
@@ -21,6 +23,7 @@ import { type Producto } from '@/types';
 import { Loading } from '@/components/ui';
 
 export default function EditarSolicitudPage() {
+    const { showSuccess, showError } = useToast();
     const params = useParams();
     const router = useRouter();
     const hashPedido = params.hash as string;
@@ -50,10 +53,6 @@ export default function EditarSolicitudPage() {
     // Estados de carga y mensajes
     const [cargando, setCargando] = useState(false);
     const [guardando, setGuardando] = useState(false);
-    const [mensaje, setMensaje] = useState<{
-        tipo: 'success' | 'error' | 'info';
-        texto: string;
-    } | null>(null);
 
     // Modal de confirmación
     const [modalEliminar, setModalEliminar] = useState<{
@@ -97,7 +96,7 @@ export default function EditarSolicitudPage() {
         }
 
         if (!token) {
-            mostrarMensaje('error', 'Sesión expirada. Por favor, autentícate nuevamente.');
+            showError('Sesión Expirada', 'Por favor, autentícate nuevamente.');
             setTimeout(() => {
                 router.push(`/pedido/${hashPedido}/mis-solicitudes`);
             }, 2000);
@@ -151,7 +150,7 @@ export default function EditarSolicitudPage() {
                 })
             );
         } catch (error) {
-            mostrarMensaje('error', 'No se pudieron cargar los productos del pedido');
+            showError('Error al Cargar', 'No se pudieron cargar los productos del pedido');
         }
     };
 
@@ -162,7 +161,7 @@ export default function EditarSolicitudPage() {
         if (!tokenOtp) return;
 
         if (!direccion.trim()) {
-            mostrarMensaje('error', 'La dirección no puede estar vacía');
+            showError('Dirección Requerida', 'La dirección no puede estar vacía');
             return;
         }
 
@@ -174,10 +173,10 @@ export default function EditarSolicitudPage() {
                 tokenOtp
             );
             setModificacionesRestantes(modificacionesRestantes - 1);
-            mostrarMensaje('success', '✅ Dirección actualizada exitosamente');
+            showSuccess('Dirección Actualizada', 'Dirección actualizada exitosamente');
         } catch (error: any) {
-            const errorMsg = error.response?.data?.message || error.message || 'Error al actualizar dirección';
-            mostrarMensaje('error', errorMsg);
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setGuardando(false);
         }
@@ -190,7 +189,7 @@ export default function EditarSolicitudPage() {
         if (!tokenOtp) return;
 
         if (nuevaCantidad < 1) {
-            mostrarMensaje('error', 'La cantidad debe ser al menos 1');
+            showError('Cantidad Inválida', 'La cantidad debe ser al menos 1');
             return;
         }
 
@@ -212,10 +211,10 @@ export default function EditarSolicitudPage() {
                 )
             );
             setModificacionesRestantes(modificacionesRestantes - 1);
-            mostrarMensaje('success', '✅ Cantidad actualizada');
+            showSuccess('Cantidad Actualizada', 'Cantidad actualizada exitosamente');
         } catch (error: any) {
-            const errorMsg = error.response?.data?.message || error.message || 'Error al actualizar cantidad';
-            mostrarMensaje('error', errorMsg);
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setGuardando(false);
         }
@@ -228,7 +227,7 @@ export default function EditarSolicitudPage() {
         if (!tokenOtp || !productoSeleccionado) return;
 
         if (cantidadNueva < 1) {
-            mostrarMensaje('error', 'La cantidad debe ser al menos 1');
+            showError('Cantidad Inválida', 'La cantidad debe ser al menos 1');
             return;
         }
 
@@ -261,10 +260,10 @@ export default function EditarSolicitudPage() {
             setMostrarAgregarProducto(false);
             setProductoSeleccionado(null);
             setCantidadNueva(1);
-            mostrarMensaje('success', '✅ Producto agregado exitosamente');
+            showSuccess('Producto Agregado', 'Producto agregado exitosamente');
         } catch (error: any) {
-            const errorMsg = error.message || 'Error al agregar producto';
-            mostrarMensaje('error', errorMsg);
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setGuardando(false);
         }
@@ -291,21 +290,13 @@ export default function EditarSolicitudPage() {
 
             setModificacionesRestantes(modificacionesRestantes - 1);
             setModalEliminar({ visible: false, idProducto: null, nombreProducto: '' });
-            mostrarMensaje('success', '✅ Producto eliminado exitosamente');
+            showSuccess('Producto Eliminado', 'Producto eliminado exitosamente');
         } catch (error: any) {
-            const errorMsg = error.message || 'Error al eliminar producto';
-            mostrarMensaje('error', errorMsg);
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setGuardando(false);
         }
-    };
-
-    /**
-     * Mostrar mensaje temporal
-     */
-    const mostrarMensaje = (tipo: 'success' | 'error' | 'info', texto: string) => {
-        setMensaje({ tipo, texto });
-        setTimeout(() => setMensaje(null), 5000);
     };
 
     /**
@@ -357,14 +348,7 @@ export default function EditarSolicitudPage() {
             </div>
 
             {/* Mensajes */}
-            {mensaje && (
-                <div
-                    className={`otp-mensaje ${mensaje.tipo === 'success' ? 'exito' : mensaje.tipo === 'error' ? 'error' : 'info'
-                        }`}
-                >
-                    {mensaje.texto}
-                </div>
-            )}
+            {/* Los mensajes ahora se muestran mediante el Toast system */}
 
             {/* Información de ayuda */}
             <div className="info-ayuda" style={{

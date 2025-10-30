@@ -7,6 +7,8 @@
 
 import { useEffect, useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { useToast } from '@/components/ui';
+import { extractErrorInfo } from '@/utils/errorHandler';
 import etiquetasService, {
     PedidoEtiqueta,
     EtiquetasPedidoResponse,
@@ -16,6 +18,7 @@ export default function EtiquetasPage() {
     // ===========================
     // ESTADOS
     // ===========================
+    const { showSuccess, showError, showInfo } = useToast();
     const [pedidos, setPedidos] = useState<PedidoEtiqueta[]>([]);
     const [pedidoSeleccionado, setPedidoSeleccionado] = useState<number | null>(
         null
@@ -24,10 +27,6 @@ export default function EtiquetasPage() {
         useState<EtiquetasPedidoResponse | null>(null);
     const [cargando, setCargando] = useState<boolean>(false);
     const [cargandoPreview, setCargandoPreview] = useState<boolean>(false);
-    const [mensaje, setMensaje] = useState<{
-        tipo: 'success' | 'error' | 'info';
-        texto: string;
-    } | null>(null);
 
     // ===========================
     // EFECTOS
@@ -55,9 +54,9 @@ export default function EtiquetasPage() {
             if (!Array.isArray(data)) {
                 
                 setPedidos([]);
-                mostrarMensaje(
-                    'error',
-                    'Error: La respuesta del servidor no tiene el formato esperado'
+                showError(
+                    'Error al cargar pedidos',
+                    'La respuesta del servidor no tiene el formato esperado'
                 );
                 return;
             }
@@ -71,15 +70,12 @@ export default function EtiquetasPage() {
             setPedidos(pedidosEntregados);
 
             if (pedidosEntregados.length === 0) {
-                mostrarMensaje('info', 'No hay pedidos entregados disponibles');
+                showInfo('Sin pedidos', 'No hay pedidos entregados disponibles');
             }
-        } catch (error: any) {
-            
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
             setPedidos([]);
-            mostrarMensaje(
-                'error',
-                error.message || 'Error al cargar los pedidos'
-            );
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -97,12 +93,9 @@ export default function EtiquetasPage() {
             const data = await etiquetasService.obtenerEtiquetasPedido(idPedido);
             setEtiquetasPreview(data);
             
-        } catch (error: any) {
-            
-            mostrarMensaje(
-                'error',
-                error.message || 'Error al cargar las etiquetas'
-            );
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
             setPedidoSeleccionado(null);
         } finally {
             setCargandoPreview(false);
@@ -124,24 +117,16 @@ export default function EtiquetasPage() {
                 nombreArchivo
             );
 
-            mostrarMensaje('success', '✅ PDF de etiquetas descargado exitosamente');
-        } catch (error: any) {
-            
-            mostrarMensaje('error', error.message || 'Error al descargar el PDF');
+            showSuccess(
+                'PDF descargado',
+                'El PDF de etiquetas se ha descargado exitosamente'
+            );
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
-    };
-
-    /**
-     * Mostrar mensaje temporal
-     */
-    const mostrarMensaje = (
-        tipo: 'success' | 'error' | 'info',
-        texto: string
-    ) => {
-        setMensaje({ tipo, texto });
-        setTimeout(() => setMensaje(null), 5000);
     };
 
     // ===========================
@@ -159,12 +144,7 @@ export default function EtiquetasPage() {
                     </p>
                 </div>
 
-                {/* Mensajes */}
-                {mensaje && (
-                    <div className={`mensaje mensaje-${mensaje.tipo}`}>
-                        {mensaje.texto}
-                    </div>
-                )}
+                {/* Los mensajes ahora se muestran con el sistema de Toast */}
 
                 {/* Contenido principal */}
                 <div className="etiquetas-contenido">

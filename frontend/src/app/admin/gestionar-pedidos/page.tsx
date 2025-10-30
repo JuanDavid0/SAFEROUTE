@@ -7,9 +7,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Button } from '@/components/ui';
+import { Button, useToast } from '@/components/ui';
 import * as pedidosService from '@/services/pedidosService';
 import * as solicitudesService from '@/services/solicitudesService';
+import { extractErrorInfo } from '@/utils/errorHandler';
 
 // Estados de pedido según el enum del backend
 type EstadoPedido = 'CRT' | 'ACT' | 'CRM' | 'CRA' | 'PRD' | 'RCP' | 'RTA' | 'ADU' | 'ENT';
@@ -49,9 +50,10 @@ type OrdenColumna = 'fechaCreado' | 'fechaCierre' | 'cantidadSolicitudes' | null
 type DireccionOrden = 'asc' | 'desc';
 
 export default function GestionarPedidosPage() {
+    const { showSuccess, showError, showWarning } = useToast();
+
     const [pedidos, setPedidos] = useState<PedidoConSolicitudes[]>([]);
     const [cargando, setCargando] = useState(false);
-    const [mensaje, setMensaje] = useState<{ tipo: 'success' | 'error'; texto: string } | null>(null);
     const [mostrarModalEstado, setMostrarModalEstado] = useState(false);
     const [pedidoSeleccionado, setPedidoSeleccionado] = useState<PedidoConSolicitudes | null>(null);
 
@@ -90,16 +92,11 @@ export default function GestionarPedidosPage() {
 
             setPedidos(pedidosConInfo);
         } catch (error) {
-            
-            mostrarMensaje('error', 'Error al cargar pedidos');
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
-    };
-
-    const mostrarMensaje = (tipo: 'success' | 'error', texto: string) => {
-        setMensaje({ tipo, texto });
-        setTimeout(() => setMensaje(null), 5000);
     };
 
     // Función para ordenar pedidos
@@ -154,13 +151,16 @@ export default function GestionarPedidosPage() {
         if (!hash) return;
         const url = `${window.location.origin}/pedido/${hash}`;
         navigator.clipboard.writeText(url);
-        mostrarMensaje('success', '✅ URL copiada al portapapeles');
+        showSuccess('URL copiada', 'La URL se ha copiado al portapapeles');
     };
 
     const handleConsolidar = async (pedido: PedidoConSolicitudes) => {
         // Validar que tenga al menos una solicitud pagada
         if (!pedido.cantidadSolicitudes || pedido.cantidadSolicitudes === 0) {
-            mostrarMensaje('error', 'El pedido debe tener al menos una solicitud pagada para consolidar');
+            showError(
+                'No se puede consolidar',
+                'El pedido debe tener al menos una solicitud pagada para consolidar'
+            );
             return;
         }
 
@@ -177,11 +177,14 @@ export default function GestionarPedidosPage() {
             // 2. Consolidar pedido (cambiar a RTA las pagadas)
             await pedidosService.consolidarPedido(pedido.idPedido);
 
-            mostrarMensaje('success', 'Pedido consolidado exitosamente');
+            showSuccess(
+                'Pedido consolidado',
+                `El pedido #${pedido.idPedido} se ha consolidado exitosamente`
+            );
             await cargarPedidos();
-        } catch (error: any) {
-            mostrarMensaje('error', error.message || 'Error al consolidar pedido');
-            
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -203,12 +206,15 @@ export default function GestionarPedidosPage() {
         try {
             setCargando(true);
             await pedidosService.actualizarEstadoPedido(pedidoSeleccionado.idPedido, nuevoEstado);
-            mostrarMensaje('success', `Estado actualizado a ${NOMBRES_ESTADOS[nuevoEstado]}`);
+            showSuccess(
+                'Estado actualizado',
+                `El estado se ha actualizado a ${NOMBRES_ESTADOS[nuevoEstado]}`
+            );
             handleCerrarModalEstado();
             await cargarPedidos();
-        } catch (error: any) {
-            mostrarMensaje('error', error.message || 'Error al actualizar estado');
-            
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -222,11 +228,11 @@ export default function GestionarPedidosPage() {
         try {
             setCargando(true);
             await pedidosService.cancelarPedido(idPedido);
-            mostrarMensaje('success', 'Pedido cerrado exitosamente');
+            showSuccess('Pedido cerrado', 'El pedido se ha cerrado exitosamente');
             await cargarPedidos();
-        } catch (error: any) {
-            mostrarMensaje('error', error.message || 'Error al cerrar pedido');
-            
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -234,12 +240,7 @@ export default function GestionarPedidosPage() {
 
     return (
         <DashboardLayout role="ADM">
-            {/* Mensaje de feedback */}
-            {mensaje && (
-                <div className={`alert alert-${mensaje.tipo}`}>
-                    {mensaje.texto}
-                </div>
-            )}
+            {/* Los mensajes ahora se muestran con el sistema de Toast */}
 
             {/* Encabezado */}
             <div className="dashboard-page-header">

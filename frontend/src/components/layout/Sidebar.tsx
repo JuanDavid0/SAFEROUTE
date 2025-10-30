@@ -59,6 +59,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, user }) => {
             path: '/superadmin/usuarios',
         },
         {
+            label: 'Logs',
+            path: '/superadmin/logs',
+        },
+        {
             label: 'Configuración',
             path: '/superadmin/configuracion',
         },

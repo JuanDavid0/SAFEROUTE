@@ -22,6 +22,8 @@ export interface BackendResponse<T = any> {
   error?: {
     code: string;
     details: string;
+    field?: string;
+    rejectedValue?: any;
   };
   timestamp?: string;
   path?: string;
@@ -330,6 +332,25 @@ export interface CancelacionSolicitudesDTO {
 }
 
 // ============================================
+// Logs del Sistema
+// ============================================
+
+export interface Log {
+  idLog: number;
+  idUsuario: number;
+  nombreUsuario: string;
+  accion: string;
+  fechaLog: string;
+}
+
+export interface LogsResponse {
+  status: 'success' | 'fail' | 'error';
+  message: string;
+  data: Log[];
+  timestamp: string;
+}
+
+// ============================================
 // Utilidades
 // ============================================
 
@@ -345,3 +366,4 @@ export interface SelectOption {
   value: string | number;
   label: string;
 }
+

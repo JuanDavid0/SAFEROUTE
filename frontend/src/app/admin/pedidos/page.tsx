@@ -7,11 +7,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Button, Input } from '@/components/ui';
+import { Button, Input, useToast } from '@/components/ui';
 import { Producto } from '@/types';
 import * as productosService from '@/services/productosService';
 import * as pedidosService from '@/services/pedidosService';
 import { useAuthStore } from '@/stores/authStore';
+import { extractErrorInfo } from '@/utils/errorHandler';
 
 // Tipo temporal para productos en el formulario
 interface ProductoFormulario {
@@ -24,6 +25,8 @@ interface ProductoFormulario {
 }
 
 export default function PedidosPage() {
+    const { showSuccess, showError, showInfo } = useToast();
+
     // Estados del formulario
     const [fechaCierre, setFechaCierre] = useState('');
     const [busquedaProducto, setBusquedaProducto] = useState('');
@@ -37,7 +40,6 @@ export default function PedidosPage() {
     // Estados de datos
     const [pedidos, setPedidos] = useState<pedidosService.PedidoResponse[]>([]);
     const [cargando, setCargando] = useState(false);
-    const [mensaje, setMensaje] = useState<{ tipo: 'success' | 'error'; texto: string } | null>(null);
 
     // Usuario actual
     const user = useAuthStore((state) => state.user);
@@ -62,8 +64,8 @@ export default function PedidosPage() {
                 }))
             );
         } catch (error) {
-
-            mostrarMensaje('error', 'Error al cargar productos');
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         }
     };
 
@@ -73,16 +75,11 @@ export default function PedidosPage() {
             const data = await pedidosService.obtenerPedidos();
             setPedidos(data);
         } catch (error) {
-
-            mostrarMensaje('error', 'Error al cargar pedidos');
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
-    };
-
-    const mostrarMensaje = (tipo: 'success' | 'error', texto: string) => {
-        setMensaje({ tipo, texto });
-        setTimeout(() => setMensaje(null), 5000);
     };
 
     const handleToggleProducto = (idProducto: number) => {
@@ -111,37 +108,51 @@ export default function PedidosPage() {
         setProductosFormulario(prev => prev.map(p => ({ ...p, seleccionado: false, cantidadMin: '', cantidadMax: '' })));
     };
 
-    const validarFormulario = (): string | null => {
-        if (!fechaCierre) return 'La fecha de cierre es obligatoria';
+    const validarFormulario = (): boolean => {
+        if (!fechaCierre) {
+            showError('Formulario incompleto', 'La fecha de cierre es obligatoria');
+            return false;
+        }
 
         const productosSeleccionados = productosFormulario.filter(p => p.seleccionado);
-        if (productosSeleccionados.length === 0) return 'Debe seleccionar al menos un producto';
+        if (productosSeleccionados.length === 0) {
+            showError('Sin productos', 'Debe seleccionar al menos un producto');
+            return false;
+        }
 
         for (const producto of productosSeleccionados) {
             if (!producto.cantidadMin || parseInt(producto.cantidadMin) <= 0) {
-                return `La cantidad mínima de "${producto.nombreProducto}" debe ser mayor a 0`;
+                showError(
+                    'Cantidad inválida',
+                    `La cantidad mínima de "${producto.nombreProducto}" debe ser mayor a 0`
+                );
+                return false;
             }
 
             if (producto.cantidadMax && parseInt(producto.cantidadMax) > 0) {
                 if (parseInt(producto.cantidadMax) < parseInt(producto.cantidadMin)) {
-                    return `La cantidad máxima de "${producto.nombreProducto}" debe ser mayor o igual a la mínima`;
+                    showError(
+                        'Cantidades inconsistentes',
+                        `La cantidad máxima de "${producto.nombreProducto}" debe ser mayor o igual a la mínima`
+                    );
+                    return false;
                 }
             }
         }
 
-        return null;
+        return true;
     };
 
     const handleCrearPedido = async () => {
-        const error = validarFormulario();
-        if (error) {
-            mostrarMensaje('error', error);
+        if (!validarFormulario()) {
             return;
         }
 
         if (user?.idUsuario === null || user?.idUsuario === undefined) {
-            mostrarMensaje('error', 'No se pudo obtener el ID del usuario. Por favor, inicie sesión nuevamente.');
-
+            showError(
+                'Sesión inválida',
+                'No se pudo obtener el ID del usuario. Por favor, inicie sesión nuevamente.'
+            );
             return;
         }
 
@@ -165,13 +176,16 @@ export default function PedidosPage() {
 
             await pedidosService.crearPedido(user.idUsuario, datos);
 
-            mostrarMensaje('success', 'Pedido creado exitosamente');
+            showSuccess(
+                'Pedido creado',
+                `Se ha creado el pedido con ${productosSeleccionados.length} producto(s)`
+            );
             handleLimpiarFormulario();
             setMostrarFormulario(false);
             await cargarPedidos();
-        } catch (error: any) {
-            mostrarMensaje('error', error.message || 'Error al crear pedido');
-
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -183,11 +197,11 @@ export default function PedidosPage() {
         try {
             setCargando(true);
             await pedidosService.actualizarEstadoPedido(idPedido, 'ACT');
-            mostrarMensaje('success', 'Pedido activado exitosamente');
+            showSuccess('Pedido activado', 'El pedido ha sido activado correctamente');
             await cargarPedidos();
-        } catch (error: any) {
-            mostrarMensaje('error', error.message || 'Error al activar pedido');
-
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -216,11 +230,11 @@ export default function PedidosPage() {
 
             const pedidoActualizado = await pedidosService.agregarProductoAlPedido(pedidoEditando.idPedido, producto);
             setPedidoEditando(pedidoActualizado);
-            mostrarMensaje('success', 'Producto agregado exitosamente');
+            showSuccess('Producto agregado', 'El producto se ha agregado al pedido correctamente');
             await cargarPedidos();
-        } catch (error: any) {
-            mostrarMensaje('error', error.message || 'Error al agregar producto');
-
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -241,11 +255,11 @@ export default function PedidosPage() {
                 datos
             );
             setPedidoEditando(pedidoActualizado);
-            mostrarMensaje('success', 'Cantidades actualizadas exitosamente');
+            showSuccess('Cantidades actualizadas', 'Las cantidades del producto se han actualizado correctamente');
             await cargarPedidos();
-        } catch (error: any) {
-            mostrarMensaje('error', error.message || 'Error al actualizar cantidades');
-
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -259,11 +273,11 @@ export default function PedidosPage() {
             setCargando(true);
             const pedidoActualizado = await pedidosService.eliminarProductoDelPedido(pedidoEditando.idPedido, idProducto);
             setPedidoEditando(pedidoActualizado);
-            mostrarMensaje('success', 'Producto eliminado exitosamente');
+            showSuccess('Producto eliminado', 'El producto ha sido eliminado del pedido');
             await cargarPedidos();
-        } catch (error: any) {
-            mostrarMensaje('error', error.message || 'Error al eliminar producto');
-
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -275,11 +289,11 @@ export default function PedidosPage() {
         try {
             setCargando(true);
             await pedidosService.cancelarPedido(idPedido);
-            mostrarMensaje('success', 'Pedido cancelado exitosamente');
+            showSuccess('Pedido cancelado', 'El pedido ha sido cancelado exitosamente');
             await cargarPedidos();
-        } catch (error: any) {
-            mostrarMensaje('error', error.message || 'Error al cancelar pedido');
-
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
             setCargando(false);
         }
@@ -315,12 +329,7 @@ export default function PedidosPage() {
             </div>
 
             <div className="dashboard-content">
-                {/* Mensaje de feedback */}
-                {mensaje && (
-                    <div className={`alert alert-${mensaje.tipo}`}>
-                        {mensaje.texto}
-                    </div>
-                )}
+                {/* Los mensajes ahora se muestran con el sistema de Toast */}
 
                 {/* Formulario de creación (condicional) */}
                 {mostrarFormulario && (

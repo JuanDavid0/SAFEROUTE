@@ -30,39 +30,13 @@ export const Logo: React.FC<LogoProps> = ({
 
     return (
         <div className={`flex flex-col items-center gap-3 ${className}`}>
-            {/* Ícono circular del logo */}
-            <div className={`${sizeClasses[size]} bg-azul-petroleo rounded-full flex items-center justify-center shadow-lg`}>
-                <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-3/5 h-3/5 text-blanco"
-                >
-                    {/* Ícono de ruta/camino */}
-                    <path
-                        d="M12 2L2 7L12 12L22 7L12 2Z"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        fill="currentColor"
-                        opacity="0.8"
-                    />
-                    <path
-                        d="M2 17L12 22L22 17"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                    />
-                    <path
-                        d="M2 12L12 17L22 12"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                    />
-                </svg>
+            {/* Logo de SAFE ROUTE desde Firebase */}
+            <div className={`${sizeClasses[size]} flex items-center justify-center`}>
+                <img
+                    src="https://firebasestorage.googleapis.com/v0/b/saferoute-f90f8.firebasestorage.app/o/SF2.png?alt=media&token=bde250f8-5d60-49dc-b52d-c61f61fb0f85"
+                    alt="SAFE ROUTE Logo"
+                    className="w-full h-full object-contain"
+                />
             </div>
 
             {/* Texto del logo */}
