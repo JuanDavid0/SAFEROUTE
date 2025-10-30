@@ -30,7 +30,7 @@ public class EtiquetaController {
 
         EtiquetasResponseDTO etiquetas = etiquetaService.generarEtiquetasJSON(idPedido);
 
-        log.info("✅ Etiquetas JSON del pedido #{} generadas exitosamente - {} etiquetas",
+        log.info(" Etiquetas JSON del pedido #{} generadas exitosamente - {} etiquetas",
                 idPedido, etiquetas.getTotalEtiquetas());
 
         return ResponseEntity.ok(etiquetas);
@@ -52,7 +52,7 @@ public class EtiquetaController {
         headers.setContentDispositionFormData("attachment", filename);
         headers.setContentLength(pdf.size());
 
-        log.info("✅ PDF de etiquetas del pedido #{} generado exitosamente - {} bytes",
+        log.info(" PDF de etiquetas del pedido #{} generado exitosamente - {} bytes",
                 idPedido, pdf.size());
 
         return ResponseEntity.ok()

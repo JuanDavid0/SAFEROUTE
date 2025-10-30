@@ -21,7 +21,6 @@ public class ProductoDTO {
     @DecimalMin(value = "0.00")
     private BigDecimal costoUnitario;
 
-    @NotBlank
     private String urlImagen;
 
     // Getters y setters

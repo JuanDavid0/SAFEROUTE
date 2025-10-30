@@ -10,18 +10,18 @@ public final class OtpConstants {
     }
 
     // ========== MENSAJES DE LOG ==========
-    public static final String LOG_SOLICITUD_OTP_CEDULA_NO_REGISTRADA = "⚠️ Intento de solicitar OTP para cédula no registrada: {}";
-    public static final String LOG_SOLICITUD_OTP_USUARIO_INACTIVO = "⚠️ Intento de solicitar OTP para usuario inactivo: {}";
-    public static final String LOG_USUARIO_SIN_TELEFONO = "❌ Usuario {} no tiene número de teléfono registrado";
-    public static final String LOG_ERROR_ENVIAR_SMS = "❌ Error al enviar SMS OTP para cédula: {}";
-    public static final String LOG_OTP_GENERADO_EXITOSAMENTE = "✅ OTP generado y enviado exitosamente para cédula: {}";
-    public static final String LOG_TOKEN_OTP_NO_ENCONTRADO = "⚠️ No se encontró un token OTP válido para cédula: {}";
-    public static final String LOG_TOKEN_OTP_EXPIRADO = "⚠️ Token OTP expirado para cédula: {}";
-    public static final String LOG_MAX_INTENTOS_ALCANZADO = "⚠️ Máximo de intentos alcanzado para OTP de cédula: {}";
-    public static final String LOG_CODIGO_OTP_INCORRECTO = "⚠️ Código OTP incorrecto para cédula: {}. Intentos restantes: {}";
-    public static final String LOG_OTP_VERIFICADO_EXITOSAMENTE = "✅ OTP verificado exitosamente para cédula: {}";
+    public static final String LOG_SOLICITUD_OTP_CEDULA_NO_REGISTRADA = " Intento de solicitar OTP para cédula no registrada: {}";
+    public static final String LOG_SOLICITUD_OTP_USUARIO_INACTIVO = " Intento de solicitar OTP para usuario inactivo: {}";
+    public static final String LOG_USUARIO_SIN_TELEFONO = " Usuario {} no tiene número de teléfono registrado";
+    public static final String LOG_ERROR_ENVIAR_SMS = " Error al enviar SMS OTP para cédula: {}";
+    public static final String LOG_OTP_GENERADO_EXITOSAMENTE = " OTP generado y enviado exitosamente para cédula: {}";
+    public static final String LOG_TOKEN_OTP_NO_ENCONTRADO = " No se encontró un token OTP válido para cédula: {}";
+    public static final String LOG_TOKEN_OTP_EXPIRADO = " Token OTP expirado para cédula: {}";
+    public static final String LOG_MAX_INTENTOS_ALCANZADO = " Máximo de intentos alcanzado para OTP de cédula: {}";
+    public static final String LOG_CODIGO_OTP_INCORRECTO = " Código OTP incorrecto para cédula: {}. Intentos restantes: {}";
+    public static final String LOG_OTP_VERIFICADO_EXITOSAMENTE = " OTP verificado exitosamente para cédula: {}";
     public static final String LOG_TOKENS_EXPIRADOS_ELIMINADOS = "🧹 Tokens OTP expirados eliminados exitosamente";
-    public static final String LOG_ERROR_LIMPIAR_TOKENS = "❌ Error al limpiar tokens OTP expirados: {}";
+    public static final String LOG_ERROR_LIMPIAR_TOKENS = " Error al limpiar tokens OTP expirados: {}";
 
     // ========== MENSAJES DE ERROR ==========
     public static final String ERROR_USUARIO_NO_ENCONTRADO = "Usuario no encontrado con cédula: %s";

@@ -27,16 +27,6 @@ import java.util.stream.Collectors;
 
 /**
  * IMPLEMENTACIÓN DEL SERVICIO DE EXPORTACIÓN A EXCEL
- * 
- * Genera informes contables profesionales en formato .xlsx con:
- * - Formato de tabla específico
- * - Estilos y colores corporativos
- * - Datos ordenados y consolidados
- * - Headers claros y totales
- * 
- * @author SafeRoute Team
- * @version 2.0
- * @since 2025-01-24
  */
 @Slf4j
 @Service

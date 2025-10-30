@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.util.HashMap;
@@ -188,6 +190,46 @@ public class GlobalExceptionHandler {
                                 .build();
 
                 ApiResponse<Void> response = ApiResponse.fail("Error en generación de Etiqueta", error);
+                response.setPath(request.getRequestURI());
+
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+
+        /**
+         * Excepciones específicas de negocio de Cancelación de Solicitudes (400)
+         */
+        @ExceptionHandler(CancelacionBusinessException.class)
+        public ResponseEntity<ApiResponse<Void>> handleCancelacionBusinessException(
+                        CancelacionBusinessException ex, HttpServletRequest request) {
+
+                log.warn("Error de negocio en Cancelación de Solicitudes: {}", ex.getMessage());
+
+                ErrorDetails error = ErrorDetails.builder()
+                                .code("CANCELACION_BUSINESS_ERROR")
+                                .details(ex.getMessage())
+                                .build();
+
+                ApiResponse<Void> response = ApiResponse.fail("Error en cancelación de solicitudes", error);
+                response.setPath(request.getRequestURI());
+
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+
+        /**
+         * Excepciones específicas de Firebase Storage (400)
+         */
+        @ExceptionHandler(FirebaseStorageException.class)
+        public ResponseEntity<ApiResponse<Void>> handleFirebaseStorageException(
+                        FirebaseStorageException ex, HttpServletRequest request) {
+
+                log.warn("Error en Firebase Storage: {}", ex.getMessage());
+
+                ErrorDetails error = ErrorDetails.builder()
+                                .code("FIREBASE_STORAGE_ERROR")
+                                .details(ex.getMessage())
+                                .build();
+
+                ApiResponse<Void> response = ApiResponse.fail("Error al procesar la imagen", error);
                 response.setPath(request.getRequestURI());
 
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
@@ -432,6 +474,67 @@ public class GlobalExceptionHandler {
                 response.setPath(request.getRequestURI());
 
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
+
+        /**
+         * Tamaño de archivo excedido (413 - Payload Too Large)
+         */
+        @ExceptionHandler(MaxUploadSizeExceededException.class)
+        public ResponseEntity<ApiResponse<Void>> handleMaxUploadSizeExceeded(
+                        MaxUploadSizeExceededException ex, HttpServletRequest request) {
+
+                log.warn("Archivo demasiado grande en: {}", request.getRequestURI());
+
+                String mensaje = "El archivo excede el tamaño máximo permitido de 10MB";
+
+                // Extraer información específica si está disponible
+                if (ex.getMessage().contains("Maximum upload size")) {
+                        mensaje = "El archivo excede el tamaño máximo permitido. Máximo: 10MB";
+                }
+
+                ErrorDetails error = ErrorDetails.builder()
+                                .code("FILE_SIZE_EXCEEDED")
+                                .details(mensaje)
+                                .build();
+
+                ApiResponse<Void> response = ApiResponse.fail("Archivo demasiado grande", error);
+                response.setPath(request.getRequestURI());
+
+                return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(response);
+        }
+
+        /**
+         * Content-Type no soportado (415 - Unsupported Media Type)
+         * Ocurre cuando se configura mal el tipo de dato en multipart/form-data
+         */
+        @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+        public ResponseEntity<ApiResponse<Void>> handleHttpMediaTypeNotSupported(
+                        HttpMediaTypeNotSupportedException ex, HttpServletRequest request) {
+
+                log.warn("Content-Type no soportado en: {} - {}", request.getRequestURI(), ex.getContentType());
+
+                String mensaje = "Configuración incorrecta en Postman/cliente";
+                String detalles = "El campo 'producto' debe ser de tipo TEXT (no File) en multipart/form-data. ";
+                detalles += "Solo el campo 'imagen' debe ser de tipo File.";
+
+                // Detectar si es un problema de configuración de multipart/form-data
+                if (ex.getMessage().contains("application/octet-stream")) {
+                        mensaje = "Error de configuración en form-data";
+                        detalles = " IMPORTANTE: En Postman/cliente, configura:\n" +
+                                        "• Campo 'producto' → Type: TEXT (con JSON como valor)\n" +
+                                        "• Campo 'imagen' → Type: FILE (selecciona archivo)\n\n" +
+                                        "El campo 'producto' NO debe ser tipo File.";
+                }
+
+                ErrorDetails error = ErrorDetails.builder()
+                                .code("MEDIA_TYPE_NOT_SUPPORTED")
+                                .details(detalles)
+                                .build();
+
+                ApiResponse<Void> response = ApiResponse.fail(mensaje, error);
+                response.setPath(request.getRequestURI());
+
+                return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(response);
         }
 
         // ==================== EXCEPCIONES DE SEGURIDAD ====================

@@ -45,9 +45,14 @@ public class AuthServiceImpl implements IAuthService {
         String token = jwtTokenProvider.generateToken(authentication);
         String rol = extraerRolDeAuthentication(authentication);
 
+        // Obtener el idUsuario del usuario autenticado
+        Usuario usuario = usuarioRepository.findByCedula(loginRequest.getCedula())
+                .orElseThrow(() -> new AuthBusinessException(AuthConstants.ERROR_USUARIO_NO_ENCONTRADO));
+        Integer idUsuario = usuario.getIdUsuario();
+
         registrarLoginExitoso(loginRequest.getCedula(), rol);
 
-        return new JwtResponse(token, rol);
+        return new JwtResponse(token, rol, idUsuario);
     }
 
     private Authentication autenticarUsuario(LoginRequest loginRequest) {

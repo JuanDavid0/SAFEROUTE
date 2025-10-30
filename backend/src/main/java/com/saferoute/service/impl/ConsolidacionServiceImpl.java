@@ -13,6 +13,7 @@ import com.saferoute.repository.PedidoRepository;
 import com.saferoute.repository.SolicitudRepository;
 import com.saferoute.service.interfaces.IConsolidacionService;
 import com.saferoute.service.interfaces.ILogService;
+import com.saferoute.service.interfaces.IWhatsAppService;
 import com.saferoute.validator.ConsolidacionValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +36,7 @@ public class ConsolidacionServiceImpl implements IConsolidacionService {
         private final PedidoRepository pedidoRepository;
         private final SolicitudRepository solicitudRepository;
         private final ILogService logService;
+        private final IWhatsAppService whatsAppService;
         private final ConsolidacionValidator consolidacionValidator;
         private final ConsolidacionCalculosHelper calculosHelper;
 
@@ -95,6 +97,27 @@ public class ConsolidacionServiceImpl implements IConsolidacionService {
                                 pedido.getIdPedido(),
                                 estadoAnterior,
                                 EstadoPedidoEnum.RTA.name());
+
+                // Notificar a clientes con solicitudes pagadas sobre la consolidación
+                notificarCambioEstadoConsolidacion(pedido, estadoAnterior);
+        }
+
+        /**
+         * Notifica a los clientes con solicitudes pagadas sobre el cambio de estado por
+         * consolidación.
+         */
+        private void notificarCambioEstadoConsolidacion(Pedido pedido, String estadoAnterior) {
+                List<Solicitud> solicitudesPagadas = solicitudRepository
+                                .findByPedido_IdPedidoAndEstadoSolicitud(pedido.getIdPedido(), EstadoSolicitudEnum.PGD);
+
+                for (Solicitud solicitud : solicitudesPagadas) {
+                        whatsAppService.notificarActualizacionSolicitud(
+                                        solicitud.getIdSolicitud(),
+                                        pedido.getIdPedido(),
+                                        estadoAnterior,
+                                        EstadoPedidoEnum.RTA.name(),
+                                        "Tu pedido ha sido consolidado y está listo para ser enviado a aduanas. ¡Pronto estará en camino!");
+                }
         }
 
         /**

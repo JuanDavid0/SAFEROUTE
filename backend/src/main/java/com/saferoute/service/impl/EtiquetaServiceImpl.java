@@ -31,21 +31,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 🏷️ IMPLEMENTACIÓN DEL SERVICIO DE ETIQUETAS
- * 
- * Genera etiquetas de entrega para pedidos entregados.
- * Cada solicitud del pedido genera una etiqueta independiente.
- * 
- * Formato PDF:
- * - 2 etiquetas por fila (cuadrícula optimizada)
- * - Diseño profesional con bordes
- * - Información clara y legible
- * - Lista para cortar e imprimir
- * 
- * @author SafeRoute Team
- * @version 1.0
- * @since 2025-10-24
- */
+ * IMPLEMENTACIÓN DEL SERVICIO DE ETIQUETAS
+*/
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -114,8 +101,29 @@ public class EtiquetaServiceImpl implements IEtiquetaService {
     }
 
     private String construirNombreCompleto(Solicitud solicitud) {
-        return solicitud.getCliente().getNombres() + " " +
-                solicitud.getCliente().getApellidos();
+        String nombres = solicitud.getCliente().getNombres();
+        String apellidos = solicitud.getCliente().getApellidos();
+
+        // Manejar null o strings vacíos
+        String nombreLimpio = (nombres != null && !nombres.trim().isEmpty()) ? nombres.trim() : "";
+        String apellidoLimpio = (apellidos != null && !apellidos.trim().isEmpty()) ? apellidos.trim() : "";
+
+        // Si ambos están vacíos, retornar N/A
+        if (nombreLimpio.isEmpty() && apellidoLimpio.isEmpty()) {
+            return "N/A";
+        }
+
+        // Si solo uno está vacío, retornar el que tiene valor
+        if (nombreLimpio.isEmpty()) {
+            return apellidoLimpio;
+        }
+
+        if (apellidoLimpio.isEmpty()) {
+            return nombreLimpio;
+        }
+
+        // Ambos tienen valor, concatenar con espacio
+        return nombreLimpio + " " + apellidoLimpio;
     }
 
     @Override
@@ -207,7 +215,7 @@ public class EtiquetaServiceImpl implements IEtiquetaService {
 
         Pedido pedido = pedidoRepository.findById(idPedido)
                 .orElseThrow(() -> {
-                    log.error("❌ Pedido no encontrado ID: {}", idPedido);
+                    log.error(" Pedido no encontrado ID: {}", idPedido);
                     return new EtiquetaBusinessException(EtiquetaConstants.ERROR_PEDIDO_NO_ENCONTRADO);
                 });
 

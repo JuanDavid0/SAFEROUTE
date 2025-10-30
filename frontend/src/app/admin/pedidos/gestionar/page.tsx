@@ -1,0 +1,27 @@
+/**
+ * Gestionar Pedidos - Administrador
+ */
+
+'use client';
+
+import React from 'react';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+
+export default function GestionarPedidosPage() {
+    return (
+        <DashboardLayout role="ADM">
+            <div className="dashboard-page-header">
+                <h1 className="dashboard-page-title">Gestionar Pedidos</h1>
+            </div>
+
+            <div className="dashboard-content">
+                <div className="dashboard-module-card">
+                    <h2 className="dashboard-module-title">Gestión de Pedidos</h2>
+                    <p className="dashboard-module-description">
+                        Este módulo se implementará en las próximas fases del proyecto.
+                    </p>
+                </div>
+            </div>
+        </DashboardLayout>
+    );
+}

@@ -24,7 +24,7 @@ public class HistorialController {
     }
 
     @GetMapping("/pedidos")
-    @PreAuthorize("hasRole('SAD')")
+    @PreAuthorize("hasAnyRole('SAD', 'ADM')")
     public ResponseEntity<ApiResponse<List<HistorialPedidoDTO>>> consultarHistorico(
             @RequestParam(required = false) Integer idCliente,
             @RequestParam(required = false) Integer idProducto,
@@ -46,7 +46,7 @@ public class HistorialController {
      * Obtener detalle de un pedido histórico
      */
     @GetMapping("/pedidos/{idPedido}")
-    @PreAuthorize("hasRole('SAD')")
+    @PreAuthorize("hasAnyRole('SAD', 'ADM')")
     public ResponseEntity<ApiResponse<HistorialPedidoDTO>> obtenerDetallePedido(@PathVariable Integer idPedido) {
         HistorialPedidoDTO detalle = historialService.obtenerDetallePedido(idPedido);
 

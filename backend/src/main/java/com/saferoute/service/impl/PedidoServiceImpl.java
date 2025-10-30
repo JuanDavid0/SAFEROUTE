@@ -12,6 +12,7 @@ import com.saferoute.service.interfaces.IPedidoService;
 import com.saferoute.service.interfaces.ILogService;
 import com.saferoute.service.interfaces.IWhatsAppService;
 import com.saferoute.service.validator.PedidoValidator;
+import lombok.extern.slf4j.Slf4j;
 import org.hashids.Hashids;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,7 @@ import java.util.stream.Collectors;
  * Implementación del servicio de Pedidos
  * Refactorizado siguiendo principios SOLID y buenas prácticas
  */
+@Slf4j
 @Service
 @Transactional
 public class PedidoServiceImpl implements IPedidoService {
@@ -116,7 +118,7 @@ public class PedidoServiceImpl implements IPedidoService {
 
     private void notificarSiPedidoActivo(Pedido pedido) {
         if (pedido.getEstadoPedido() == EstadoPedidoEnum.ACT) {
-            whatsAppService.notificarNuevoPedidoActivo(pedido);
+            whatsAppService.notificarNuevoPedido(pedido);
         }
     }
 
@@ -152,14 +154,40 @@ public class PedidoServiceImpl implements IPedidoService {
     }
 
     private void notificarCambioEstado(Pedido pedido, EstadoPedidoEnum estadoActual) {
-        whatsAppService.notificarCambioEstadoPedido(pedido, estadoActual.name());
+        // Notificar a los clientes con solicitudes en el pedido sobre el cambio de
+        // estado
+        List<Solicitud> solicitudesNotificar = solicitudRepository.findByPedido_IdPedido(pedido.getIdPedido())
+                .stream()
+                .filter(s -> s.getEstadoSolicitud() == EstadoSolicitudEnum.PGD)
+                .toList();
+
+        for (Solicitud solicitud : solicitudesNotificar) {
+            whatsAppService.notificarActualizacionSolicitud(
+                    solicitud.getIdSolicitud(),
+                    pedido.getIdPedido(),
+                    estadoActual.name(),
+                    pedido.getEstadoPedido().name(),
+                    obtenerMensajeSegunEstado(pedido.getEstadoPedido()));
+        }
+    }
+
+    private String obtenerMensajeSegunEstado(EstadoPedidoEnum estado) {
+        return switch (estado) {
+            case RTA -> "Tu pedido está listo para aduanas. ¡Pronto estará en camino!";
+            case ADU -> "Tu pedido está en proceso de aduanas. Esto puede tomar algunos días.";
+            case ENT -> "¡Tu pedido ha sido entregado! Gracias por confiar en nosotros.";
+            case CRM, CRA -> "Tu pedido ha sido cancelado. Contacta con soporte para más información.";
+            case PRD -> "Tu pedido está marcado como perdido. Estamos trabajando en localizarlo.";
+            case RCP -> "¡Buenas noticias! Tu pedido ha sido recuperado y continuará su proceso.";
+            default -> "El estado de tu pedido ha cambiado. Mantente atento a las actualizaciones.";
+        };
     }
 
     private void procesarActivacionPedido(Integer idPedido, Pedido pedido,
             EstadoPedidoEnum estadoActual, EstadoPedidoEnum estadoNuevo) {
         if (estadoNuevo == EstadoPedidoEnum.ACT && estadoActual != EstadoPedidoEnum.ACT) {
             generarUrlHash(idPedido);
-            whatsAppService.notificarNuevoPedidoActivo(pedido);
+            whatsAppService.notificarNuevoPedido(pedido);
         }
     }
 
@@ -255,8 +283,16 @@ public class PedidoServiceImpl implements IPedidoService {
                 .orElseThrow(() -> new PedidoBusinessException(PedidoConstants.ERROR_PEDIDO_NO_ENCONTRADO));
 
         cambiarEstadoPedido(pedido, EstadoPedidoEnum.CRM);
+
+        // Notificar solo a clientes con solicitudes pagadas (PGD)
+        List<Solicitud> solicitudesPagadas = solicitudRepository
+                .findByPedido_IdPedidoAndEstadoSolicitud(idPedido, EstadoSolicitudEnum.PGD);
+
+        if (!solicitudesPagadas.isEmpty()) {
+            whatsAppService.notificarCancelacionPedido(pedido, "El pedido ha sido cancelado por el administrador");
+        }
+
         cancelarSolicitudesAsociadas(idPedido);
-        whatsAppService.notificarCancelacionPedido(pedido);
     }
 
     private void cambiarEstadoPedido(Pedido pedido, EstadoPedidoEnum nuevoEstado) {

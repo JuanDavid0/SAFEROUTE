@@ -109,8 +109,29 @@ public class HistorialMapper {
      * @return Nombre completo formateado
      */
     private String construirNombreCompleto(Solicitud solicitud) {
-        return solicitud.getCliente().getNombres() + " " +
-                solicitud.getCliente().getApellidos();
+        String nombres = solicitud.getCliente().getNombres();
+        String apellidos = solicitud.getCliente().getApellidos();
+
+        // Manejar null o strings vacíos
+        String nombreLimpio = (nombres != null && !nombres.trim().isEmpty()) ? nombres.trim() : "";
+        String apellidoLimpio = (apellidos != null && !apellidos.trim().isEmpty()) ? apellidos.trim() : "";
+
+        // Si ambos están vacíos, retornar N/A
+        if (nombreLimpio.isEmpty() && apellidoLimpio.isEmpty()) {
+            return "N/A";
+        }
+
+        // Si solo uno está vacío, retornar el que tiene valor
+        if (nombreLimpio.isEmpty()) {
+            return apellidoLimpio;
+        }
+
+        if (apellidoLimpio.isEmpty()) {
+            return nombreLimpio;
+        }
+
+        // Ambos tienen valor, concatenar con espacio
+        return nombreLimpio + " " + apellidoLimpio;
     }
 
     /**
@@ -134,7 +155,13 @@ public class HistorialMapper {
     private SolicitudProductoDTO mapearProducto(SolicitudProducto producto) {
         SolicitudProductoDTO dto = new SolicitudProductoDTO();
         dto.setIdProducto(producto.getProducto().getIdProducto());
-        dto.setNombreProducto(producto.getProducto().getNombreProducto());
+
+        // Validar nombre del producto para evitar null
+        String nombreProducto = producto.getProducto().getNombreProducto();
+        dto.setNombreProducto((nombreProducto != null && !nombreProducto.trim().isEmpty())
+                ? nombreProducto.trim()
+                : "N/A");
+
         dto.setCantidadSolicitada(producto.getCantidadSolicitada());
         dto.setPrecio(producto.getPrecio());
         return dto;

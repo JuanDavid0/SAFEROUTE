@@ -7,11 +7,14 @@ public interface IWhatsAppService {
 
     void enviarResumenSolicitud(SolicitudDTO solicitud);
 
-    void notificarNuevoPedidoActivo(Pedido pedido);
-
-    void notificarCambioEstadoPedido(Pedido pedido, String estadoAnterior);
-    
-    void notificarCancelacionPedido(Pedido pedido);
-
     void notificarSolicitudPagada(SolicitudDTO solicitud);
+
+    void notificarActualizacionSolicitud(Integer idSolicitud, Integer idPedido,
+            String estadoAnterior, String estadoActual, String mensaje);
+
+    void notificarNuevoPedido(Pedido pedido);
+
+    void notificarCancelacionPedido(Pedido pedido, String motivo);
+
+    void notificarCancelacionSolicitud(Integer idSolicitud, Integer idPedido);
 }

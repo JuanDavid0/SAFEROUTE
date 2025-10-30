@@ -6,9 +6,10 @@ import com.saferoute.model.*;
 import com.saferoute.model.enums.EstadoPedidoEnum;
 import com.saferoute.model.enums.EstadoSolicitudEnum;
 import com.saferoute.repository.*;
-import com.saferoute.service.IReporteService;
 import com.saferoute.service.helper.AgrupamientoReporteHelper;
 import com.saferoute.service.helper.CalculosFinancierosHelper;
+import com.saferoute.service.interfaces.IReporteService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -215,7 +216,6 @@ public class ReporteServiceImpl implements IReporteService {
         ClienteFrecuenteDTO dto = new ClienteFrecuenteDTO();
         dto.setCedula(cliente.getCedula());
         dto.setNombreCompleto(cliente.getNombres() + " " + cliente.getApellidos());
-        dto.setEmail(cliente.getTelefono());
         dto.setTelefono(cliente.getTelefono());
         dto.setTotalSolicitudes(0);
         dto.setSolicitudesPagadas(0);

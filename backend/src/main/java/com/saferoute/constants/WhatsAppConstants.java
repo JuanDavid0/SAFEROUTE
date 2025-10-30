@@ -15,29 +15,33 @@ public final class WhatsAppConstants {
     public static final String LOG_RESUMEN_ENVIADO = " Resumen de solicitud #{} enviado exitosamente";
     public static final String LOG_ERROR_RESUMEN = " Error al enviar resumen de solicitud #{}: {}";
 
-    public static final String LOG_NOTIFICANDO_PEDIDO_ACTIVO = " Notificando nuevo pedido activo #{} a todos los clientes";
-    public static final String LOG_PEDIDO_ACTIVO_ENVIADO = " Notificación de nuevo pedido enviada a {} clientes";
-    public static final String LOG_ERROR_PEDIDO_ACTIVO = " Error al notificar nuevo pedido activo: {}";
-
-    public static final String LOG_NOTIFICANDO_CAMBIO_ESTADO = " Notificando cambio de estado del pedido #{}: {} -> {}";
-    public static final String LOG_CAMBIO_ESTADO_ENVIADO = " Notificación de cambio de estado enviada a {} clientes";
-    public static final String LOG_ERROR_CAMBIO_ESTADO = " Error al notificar cambio de estado: {}";
-
-    public static final String LOG_NOTIFICANDO_CANCELACION = " Notificando cancelación del pedido #{}";
-    public static final String LOG_CANCELACION_ENVIADA = " Notificación de cancelación enviada a {} clientes";
-    public static final String LOG_ERROR_CANCELACION = " Error al notificar cancelación: {}";
-
     public static final String LOG_NOTIFICANDO_SOLICITUD_PAGADA = " Notificando solicitud pagada #{} al cliente";
     public static final String LOG_SOLICITUD_PAGADA_ENVIADA = " Notificación de solicitud pagada enviada exitosamente";
     public static final String LOG_ERROR_SOLICITUD_PAGADA = " Error al notificar solicitud pagada: {}";
+
+    public static final String LOG_NOTIFICANDO_ACTUALIZACION_PEDIDO = " Notificando actualización de solicitud #{} del pedido #{} al cliente";
+    public static final String LOG_ACTUALIZACION_PEDIDO_ENVIADA = " Notificación de actualización enviada exitosamente a solicitud #{}";
+    public static final String LOG_ERROR_ACTUALIZACION_PEDIDO = " Error al notificar actualización de solicitud #{}: {}";
+
+    public static final String LOG_NOTIFICANDO_NUEVO_PEDIDO = " Notificando nuevo pedido #{} a todos los clientes activos";
+    public static final String LOG_NUEVO_PEDIDO_ENVIADO = " Notificación de nuevo pedido enviada a {} clientes";
+    public static final String LOG_ERROR_NUEVO_PEDIDO = " Error al notificar nuevo pedido: {}";
+
+    public static final String LOG_NOTIFICANDO_CANCELACION_PEDIDO = " Notificando cancelación del pedido #{} a los clientes";
+    public static final String LOG_CANCELACION_PEDIDO_ENVIADA = " Notificación de cancelación de pedido enviada a {} clientes";
+    public static final String LOG_ERROR_CANCELACION_PEDIDO = " Error al notificar cancelación de pedido: {}";
+
+    public static final String LOG_NOTIFICANDO_CANCELACION_SOLICITUD = " Notificando cancelación de solicitud #{} al cliente";
+    public static final String LOG_CANCELACION_SOLICITUD_ENVIADA = " Notificación de cancelación de solicitud enviada exitosamente";
+    public static final String LOG_ERROR_CANCELACION_SOLICITUD = " Error al notificar cancelación de solicitud #{}: {}";
 
     public static final String LOG_ENVIANDO_PLANTILLA = " Enviando plantilla '{}' a WhatsApp - Número: {}";
     public static final String LOG_REQUEST_BODY = " Request body: {}";
     public static final String LOG_PLANTILLA_ENVIADA = " Plantilla '{}' enviada exitosamente a {} - Response: {}";
     public static final String LOG_ERROR_PLANTILLA = " Error al enviar plantilla. Status: {}, Body: {}";
-    public static final String LOG_ERROR_ENVIO_MENSAJE = "Error al enviar mensaje a {}: {}";
+    public static final String LOG_ERROR_ENVIO_MENSAJE = " Error al enviar mensaje a {}: {}";
     public static final String LOG_PEDIDO_SIN_HASH = " Pedido #{} no tiene URL hash, usando ID en la URL";
-    public static final String LOG_URL_PEDIDO_HASH = "🔗 URL del pedido usando hash: {}";
+    public static final String LOG_URL_PEDIDO_HASH = " URL del pedido usando hash: {}";
 
     // ========== MENSAJES DE ERROR HTTP ==========
     public static final String ERROR_401_TOKEN_INVALIDO = " ERROR 401: Token de WhatsApp inválido o expirado";
@@ -52,11 +56,19 @@ public final class WhatsAppConstants {
     public static final String EXCEPTION_ERROR_ENVIAR_PLANTILLA = "Error al enviar plantilla de WhatsApp";
 
     // ========== NOMBRES DE PLANTILLAS ==========
+    // Plantillas en Spanish (COL)
     public static final String TEMPLATE_RESUMEN_SOLICITUD = "resumen_solicitud";
-    public static final String TEMPLATE_NUEVO_PEDIDO_ACTIVO = "nuevo_pedido_activo";
-    public static final String TEMPLATE_CAMBIO_ESTADO_PEDIDO = "cambio_estado_pedido";
-    public static final String TEMPLATE_PEDIDO_CANCELADO = "pedido_cancelado";
+    public static final String TEMPLATE_ACTUALIZACION_PEDIDO = "actualizacion_pedido";
+    public static final String TEMPLATE_NUEVO_PEDIDO = "pedido_nuevo";
+    public static final String TEMPLATE_CANCELACION_PEDIDO = "cancelacion_pedido";
+    public static final String TEMPLATE_CANCELACION_SOLICITUD = "cancelacion_solicitud";
+
+    // Plantilla en Spanish (sin COL)
     public static final String TEMPLATE_SOLICITUD_PAGADA = "solicitud_pagada";
+
+    // ========== CÓDIGOS DE IDIOMA PARA PLANTILLAS ==========
+    public static final String LANGUAGE_CODE_ES = "es"; // Para solicitud_pagada
+    public static final String LANGUAGE_CODE_ES_CO = "es_CO"; // Para el resto de plantillas
 
     // ========== ROLES Y ESTADOS ==========
     public static final String ROL_CLIENTE = "CLI";
@@ -96,7 +108,7 @@ public final class WhatsAppConstants {
 
     // ========== FORMATOS DE URL ==========
     public static final String URL_FORMAT_SOLICITUD = "/solicitud/%d";
-    public static final String URL_FORMAT_PEDIDO_HASH = "/pedidos/pedido-disponible/%s";
+    public static final String URL_FORMAT_PEDIDO_HASH = "/pedido/%s";
     public static final String URL_FORMAT_PEDIDO_ID = "/pedidos/pedido/%d";
     public static final String URL_FORMAT_MESSAGES_API = "%s/%s/messages";
 }

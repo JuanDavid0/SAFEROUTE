@@ -24,10 +24,10 @@ public final class UsuarioConstants {
     public static final String FORMATO_LOG_ELIMINACION = "Usuario administrador eliminado (soft delete) - Cédula: %s, Nombres: %s %s";
 
     // ===== MENSAJES DE LOG =====
-    public static final String LOG_ELIMINANDO_USUARIO = "🗑️ Eliminando usuario ID: {}";
-    public static final String LOG_VALIDANDO_ROL = "🔍 Validando rol de administrador para usuario ID: {}";
-    public static final String LOG_USUARIO_ELIMINADO = "✅ Usuario eliminado exitosamente (soft delete) - ID: {}";
-    public static final String LOG_OBTENER_POR_ID = "👤 Obteniendo usuario por ID: {}";
-    public static final String LOG_LISTAR_TODOS = "📋 Listando todos los usuarios";
-    public static final String LOG_TOTAL_ENCONTRADOS = "🔍 Total de usuarios encontrados: {}";
+    public static final String LOG_ELIMINANDO_USUARIO = " Eliminando usuario ID: {}";
+    public static final String LOG_VALIDANDO_ROL = " Validando rol de administrador para usuario ID: {}";
+    public static final String LOG_USUARIO_ELIMINADO = " Usuario eliminado exitosamente (soft delete) - ID: {}";
+    public static final String LOG_OBTENER_POR_ID = " Obteniendo usuario por ID: {}";
+    public static final String LOG_LISTAR_TODOS = " Listando todos los usuarios";
+    public static final String LOG_TOTAL_ENCONTRADOS = " Total de usuarios encontrados: {}";
 }

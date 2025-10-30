@@ -25,6 +25,14 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
+  # Multipart File Upload Configuration
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB        # Tamaño máximo por archivo
+      max-request-size: 15MB     # Tamaño máximo de la petición completa
+      file-size-threshold: 2KB   # Umbral para escribir en disco
+
 server:
   port: 8080
   servlet:
@@ -47,7 +55,7 @@ twilio:
 # WhatsApp Business API Configuration
 whatsapp:
   api:
-    url: https://graph.facebook.com/v24.0
+    url: https://graph.facebook.com/v22.0
     phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID}
     token: ${WHATSAPP_API_TOKEN}
   base-url: ${WHATSAPP_BASE_URL}
@@ -68,6 +76,13 @@ saferoute:
   hashids:
     salt: ${HASHIDS_SALT}  # Clave secreta para generar hashes (debe ser única)
     min-length: 15                                  # Longitud mínima del hash generado
+
+# Firebase Storage Configuration
+firebase:
+  credentials:
+    path: ${FIREBASE_CREDENTIALS_PATH:src/main/resources/firebase-service-account.json}
+  storage:
+    bucket: ${FIREBASE_STORAGE_BUCKET}
 
 ---
 spring:

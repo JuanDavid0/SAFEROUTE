@@ -436,6 +436,13 @@ public class SolicitudServiceImpl implements ISolicitudService {
         SolicitudDTO dto = new SolicitudDTO();
         dto.setIdSolicitud(solicitud.getIdSolicitud());
         dto.setIdCliente(solicitud.getCliente().getIdUsuario());
+
+        // Construir nombre completo del cliente de forma segura
+        String nombreCompleto = construirNombreCompleto(
+                solicitud.getCliente().getNombres(),
+                solicitud.getCliente().getApellidos());
+        dto.setNombreCliente(nombreCompleto);
+
         dto.setIdPedido(solicitud.getPedido().getIdPedido());
         dto.setDireccionEntrega(solicitud.getDireccionEntrega());
         dto.setEstadoSolicitud(solicitud.getEstadoSolicitud().name());
@@ -483,5 +490,32 @@ public class SolicitudServiceImpl implements ISolicitudService {
                     "La cantidad solicitada (%d) excede la cantidad máxima permitida (%d) para este producto",
                     cantidad, cantidadMax));
         }
+    }
+
+    /**
+     * Construye el nombre completo del cliente manejando valores null de forma
+     * segura
+     */
+    private String construirNombreCompleto(String nombres, String apellidos) {
+        // Manejar null o strings vacíos
+        String nombreLimpio = (nombres != null && !nombres.trim().isEmpty()) ? nombres.trim() : "";
+        String apellidoLimpio = (apellidos != null && !apellidos.trim().isEmpty()) ? apellidos.trim() : "";
+
+        // Si ambos están vacíos, retornar N/A
+        if (nombreLimpio.isEmpty() && apellidoLimpio.isEmpty()) {
+            return "N/A";
+        }
+
+        // Si solo uno está vacío, retornar el que tiene valor
+        if (nombreLimpio.isEmpty()) {
+            return apellidoLimpio;
+        }
+
+        if (apellidoLimpio.isEmpty()) {
+            return nombreLimpio;
+        }
+
+        // Ambos tienen valor, concatenar con espacio
+        return nombreLimpio + " " + apellidoLimpio;
     }
 }
