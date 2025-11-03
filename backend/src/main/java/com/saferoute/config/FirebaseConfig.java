@@ -18,6 +18,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 
 /**
  * Configuración de Firebase Storage
@@ -34,29 +35,48 @@ public class FirebaseConfig {
     private String bucketName;
 
     /**
-     * Verifica si el archivo de credenciales existe en el classpath
+     * Obtiene el InputStream de las credenciales desde diferentes fuentes
      */
-    private boolean credentialsFileExists() {
+    private InputStream getCredentialsInputStream() throws IOException {
+        // 1. Intentar desde classpath
         try {
-            // Primero intentar como recurso del classpath
             Resource resource = new ClassPathResource("firebase-service-account.json");
             if (resource.exists()) {
-                return true;
+                log.info("Loading Firebase credentials from classpath");
+                return resource.getInputStream();
             }
-
-            // Si no está en classpath, intentar como archivo del sistema
-            File credentialsFile = new File(credentialsPath);
-            boolean exists = credentialsFile.exists();
-
-            if (!exists) {
-                log.warn(" Firebase credentials file not found at: {}", credentialsPath);
-                log.warn(" Firebase Storage will NOT be initialized.");
-                log.warn(" To enable Firebase: place firebase-service-account.json in src/main/resources/");
-            }
-
-            return exists;
         } catch (Exception e) {
-            log.warn(" Error checking Firebase credentials file", e);
+            log.debug("Credentials not found in classpath, trying other sources...");
+        }
+
+        // 2. Si es una URL (comienza con http:// o https://)
+        if (credentialsPath.startsWith("http://") || credentialsPath.startsWith("https://")) {
+            log.info("Loading Firebase credentials from URL: {}", credentialsPath);
+            URL url = new URL(credentialsPath);
+            return url.openStream();
+        }
+
+        // 3. Intentar desde filesystem
+        File credentialsFile = new File(credentialsPath);
+        if (credentialsFile.exists()) {
+            log.info("Loading Firebase credentials from file system: {}", credentialsPath);
+            return new FileInputStream(credentialsFile);
+        }
+
+        throw new IOException("Firebase credentials not found in any location: " + credentialsPath);
+    }
+
+    /**
+     * Verifica si las credenciales están disponibles
+     */
+    private boolean credentialsAvailable() {
+        try {
+            InputStream stream = getCredentialsInputStream();
+            stream.close();
+            return true;
+        } catch (Exception e) {
+            log.warn("Firebase credentials not available: {}", e.getMessage());
+            log.warn("Firebase Storage will NOT be initialized.");
             return false;
         }
     }
@@ -66,73 +86,61 @@ public class FirebaseConfig {
      */
     @Bean
     public FirebaseApp firebaseApp() {
-        if (!credentialsFileExists()) {
-            log.info(" Firebase App initialization SKIPPED (credentials file not found)");
+        if (!credentialsAvailable()) {
+            log.info("Firebase App initialization SKIPPED (credentials not available)");
             return null;
         }
 
         try {
-            InputStream serviceAccount;
-
-            // Intentar cargar desde classpath primero (más confiable)
-            try {
-                Resource resource = new ClassPathResource("firebase-service-account.json");
-                if (resource.exists()) {
-                    serviceAccount = resource.getInputStream();
-                    log.info("Loading Firebase credentials from classpath");
-                } else {
-                    // Fallback a ruta del sistema de archivos
-                    serviceAccount = new FileInputStream(credentialsPath);
-                    log.info("Loading Firebase credentials from file system: {}", credentialsPath);
-                }
-            } catch (Exception e) {
-                // Último intento con ruta del sistema
-                serviceAccount = new FileInputStream(credentialsPath);
-                log.info("Loading Firebase credentials from file system: {}", credentialsPath);
-            }
+            InputStream serviceAccount = getCredentialsInputStream();
 
             FirebaseOptions options = FirebaseOptions.builder()
                     .setCredentials(GoogleCredentials.fromStream(serviceAccount))
                     .setStorageBucket(bucketName)
                     .build();
 
+            serviceAccount.close();
+
             FirebaseApp app = FirebaseApp.initializeApp(options);
             log.info(FirebaseConstants.LOG_FIREBASE_INICIALIZADO);
-            log.info("🪣 Storage bucket: {}", bucketName);
+            log.info("Storage bucket: {}", bucketName);
 
             return app;
 
         } catch (Exception e) {
             log.error(FirebaseConstants.ERROR_INICIALIZAR_FIREBASE, e);
-            log.warn(" Firebase App will NOT be available");
+            log.warn("Firebase App will NOT be available");
             return null;
         }
     }
 
     /**
-     * Proporciona el cliente de Storage solo si Firebase App se inicializó
-     * correctamente
+     * Proporciona el cliente de Storage solo si Firebase App se inicializó correctamente
      */
     @Bean
     @ConditionalOnBean(FirebaseApp.class)
     public Storage storage() {
-        if (!credentialsFileExists()) {
-            log.info(" Firebase Storage initialization SKIPPED (credentials file not found)");
+        if (!credentialsAvailable()) {
+            log.info("Firebase Storage initialization SKIPPED (credentials not available)");
             return null;
         }
 
         try {
-            FileInputStream serviceAccount = new FileInputStream(credentialsPath);
+            InputStream serviceAccount = getCredentialsInputStream();
             GoogleCredentials credentials = GoogleCredentials.fromStream(serviceAccount);
+            serviceAccount.close();
 
-            return StorageOptions.newBuilder()
+            Storage storageInstance = StorageOptions.newBuilder()
                     .setCredentials(credentials)
                     .build()
                     .getService();
 
+            log.info("Firebase Storage initialized successfully");
+            return storageInstance;
+
         } catch (Exception e) {
-            log.error(" Error initializing Firebase Storage", e);
-            log.warn(" Firebase Storage will NOT be available");
+            log.error("Error initializing Firebase Storage", e);
+            log.warn("Firebase Storage will NOT be available");
             return null;
         }
     }
