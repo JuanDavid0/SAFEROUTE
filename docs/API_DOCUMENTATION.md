@@ -48,15 +48,17 @@ Crea el primer usuario del sistema con rol de Superadministrador.
 ```json
 {
   "status": "success",
-  "message": "Registro exitoso",
+  "message": "Usuario registrado exitosamente",
   "data": {
     "idUsuario": 1,
-    "cedula": "9999999999",
     "nombres": "Super",
     "apellidos": "Usuario",
-    "rol": "SAD",
-    "token": "eyJhbGciOiJIUzM4NCJ9..."
-  }
+    "telefono": "3133121509",
+    "cedula": "9999999999",
+    "direccion": "Oficina SafeRoute",
+    "estadoUsuario": "ACTIVO"
+  },
+  "timestamp": "2025-10-30 10:00:00"
 }
 ```
 
@@ -89,11 +91,14 @@ Solo superadministradores pueden crear nuevos administradores.
   "message": "Administrador creado exitosamente",
   "data": {
     "idUsuario": 2,
-    "cedula": "9638527410",
     "nombres": "Nuevo",
     "apellidos": "Admin",
-    "rol": "ADM"
-  }
+    "telefono": "3213456621",
+    "cedula": "9638527410",
+    "direccion": "N/A",
+    "estadoUsuario": "ACTIVO"
+  },
+  "timestamp": "2025-10-30 10:00:00"
 }
 ```
 
@@ -119,15 +124,13 @@ Autenticación de usuarios (SAD/ADM).
 ```json
 {
   "status": "success",
-  "message": "Login exitoso",
+  "message": "Inicio de sesión exitoso",
   "data": {
     "token": "eyJhbGciOiJIUzM4NCJ9...",
-    "idUsuario": 1,
-    "cedula": "9999999999",
-    "nombres": "Super",
-    "apellidos": "Usuario",
-    "rol": "SAD"
-  }
+    "rol": "SAD",
+    "idUsuario": 1
+  },
+  "timestamp": "2025-10-30 10:00:00"
 }
 ```
 
@@ -154,7 +157,8 @@ Permite al usuario autenticado cambiar su contraseña.
 ```json
 {
   "status": "success",
-  "message": "Contraseña actualizada exitosamente"
+  "message": "Contraseña cambiada exitosamente",
+  "timestamp": "2025-10-30 10:00:00"
 }
 ```
 
@@ -1259,15 +1263,11 @@ Obtiene un resumen general del sistema.
 **Response Success** (200):
 ```json
 {
-  "status": "success",
-  "message": "Resumen obtenido exitosamente",
-  "data": {
-    "totalPedidosActivos": 5,
-    "totalSolicitudesPendientes": 12,
-    "totalSolicitudesPagadas": 8,
-    "ingresosEsteMes": 5000.0,
-    "productosEnStock": 25
-  }
+  "totalPedidosActivos": 5,
+  "totalSolicitudesPendientes": 12,
+  "totalSolicitudesPagadas": 8,
+  "ingresosEsteMes": 5000.0,
+  "productosEnStock": 25
 }
 ```
 
@@ -1288,23 +1288,26 @@ Obtiene los productos más vendidos con límite opcional.
 
 **Response Success** (200):
 ```json
+[
+  {
+    "idProducto": 9,
+    "nombreProducto": "Producto A",
+    "cantidadVendida": 1500,
+    "ingresoTotal": 150000.0
+  },
+  {
+    "idProducto": 12,
+    "nombreProducto": "Producto B",
+    "cantidadVendida": 1200,
+    "ingresoTotal": 120000.0
+  }
+]
+```
+
+**Response Error** (400):
+```json
 {
-  "status": "success",
-  "message": "Productos más vendidos obtenidos exitosamente",
-  "data": [
-    {
-      "idProducto": 9,
-      "nombreProducto": "Producto A",
-      "cantidadVendida": 1500,
-      "ingresoTotal": 150000.0
-    },
-    {
-      "idProducto": 12,
-      "nombreProducto": "Producto B",
-      "cantidadVendida": 1200,
-      "ingresoTotal": 120000.0
-    }
-  ]
+  "error": "El límite debe estar entre 1 y 100"
 }
 ```
 
@@ -1319,18 +1322,17 @@ Obtiene los ingresos agrupados por período.
 **Autenticación**: Bearer Token (SAD/ADM)
 
 **Query Parameters**:
-- `fechaInicio` (string): Fecha de inicio (YYYY-MM-DD)
-- `fechaFin` (string): Fecha de fin (YYYY-MM-DD)
-- `agrupacion` (string): Tipo de agrupación (DIARIA, SEMANAL, MENSUAL, TRIMESTRAL, ANUAL)
+- `fechaInicio` (string, required): Fecha de inicio (YYYY-MM-DD)
+- `fechaFin` (string, required): Fecha de fin (YYYY-MM-DD)
+- `agrupacion` (string, optional): Tipo de agrupación (default: TRIMESTRAL)
+  - Valores permitidos: `TRIMESTRAL`, `ANUAL`
 
 **Ejemplo**: `GET /reportes/ingresos?fechaInicio=2025-01-01&fechaFin=2025-12-31&agrupacion=TRIMESTRAL`
 
 **Response Success** (200):
 ```json
 {
-  "status": "success",
-  "message": "Ingresos obtenidos exitosamente",
-  "data": [
+  "periodos": [
     {
       "periodo": "Q1 2025",
       "ingresos": 45000.0,
@@ -1343,7 +1345,27 @@ Obtiene los ingresos agrupados por período.
       "costos": 35000.0,
       "ganancia": 17000.0
     }
-  ]
+  ],
+  "resumen": {
+    "totalIngresos": 97000.0,
+    "totalCostos": 65000.0,
+    "gananciaTotal": 32000.0
+  }
+}
+```
+
+**Response Error** (400):
+```json
+{
+  "error": "La fecha de inicio no puede ser posterior a la fecha final"
+}
+```
+
+o
+
+```json
+{
+  "error": "La agrupación debe ser 'TRIMESTRAL' o 'ANUAL'"
 }
 ```
 
@@ -1362,17 +1384,20 @@ Obtiene los productos ordenados por ganancia.
 
 **Response Success** (200):
 ```json
+[
+  {
+    "idProducto": 9,
+    "nombreProducto": "Producto A",
+    "gananciaTotal": 50000.0,
+    "margenGanancia": 33.33
+  }
+]
+```
+
+**Response Error** (400):
+```json
 {
-  "status": "success",
-  "message": "Productos con mayor ganancia obtenidos",
-  "data": [
-    {
-      "idProducto": 9,
-      "nombreProducto": "Producto A",
-      "gananciaTotal": 50000.0,
-      "margenGanancia": 33.33
-    }
-  ]
+  "error": "El límite debe estar entre 1 y 100"
 }
 ```
 
@@ -1391,17 +1416,20 @@ Obtiene los clientes más frecuentes.
 
 **Response Success** (200):
 ```json
+[
+  {
+    "idCliente": 25,
+    "nombreCliente": "Juan Pérez",
+    "totalSolicitudes": 15,
+    "totalGastado": 75000.0
+  }
+]
+```
+
+**Response Error** (400):
+```json
 {
-  "status": "success",
-  "message": "Clientes frecuentes obtenidos",
-  "data": [
-    {
-      "idCliente": 25,
-      "nombreCliente": "Juan Pérez",
-      "totalSolicitudes": 15,
-      "totalGastado": 75000.0
-    }
-  ]
+  "error": "El límite debe estar entre 1 y 100"
 }
 ```
 
@@ -1417,18 +1445,14 @@ Obtiene todos los pedidos actualmente en curso.
 
 **Response Success** (200):
 ```json
-{
-  "status": "success",
-  "message": "Pedidos en curso obtenidos",
-  "data": [
-    {
-      "idPedido": 28,
-      "estadoPedido": "ACT",
-      "fechaCierre": "2025-12-30",
-      "totalSolicitudes": 12
-    }
-  ]
-}
+[
+  {
+    "idPedido": 28,
+    "estadoPedido": "ACT",
+    "fechaCierre": "2025-12-30",
+    "totalSolicitudes": 12
+  }
+]
 ```
 
 ---
@@ -1605,13 +1629,15 @@ Verifica el código OTP y devuelve un token de autenticación temporal.
 ```json
 {
   "status": "success",
-  "message": "OTP verificado exitosamente",
+  "message": "Código OTP verificado correctamente. Token de autorización generado",
   "data": {
     "token": "eyJhbGciOiJIUzM4NCJ9...",
     "idCliente": 25,
-    "nombreCliente": "Juan Pérez",
-    "expiracion": "2025-10-30 11:00:00"
-  }
+    "nombreCompleto": "Juan Pérez",
+    "cedula": "9152556873",
+    "telefono": "3001234567"
+  },
+  "timestamp": "2025-10-30 10:00:00"
 }
 ```
 
@@ -1619,7 +1645,8 @@ Verifica el código OTP y devuelve un token de autenticación temporal.
 ```json
 {
   "status": "fail",
-  "message": "Código OTP inválido o expirado"
+  "message": "Código OTP inválido o expirado",
+  "timestamp": "2025-10-30 10:00:00"
 }
 ```
 
@@ -1728,4 +1755,3 @@ Por defecto, los endpoints que retornan listas no están paginados. Para grandes
 ### Modificaciones de Solicitudes
 
 Los clientes tienen **2 modificaciones** permitidas por solicitud antes del cierre del pedido.
-
