@@ -6,7 +6,7 @@
 
 ---
 
-## 📋 Tabla de Contenidos
+## Tabla de Contenidos
 
 1. [Autenticación](#-autenticación)
 2. [Gestión de Usuarios](#-gestión-de-usuarios)
@@ -22,7 +22,7 @@
 
 ---
 
-## 🔐 Autenticación
+## Autenticación
 
 ### Registro de Superadministrador
 
@@ -160,7 +160,7 @@ Permite al usuario autenticado cambiar su contraseña.
 
 ---
 
-## 👥 Gestión de Usuarios
+##  Gestión de Usuarios
 
 ### Obtener Todos los Usuarios
 
@@ -221,7 +221,7 @@ Elimina un administrador del sistema (solo SAD).
 
 ---
 
-## 📦 Gestión de Productos
+## Gestión de Productos
 
 ### Crear Producto
 
@@ -421,7 +421,7 @@ Busca productos que coincidan con el nombre especificado.
 
 ---
 
-## 📋 Gestión de Pedidos
+## Gestión de Pedidos
 
 ### Crear Pedido
 
@@ -753,7 +753,7 @@ Elimina un producto de un pedido.
 
 ---
 
-## 📝 Gestión de Solicitudes
+## Gestión de Solicitudes
 
 ### Crear Solicitud (Cliente Nuevo)
 
@@ -966,15 +966,6 @@ Actualiza el estado de una solicitud (solo administradores).
   "nuevoEstado": "PGD"
 }
 ```
-
-**Estados Válidos**:
-- `PDP`: Pendiente de Pago
-- `PGD`: Pagada
-- `RTA`: En Ruta
-- `ADU`: Aduana
-- `ENT`: Entregada
-- `CXV`: Cancelada por Vencimiento
-- `CXC`: Cancelada por Cliente
 
 **Response Success** (200):
 ```json
@@ -1255,7 +1246,7 @@ Obtiene los logs de un usuario específico (solo SAD).
 
 ---
 
-## 📊 Reportes y Estadísticas
+## Reportes y Estadísticas
 
 ### Resumen General
 
@@ -1442,7 +1433,7 @@ Obtiene todos los pedidos actualmente en curso.
 
 ---
 
-## 📄 Informes Excel
+## Informes Excel
 
 ### Informe por Cliente
 
@@ -1504,7 +1495,7 @@ Genera y descarga un informe Excel de las solicitudes de un pedido.
 
 ---
 
-## 🏷️ Etiquetas
+##  Etiquetas
 
 ### Obtener Etiquetas en JSON
 
@@ -1559,7 +1550,7 @@ Genera y descarga las etiquetas de envío en formato PDF.
 
 ---
 
-## 📱 Autenticación OTP (Twilio)
+## Autenticación OTP (Twilio)
 
 ### Solicitar Código OTP
 
@@ -1634,7 +1625,7 @@ Verifica el código OTP y devuelve un token de autenticación temporal.
 
 ---
 
-## 📋 Códigos de Respuesta
+## Códigos de Respuesta
 
 ### Códigos HTTP
 
@@ -1696,7 +1687,7 @@ Verifica el código OTP y devuelve un token de autenticación temporal.
 
 ---
 
-## 🔒 Autenticación y Seguridad
+## Autenticación y Seguridad
 
 ### Header de Autenticación
 
@@ -1714,21 +1705,10 @@ Authorization: Bearer {token}
 | Administrador | `ADM` | Gestión de pedidos y productos |
 | Cliente (OTP) | - | Acceso temporal mediante OTP |
 
-### Permisos por Rol
-
-| Endpoint | SAD | ADM | Cliente OTP |
-|----------|-----|-----|-------------|
-| `/usuarios` | ✅ | ❌ | ❌ |
-| `/productos` | ✅ | ✅ | ❌ |
-| `/pedidos` | ✅ | ✅ | ❌ |
-| `/solicitudes` (admin) | ✅ | ✅ | ❌ |
-| `/solicitudes/mis-solicitudes` | ❌ | ❌ | ✅ |
-| `/reportes` | ✅ | ✅ | ❌ |
-| `/logs` | ✅ | ❌ | ❌ |
 
 ---
 
-## 📝 Notas Adicionales
+## Notas Adicionales
 
 ### Formato de Fechas
 
@@ -1749,11 +1729,3 @@ Por defecto, los endpoints que retornan listas no están paginados. Para grandes
 
 Los clientes tienen **2 modificaciones** permitidas por solicitud antes del cierre del pedido.
 
----
-
-## 📞 Soporte
-
-Para más información o soporte técnico, contactar al equipo de desarrollo de SafeRoute.
-
-**Última actualización**: Octubre 2025  
-**Versión de la API**: 1.0.0
