@@ -1731,27 +1731,3 @@ Authorization: Bearer {token}
 | Superadministrador | `SAD` | Acceso completo al sistema |
 | Administrador | `ADM` | Gestión de pedidos y productos |
 | Cliente (OTP) | - | Acceso temporal mediante OTP |
-
-
----
-
-## Notas Adicionales
-
-### Formato de Fechas
-
-- **Entrada**: `YYYY-MM-DD` (ejemplo: `2025-12-30`)
-- **Salida**: `YYYY-MM-DD HH:mm:ss` (ejemplo: `2025-10-30 10:00:00`)
-
-### Límites de Paginación
-
-Por defecto, los endpoints que retornan listas no están paginados. Para grandes volúmenes de datos, considerar implementar paginación.
-
-### Timeouts
-
-- Tokens JWT: 24 horas
-- Tokens OTP: 1 hora
-- Códigos OTP: 10 minutos
-
-### Modificaciones de Solicitudes
-
-Los clientes tienen **2 modificaciones** permitidas por solicitud antes del cierre del pedido.

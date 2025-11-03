@@ -215,16 +215,16 @@ INSERT INTO PRODUCTO (
     nombre_producto, tipo_producto, descripcion_producto, 
     precio_unitario, costo_unitario, url_imagen, estado_producto
 ) VALUES
-    ('Smartwatch Pro X10', 'Electrónicos', 'Reloj inteligente con monitor cardíaco y GPS integrado', 480000, 320000, 'https://example.com/img/smartwatch.jpg', 'ACTIVO'),
-    ('Auriculares Inalámbricos AirBeats', 'Electrónicos', 'Auriculares Bluetooth con cancelación de ruido', 250000, 160000, 'https://example.com/img/airbeats.jpg', 'ACTIVO'),
-    ('Cámara de Seguridad 360°', 'Seguridad', 'Cámara IP con visión nocturna y detección de movimiento', 370000, 250000, 'https://example.com/img/camara360.jpg', 'ACTIVO'),
-    ('Cargador Rápido Universal', 'Accesorios', 'Cargador con puerto USB-C y compatibilidad universal', 90000, 50000, 'https://example.com/img/cargador.jpg', 'ACTIVO'),
-    ('Power Bank 20000mAh', 'Accesorios', 'Batería portátil con doble salida USB', 150000, 95000, 'https://example.com/img/powerbank.jpg', 'ACTIVO'),
-    ('Teclado Mecánico RGB', 'Computación', 'Teclado mecánico retroiluminado con switches azules', 280000, 190000, 'https://example.com/img/teclado.jpg', 'ACTIVO'),
-    ('Mouse Inalámbrico Pro', 'Computación', 'Mouse ergonómico con sensor óptico de alta precisión', 120000, 70000, 'https://example.com/img/mouse.jpg', 'ACTIVO'),
-    ('Mini Proyector LED', 'Electrónicos', 'Proyector portátil HD compatible con HDMI y USB', 550000, 380000, 'https://example.com/img/proyector.jpg', 'ACTIVO'),
-    ('Balanza Digital Portátil', 'Hogar', 'Báscula precisa para maletas y paquetes', 85000, 50000, 'https://example.com/img/balanza.jpg', 'ACTIVO'),
-    ('Altavoz Bluetooth Portátil', 'Electrónicos', 'Altavoz resistente al agua con sonido envolvente', 200000, 130000, 'https://example.com/img/altavoz.jpg', 'ACTIVO');
+    ('Smartwatch Pro X10', 'Electrónicos', 'Reloj inteligente con monitor cardíaco y GPS integrado', 480000, 320000, 'https://firebasestorage.googleapis.com/v0/b/saferoute-f90f8.firebasestorage.app/o/productos%2Fproducto_32_1761769693166_d8ab95f7.png?alt=media&token=3a362c13-f5c0-4614-997b-e8890bf01786', 'ACTIVO'),
+    ('Auriculares Inalámbricos AirBeats', 'Electrónicos', 'Auriculares Bluetooth con cancelación de ruido', 250000, 160000, 'https://firebasestorage.googleapis.com/v0/b/saferoute-f90f8.firebasestorage.app/o/productos%2Fauriculares_inal_mbricos_airbeats_chaos_10_stylize_230.jpeg?alt=media&token=2bf6a896-ddd4-4cf3-bbe3-ebae1f9402b1', 'ACTIVO'),
+    ('Cámara de Seguridad 360°', 'Seguridad', 'Cámara IP con visión nocturna y detección de movimiento', 370000, 250000, 'https://firebasestorage.googleapis.com/v0/b/saferoute-f90f8.firebasestorage.app/o/productos%2FGemini_Generated_Image_tyx09atyx09atyx0.png?alt=media&token=f1997a59-c03c-4fe0-a9bb-5849357d8cec', 'ACTIVO'),
+    ('Cargador Rápido Universal', 'Accesorios', 'Cargador con puerto USB-C y compatibilidad universal', 90000, 50000, 'https://firebasestorage.googleapis.com/v0/b/saferoute-f90f8.firebasestorage.app/o/productos%2FGemini_Generated_Image_58whr58whr58whr5.png?alt=media&token=30aaa6db-ad32-4a16-a371-bb0ce5c2aae3', 'ACTIVO'),
+    ('Power Bank 20000mAh', 'Accesorios', 'Batería portátil con doble salida USB', 150000, 95000, 'https://firebasestorage.googleapis.com/v0/b/saferoute-f90f8.firebasestorage.app/o/productos%2FGemini_Generated_Image_5t6jn55t6jn55t6j.png?alt=media&token=7789db5d-78ec-4db0-8f3d-e8e49ea912b3', 'ACTIVO'),
+    ('Teclado Mecánico RGB', 'Computación', 'Teclado mecánico retroiluminado con switches azules', 280000, 190000, 'https://firebasestorage.googleapis.com/v0/b/saferoute-f90f8.firebasestorage.app/o/productos%2Fteclado_mec_nico_rgb_chaos_10_stylize_230.jpeg?alt=media&token=12101f0e-9f85-44f1-aab6-497b1f888548', 'ACTIVO'),
+    ('Mouse Inalámbrico Pro', 'Computación', 'Mouse ergonómico con sensor óptico de alta precisión', 120000, 70000, 'https://firebasestorage.googleapis.com/v0/b/saferoute-f90f8.firebasestorage.app/o/productos%2Fmouse_inal_mbrico_pro_chaos_10_stylize_230.jpeg?alt=media&token=2fcc12f7-d8b9-44ba-98a5-e9069cadf5f9', 'ACTIVO'),
+    ('Mini Proyector LED', 'Electrónicos', 'Proyector portátil HD compatible con HDMI y USB', 550000, 380000, 'https://firebasestorage.googleapis.com/v0/b/saferoute-f90f8.firebasestorage.app/o/productos%2Fmini_proyector_led_chaos_10_stylize_230.jpeg?alt=media&token=9e49ede2-9ab7-456e-88d3-9b5548110c46', 'ACTIVO'),
+    ('Balanza Digital Portátil', 'Hogar', 'Báscula precisa para maletas y paquetes', 85000, 50000, 'https://firebasestorage.googleapis.com/v0/b/saferoute-f90f8.firebasestorage.app/o/productos%2Funa_balanza_digital_port_til_stylize_90.jpeg?alt=media&token=c53721e1-60a5-447f-aded-1d520185d138', 'ACTIVO'),
+    ('Altavoz Bluetooth Portátil', 'Electrónicos', 'Altavoz resistente al agua con sonido envolvente', 200000, 130000, 'https://firebasestorage.googleapis.com/v0/b/saferoute-f90f8.firebasestorage.app/o/productos%2Faltavoz_bluetooth_port_til_stylize_90.jpeg?alt=media&token=378b75cf-c78e-42a2-a880-51822ac93867', 'ACTIVO');
 
 -- ======================================================
 -- FIN DE INSERCIONES INICIALES
