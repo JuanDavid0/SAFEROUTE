@@ -70,7 +70,6 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({
                             <p>Usted tiene derecho a:</p>
                             <ul>
                                 <li><strong>Conocer, actualizar y rectificar</strong> sus datos personales</li>
-                                <li><strong>Solicitar prueba</strong> de la autorización otorgada</li>
                                 <li><strong>Ser informado</strong> sobre el uso que se ha dado a sus datos</li>
                                 <li><strong>Revocar la autorización</strong> y/o solicitar la supresión de datos</li>
                                 <li><strong>Presentar quejas</strong> ante la Superintendencia de Industria y Comercio</li>
@@ -85,7 +84,6 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({
                                 <li>Autenticación mediante JWT y OTP</li>
                                 <li>Control de acceso basado en roles (RBAC)</li>
                                 <li>Auditoría y registro de operaciones críticas</li>
-                                <li>Respaldos periódicos de la base de datos</li>
                             </ul>
 
                             <h4>6. Tiempo de Retención</h4>

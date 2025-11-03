@@ -15,7 +15,7 @@ public class Log {
     @JoinColumn(name = "id_usuario", nullable = false)
     private Usuario usuario;
 
-    @Column(nullable = false, length = 50)
+    @Column(nullable = false, length = 255)
     private String accion;
 
     @Column(nullable = false)
