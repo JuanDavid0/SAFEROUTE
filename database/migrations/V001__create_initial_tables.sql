@@ -87,7 +87,7 @@ CREATE TABLE SOLICITUD (
     fecha_solicitud DATE NOT NULL DEFAULT CURRENT_DATE,
     estado_solicitud ESTADO_SOLICITUD_DOM DEFAULT 'PDP',
     direccion_entrega VARCHAR(255) NOT NULL DEFAULT '',
-    modificaciones_restantes INTEGER NOT NULL DEFAULT 3,
+    modificaciones_restantes INTEGER NOT NULL DEFAULT 2,
     CONSTRAINT SOL_FK_ID_CLI FOREIGN KEY (id_cliente)
         REFERENCES USUARIO(id_usuario),
     CONSTRAINT SOL_FK_ID_PED FOREIGN KEY (id_pedido)

@@ -4,19 +4,12 @@
 
 // Estados de Solicitud
 export const ESTADOS_SOLICITUD = {
-  PND: 'Pendiente de pago',
+  PDP: 'Pendiente de pago',
   PGD: 'Pagado',
   ENT: 'Entregado',
   CAN: 'Cancelado',
 } as const;
 
-// Estados de Pedido
-export const ESTADOS_PEDIDO = {
-  AGP: 'Aguardando pago',
-  CSL: 'Consolidado',
-  FNL: 'Finalizado',
-  CRM: 'Con remisión',
-} as const;
 
 // Roles
 export const ROLES = {
@@ -25,18 +18,6 @@ export const ROLES = {
   SAD: 'Super Administrador',
 } as const;
 
-// Tipos de Producto
-export const TIPOS_PRODUCTO = [
-  'Granos',
-  'Lácteos',
-  'Carnes',
-  'Frutas',
-  'Verduras',
-  'Abarrotes',
-  'Bebidas',
-  'Aseo',
-  'Otros',
-] as const;
 
 // Validaciones
 export const VALIDACIONES = {

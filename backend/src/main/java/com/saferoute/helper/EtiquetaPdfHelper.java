@@ -29,6 +29,7 @@ public class EtiquetaPdfHelper {
         cell.add(crearLineaSeparadora());
         cell.add(crearCampoCliente(etiqueta.getNombreCliente()));
         cell.add(crearCampoDireccion(etiqueta.getDireccion()));
+        cell.add(crearCampoCedula(etiqueta.getCedula()));
         cell.add(crearCampoContacto(etiqueta.getTelefono()));
 
         return cell;
@@ -91,6 +92,16 @@ public class EtiquetaPdfHelper {
                         .setBold()
                         .setFontSize(EtiquetaConstants.FONT_SIZE_LABEL))
                 .add(new Paragraph(direccion)
+                        .setFontSize(EtiquetaConstants.FONT_SIZE_TEXTO))
+                .setMarginBottom(EtiquetaConstants.MARGEN_BOTTOM_CAMPO);
+    }
+
+    private Paragraph crearCampoCedula(String cedula) {
+        return new Paragraph()
+                .add(new Paragraph(EtiquetaConstants.TEXTO_CEDULA)
+                        .setBold()
+                        .setFontSize(EtiquetaConstants.FONT_SIZE_LABEL))
+                .add(new Paragraph(cedula)
                         .setFontSize(EtiquetaConstants.FONT_SIZE_TEXTO))
                 .setMarginBottom(EtiquetaConstants.MARGEN_BOTTOM_CAMPO);
     }

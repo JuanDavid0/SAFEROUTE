@@ -67,11 +67,16 @@ public class EtiquetaServiceImpl implements IEtiquetaService {
     private List<Solicitud> obtenerSolicitudesPedido(Pedido pedido) {
         List<Solicitud> solicitudes = solicitudRepository.findByPedido(pedido);
 
-        if (solicitudes.isEmpty()) {
+        // Filtrar solo solicitudes pagadas (PGD)
+        List<Solicitud> solicitudesPagadas = solicitudes.stream()
+                .filter(s -> s.getEstadoSolicitud() == com.saferoute.model.enums.EstadoSolicitudEnum.PGD)
+                .toList();
+
+        if (solicitudesPagadas.isEmpty()) {
             throw new EtiquetaBusinessException(EtiquetaConstants.ERROR_PEDIDO_SIN_SOLICITUDES);
         }
 
-        return solicitudes;
+        return solicitudesPagadas;
     }
 
     private List<EtiquetaDTO> construirEtiquetas(List<Solicitud> solicitudes, Integer idPedido) {
@@ -95,6 +100,7 @@ public class EtiquetaServiceImpl implements IEtiquetaService {
                 .nombreCliente(construirNombreCompleto(solicitud))
                 .direccion(solicitud.getDireccionEntrega())
                 .telefono(solicitud.getCliente().getTelefono())
+                .cedula(solicitud.getCliente().getCedula())
                 .numeroEtiqueta(numeroEtiqueta)
                 .totalEtiquetas(totalEtiquetas)
                 .build();

@@ -458,6 +458,7 @@ public class SolicitudServiceImpl implements ISolicitudService {
     private SolicitudProductoDTO mapSolicitudProductoToDTO(SolicitudProducto sp) {
         SolicitudProductoDTO spDTO = new SolicitudProductoDTO();
         spDTO.setIdProducto(sp.getProducto().getIdProducto());
+        spDTO.setNombreProducto(sp.getProducto().getNombreProducto());
         spDTO.setCantidadSolicitada(sp.getCantidadSolicitada());
         spDTO.setPrecio(sp.getPrecio().multiply(java.math.BigDecimal.valueOf(sp.getCantidadSolicitada())));
         return spDTO;

@@ -29,6 +29,7 @@ public final class EtiquetaConstants {
     public static final String TEXTO_SEPARADOR = "━━━━━━━━━━━━━━━━━━━━━━";
     public static final String TEXTO_CLIENTE = "Cliente:";
     public static final String TEXTO_DIRECCION = "Dirección:";
+    public static final String TEXTO_CEDULA = "Cédula:";
     public static final String TEXTO_CONTACTO = "Contacto:";
     public static final String TEXTO_NUMERO_ETIQUETA = "Etiqueta %d de %d";
 

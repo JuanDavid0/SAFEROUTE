@@ -1894,6 +1894,36 @@ p,
   cursor: not-allowed;
 }
 
+/* Alertas de validación de cantidad */
+.cantidad-alerta {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cantidad-alerta-error {
+  background-color: #fee;
+  color: #c33;
+  border-left: 4px solid var(--rojo-intenso);
+}
+
+.cantidad-alerta-success {
+  background-color: #efe;
+  color: #363;
+  border-left: 4px solid var(--verde-suave);
+}
+
+.producto-rango {
+  color: var(--gris-medio);
+  font-size: 14px;
+  margin-top: 4px;
+}
+
 @media (max-width: 768px) {
   .agregar-producto-form {
     grid-template-columns: 1fr;

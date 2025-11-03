@@ -14,6 +14,7 @@ import {
     agregarProductoASolicitud,
     actualizarCantidadProducto,
     eliminarProductoDeSolicitud,
+    obtenerMisSolicitudes,
     type SolicitudCliente,
     type ProductoSolicitud,
 } from '@/services/solicitudClienteService';
@@ -43,6 +44,9 @@ export default function EditarSolicitudPage() {
 
     // Productos del pedido (IDs permitidos)
     const [productosPedido, setProductosPedido] = useState<number[]>([]);
+
+    // Restricciones de cantidad por producto (cantidadMin y cantidadMax)
+    const [restriccionesCantidad, setRestriccionesCantidad] = useState<Map<number, { cantidadMin: number; cantidadMax: number | null }>>(new Map());
 
     // Productos disponibles para agregar
     const [productosDisponibles, setProductosDisponibles] = useState<Producto[]>([]);
@@ -104,14 +108,8 @@ export default function EditarSolicitudPage() {
         }
         setTokenOtp(token);
 
-        // Recuperar datos de la solicitud de sessionStorage
-        const solicitudData = sessionStorage.getItem('solicitudEditar');
-        if (solicitudData) {
-            const solicitud: SolicitudCliente = JSON.parse(solicitudData);
-            setDireccion(solicitud.direccionEntrega);
-            setProductosActuales(solicitud.productos);
-            setModificacionesRestantes(solicitud.modificacionesRestantes);
-        }
+        // Cargar datos actuales de la solicitud desde el backend
+        cargarSolicitudActual(token);
     }, []);
 
     useEffect(() => {
@@ -125,6 +123,29 @@ export default function EditarSolicitudPage() {
     // ===========================
 
     /**
+     * Cargar datos actuales de la solicitud desde el backend
+     */
+    const cargarSolicitudActual = async (token: string) => {
+        try {
+            setCargando(true);
+            // Obtener la solicitud actualizada del backend
+            const response = await obtenerMisSolicitudes(hashPedido, token);
+            const solicitudActual = response.data.find((s: SolicitudCliente) => s.idSolicitud === idSolicitud);
+
+            if (solicitudActual) {
+                setDireccion(solicitudActual.direccionEntrega);
+                setProductosActuales(solicitudActual.productos);
+                setModificacionesRestantes(solicitudActual.modificacionesRestantes);
+            }
+        } catch (error) {
+            const errorInfo = extractErrorInfo(error);
+            showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
+        } finally {
+            setCargando(false);
+        }
+    };
+
+    /**
      * Cargar productos disponibles del pedido
      */
     const cargarProductosDisponibles = async () => {
@@ -134,12 +155,22 @@ export default function EditarSolicitudPage() {
             const idsProductosPedido = pedidoData.data.productos.map((p: any) => p.idProducto);
             setProductosPedido(idsProductosPedido);
 
-            // 2. Obtener los productos del catálogo usando método público
+            // 2. Guardar restricciones de cantidad (cantidadMin y cantidadMax)
+            const restricciones = new Map<number, { cantidadMin: number; cantidadMax: number | null }>();
+            pedidoData.data.productos.forEach((p: any) => {
+                restricciones.set(p.idProducto, {
+                    cantidadMin: p.cantidadMin,
+                    cantidadMax: p.cantidadMax
+                });
+            });
+            setRestriccionesCantidad(restricciones);
+
+            // 3. Obtener los productos del catálogo usando método público
             const productosDelPedido = await obtenerProductosPorIdsPublico(idsProductosPedido);
 
             setProductosDisponibles(productosDelPedido);
 
-            // 3. Enriquecer los productos actuales con los nombres completos
+            // 4. Enriquecer los productos actuales con los nombres completos
             setProductosActuales(prevProductos =>
                 prevProductos.map(prodActual => {
                     const prodCompleto = productosDelPedido.find((p: Producto) => p.idProducto === prodActual.idProducto);
@@ -188,8 +219,29 @@ export default function EditarSolicitudPage() {
     const handleActualizarCantidad = async (idProducto: number, nuevaCantidad: number) => {
         if (!tokenOtp) return;
 
-        if (nuevaCantidad < 1) {
-            showError('Cantidad Inválida', 'La cantidad debe ser al menos 1');
+        // Obtener restricciones de cantidad para el producto
+        const restricciones = restriccionesCantidad.get(idProducto);
+
+        if (!restricciones) {
+            showError('Error', 'No se encontraron restricciones para este producto');
+            return;
+        }
+
+        // Validar cantidad mínima
+        if (nuevaCantidad < restricciones.cantidadMin) {
+            showError(
+                'Cantidad Insuficiente',
+                `La cantidad debe ser al menos ${restricciones.cantidadMin}`
+            );
+            return;
+        }
+
+        // Validar cantidad máxima (solo si existe)
+        if (restricciones.cantidadMax !== null && nuevaCantidad > restricciones.cantidadMax) {
+            showError(
+                'Cantidad Excedida',
+                `La cantidad no puede exceder ${restricciones.cantidadMax}`
+            );
             return;
         }
 
@@ -226,8 +278,29 @@ export default function EditarSolicitudPage() {
     const handleAgregarProducto = async () => {
         if (!tokenOtp || !productoSeleccionado) return;
 
-        if (cantidadNueva < 1) {
-            showError('Cantidad Inválida', 'La cantidad debe ser al menos 1');
+        // Obtener restricciones de cantidad para el producto seleccionado
+        const restricciones = restriccionesCantidad.get(productoSeleccionado);
+
+        if (!restricciones) {
+            showError('Error', 'No se encontraron restricciones para este producto');
+            return;
+        }
+
+        // Validar cantidad mínima
+        if (cantidadNueva < restricciones.cantidadMin) {
+            showError(
+                'Cantidad Insuficiente',
+                `La cantidad debe ser al menos ${restricciones.cantidadMin}`
+            );
+            return;
+        }
+
+        // Validar cantidad máxima (solo si existe)
+        if (restricciones.cantidadMax !== null && cantidadNueva > restricciones.cantidadMax) {
+            showError(
+                'Cantidad Excedida',
+                `La cantidad no puede exceder ${restricciones.cantidadMax}`
+            );
             return;
         }
 
@@ -416,39 +489,107 @@ export default function EditarSolicitudPage() {
                 {/* Formulario para agregar producto */}
                 {mostrarAgregarProducto && (
                     <div className="agregar-producto-form">
-                        <div className="form-row">
-                            <div className="form-group">
-                                <label className="form-label">Producto</label>
-                                <select
-                                    className="form-input"
-                                    value={productoSeleccionado || ''}
-                                    onChange={(e) => setProductoSeleccionado(parseInt(e.target.value))}
-                                >
-                                    <option value="">Selecciona un producto</option>
-                                    {productosParaAgregar.map((producto) => (
-                                        <option key={producto.idProducto} value={producto.idProducto}>
-                                            {producto.nombreProducto} - ${producto.precioUnitario.toLocaleString()}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
+                        {/* Selección de Producto */}
+                        <div className="form-group">
+                            <label className="form-label">Producto</label>
+                            <select
+                                className="form-input"
+                                value={productoSeleccionado || ''}
+                                onChange={(e) => {
+                                    setProductoSeleccionado(parseInt(e.target.value));
+                                    setCantidadNueva(1); // Reset cantidad al cambiar producto
+                                }}
+                            >
+                                <option value="">Selecciona un producto</option>
+                                {productosParaAgregar.map((producto) => (
+                                    <option key={producto.idProducto} value={producto.idProducto}>
+                                        {producto.nombreProducto} - ${producto.precioUnitario.toLocaleString()}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
 
-                            <div className="form-group">
-                                <label className="form-label">Cantidad</label>
-                                <input
-                                    type="number"
-                                    className="form-input"
-                                    value={cantidadNueva}
-                                    onChange={(e) => setCantidadNueva(parseInt(e.target.value) || 1)}
-                                    min="1"
-                                />
-                            </div>
+                        {/* Mostrar imagen y detalles del producto seleccionado */}
+                        {productoSeleccionado && (() => {
+                            const producto = productosDisponibles.find(p => p.idProducto === productoSeleccionado);
+                            const restricciones = restriccionesCantidad.get(productoSeleccionado);
+                            
+                            return producto ? (
+                                <div className="producto-preview">
+                                    {producto.urlImagen && (
+                                        <img 
+                                            src={producto.urlImagen} 
+                                            alt={producto.nombreProducto}
+                                            className="producto-imagen-preview"
+                                        />
+                                    )}
+                                    <div className="producto-info-preview">
+                                        <p><strong>{producto.nombreProducto}</strong></p>
+                                        <p>{producto.descripcionProducto}</p>
+                                        <p className="producto-precio">${producto.precioUnitario.toLocaleString()}</p>
+                                        {restricciones && (
+                                            <p className="producto-rango">
+                                                📦 Cantidad: {restricciones.cantidadMin}
+                                                {restricciones.cantidadMax !== null ? ` - ${restricciones.cantidadMax}` : '+'} unidades
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : null;
+                        })()}
+
+                        {/* Campo de cantidad */}
+                        <div className="form-group">
+                            <label className="form-label">Cantidad</label>
+                            <input
+                                type="text"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                className="form-input"
+                                value={cantidadNueva}
+                                onChange={(e) => {
+                                    const valor = e.target.value.replace(/\D/g, '');
+                                    setCantidadNueva(valor ? parseInt(valor) : 0);
+                                }}
+                                placeholder="Ingresa la cantidad"
+                            />
+                            {productoSeleccionado && (() => {
+                                const restricciones = restriccionesCantidad.get(productoSeleccionado);
+                                if (!restricciones) return null;
+                                
+                                // Mostrar alerta si la cantidad es inválida
+                                if (cantidadNueva < restricciones.cantidadMin) {
+                                    return (
+                                        <div className="cantidad-alerta cantidad-alerta-error">
+                                            ⚠️ La cantidad debe ser al menos {restricciones.cantidadMin}
+                                        </div>
+                                    );
+                                }
+                                if (restricciones.cantidadMax !== null && cantidadNueva > restricciones.cantidadMax) {
+                                    return (
+                                        <div className="cantidad-alerta cantidad-alerta-error">
+                                            ⚠️ La cantidad no puede exceder {restricciones.cantidadMax}
+                                        </div>
+                                    );
+                                }
+                                
+                                // Mostrar mensaje de éxito si la cantidad es válida
+                                if (cantidadNueva >= restricciones.cantidadMin) {
+                                    return (
+                                        <div className="cantidad-alerta cantidad-alerta-success">
+                                            ✅ Cantidad válida
+                                        </div>
+                                    );
+                                }
+                                
+                                return null;
+                            })()}
                         </div>
 
                         <button
                             className="btn-confirmar-agregar"
                             onClick={handleAgregarProducto}
-                            disabled={!productoSeleccionado || guardando}
+                            disabled={!productoSeleccionado || cantidadNueva < 1 || guardando}
                         >
                             {guardando ? '⏳ Agregando...' : '✅ Confirmar'}
                         </button>

@@ -19,6 +19,7 @@ public class EtiquetaDTO {
     private String nombreCliente;
     private String direccion;
     private String telefono;
+    private String cedula;
     private Integer numeroEtiqueta;
     private Integer totalEtiquetas;
 }

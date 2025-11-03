@@ -36,7 +36,7 @@ public class Solicitud {
     private String direccionEntrega;
 
     @Column(nullable = false)
-    private Integer modificacionesRestantes = 3;
+    private Integer modificacionesRestantes = 2;
 
     // Getters y setters
     public Integer getIdSolicitud() {
