@@ -44,6 +44,8 @@ export interface CrearSolicitudPublicaRequest {
 	direccion: string;
 	idPedido: number;
 	productos: SolicitudProductoDTO[];
+	aceptaPoliticas: boolean;
+	aceptaTerminos: boolean;
 }
 
 /**

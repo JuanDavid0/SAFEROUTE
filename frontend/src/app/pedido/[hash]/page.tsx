@@ -12,7 +12,7 @@ import { extractErrorInfo } from '@/utils/errorHandler';
 import solicitudPublicaService from '@/services/solicitudPublicaService';
 import { obtenerProductoPorIdPublico } from '@/services/productosService';
 import type { Producto, SolicitudProductoDTO } from '@/types';
-import { Loading } from '@/components/ui';
+import { Loading, PrivacyPolicyModal } from '@/components/ui';
 
 interface ProductoConInfo {
     idProducto: number;
@@ -41,6 +41,11 @@ export default function PedidoPublicoPage() {
     // Modal de selección inicial
     const [mostrarModalInicial, setMostrarModalInicial] = useState(true);
     const [modoVista, setModoVista] = useState<'crear' | 'editar' | null>(null);
+
+    // Modal de políticas de privacidad
+    const [mostrarModalPrivacidad, setMostrarModalPrivacidad] = useState(false);
+    const [aceptaPoliticas, setAceptaPoliticas] = useState(false);
+    const [aceptaTerminos, setAceptaTerminos] = useState(false);
 
     // Datos del cliente
     const [cedula, setCedula] = useState('');
@@ -219,10 +224,39 @@ export default function PedidoPublicoPage() {
     };
 
     /**
-     * Crear solicitud
+     * Abrir modal de políticas de privacidad antes de crear solicitud
      */
-    const crearSolicitud = async () => {
-        if (!validarFormulario() || !idPedido) return;
+    const iniciarCreacionSolicitud = () => {
+        if (!validarFormulario()) return;
+        
+        // Abrir modal de políticas de privacidad
+        setMostrarModalPrivacidad(true);
+    };
+
+    /**
+     * Manejar aceptación de políticas y crear solicitud
+     */
+    const manejarAceptacionPoliticas = (politicas: boolean, terminos: boolean) => {
+        setAceptaPoliticas(politicas);
+        setAceptaTerminos(terminos);
+        setMostrarModalPrivacidad(false);
+
+        // Si ambos están aceptados, crear la solicitud
+        if (politicas && terminos) {
+            crearSolicitud(politicas, terminos);
+        } else {
+            showError(
+                'Consentimiento Requerido',
+                'Debe aceptar las Políticas de Privacidad y los Términos y Condiciones para continuar'
+            );
+        }
+    };
+
+    /**
+     * Crear solicitud con los consentimientos
+     */
+    const crearSolicitud = async (politicas: boolean, terminos: boolean) => {
+        if (!idPedido) return;
 
         try {
             setEnviando(true);
@@ -240,6 +274,8 @@ export default function PedidoPublicoPage() {
                 direccion: direccion.trim(),
                 idPedido,
                 productos: productosParaEnviar,
+                aceptaPoliticas: politicas,
+                aceptaTerminos: terminos,
             });
 
             // Verificar si la solicitud fue exitosa
@@ -586,7 +622,7 @@ export default function PedidoPublicoPage() {
                     <div className="acciones-finales">
                         <button
                             className="btn-crear-solicitud"
-                            onClick={crearSolicitud}
+                            onClick={iniciarCreacionSolicitud}
                             disabled={enviando}
                         >
                             {enviando ? '⏳ Creando solicitud...' : '✅ Crear Solicitud'}
@@ -594,6 +630,13 @@ export default function PedidoPublicoPage() {
                     </div>
                 </div>
             )}
+
+            {/* Modal de Políticas de Privacidad */}
+            <PrivacyPolicyModal
+                isOpen={mostrarModalPrivacidad}
+                onClose={() => setMostrarModalPrivacidad(false)}
+                onAccept={manejarAceptacionPoliticas}
+            />
         </div>
     );
 }

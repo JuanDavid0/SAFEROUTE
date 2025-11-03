@@ -19,3 +19,5 @@ export type { ToastProps, ToastType, ToastPosition } from './Toast';
 
 export { ToastProvider, useToast } from './ToastContainer';
 export type { ToastItem, ToastContextType, ToastProviderProps } from './ToastContainer';
+
+export { PrivacyPolicyModal } from './PrivacyPolicyModal';
