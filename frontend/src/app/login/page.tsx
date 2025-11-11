@@ -212,6 +212,7 @@ export default function LoginPage() {
                             required
                             fullWidth
                             maxLength={10}
+                            minLength={8}
                             disabled={isLoading}
                         />
 

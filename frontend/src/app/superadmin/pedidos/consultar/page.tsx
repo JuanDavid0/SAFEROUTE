@@ -299,15 +299,15 @@ export default function ConsultarSolicitudesPage() {
                                                     <span className="value">{solicitud.fechaSolicitud}</span>
                                                 </div>
                                                 <div className="info-item">
-                                                    <span className="label">⏰ Límite de Pago:</span>
+                                                    <span className="label">Límite de Pago:</span>
                                                     <span className="value">{solicitud.fechaLimitePago}</span>
                                                 </div>
                                                 <div className="info-item">
-                                                    <span className="label">📦 Productos:</span>
+                                                    <span className="label">Productos:</span>
                                                     <span className="value">{solicitud.productos.length}</span>
                                                 </div>
                                                 <div className="info-item">
-                                                    <span className="label">💰 Total:</span>
+                                                    <span className="label">Total:</span>
                                                     <span className="value total-precio">
                                                         ${calcularTotalSolicitud(solicitud).toLocaleString()}
                                                     </span>
@@ -320,7 +320,7 @@ export default function ConsultarSolicitudesPage() {
                                                 onClick={() => handleVerDetalles(solicitud)}
                                                 className="btn-sm btn-secondary"
                                             >
-                                                📋 Ver Detalles
+                                                Ver Detalles
                                             </button>
 
                                             {solicitud.estadoSolicitud === 'PDP' && (

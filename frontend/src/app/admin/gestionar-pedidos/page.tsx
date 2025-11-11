@@ -403,7 +403,7 @@ export default function GestionarPedidosPage() {
                                                             disabled={cargando}
                                                             title="Consolidar pedido"
                                                         >
-                                                            📦 Consolidar
+                                                            Consolidar
                                                         </button>
                                                     )}
 
@@ -415,7 +415,7 @@ export default function GestionarPedidosPage() {
                                                             disabled={cargando}
                                                             title="Actualizar estado"
                                                         >
-                                                            🔄 Estado
+                                                             Estado
                                                         </button>
                                                     )}
 

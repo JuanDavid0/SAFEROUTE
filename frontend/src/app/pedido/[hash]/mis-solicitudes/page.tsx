@@ -115,8 +115,8 @@ export default function MisSolicitudesPage() {
      * Solicitar código OTP
      */
     const handleSolicitarOtp = async () => {
-        if (!cedula || cedula.length !== 10) {
-            showError('Cédula Inválida', 'Ingresa una cédula válida de 10 dígitos');
+        if (!cedula || cedula.length < 8 || cedula.length > 10) {
+            showError('Cédula Inválida', 'Ingresa una cédula válida de 8 a 10 dígitos');
             return;
         }
 
@@ -132,7 +132,7 @@ export default function MisSolicitudesPage() {
                 showError('Error al Enviar', response.data.mensaje);
             }
         } catch (error: any) {
-            console.error('❌ Error al solicitar OTP:', error);
+            console.error('Error al solicitar OTP:', error);
             const errorInfo = extractErrorInfo(error);
             showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
@@ -343,7 +343,7 @@ export default function MisSolicitudesPage() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                         <h1 className="solicitud-publica-titulo">
-                            {autenticado ? '📋 Mis Solicitudes' : '🔐 Acceso a Solicitudes'}
+                            {autenticado ? 'Mis Solicitudes' : ' Acceso a Solicitudes'}
                         </h1>
                         <p className="solicitud-publica-descripcion">
                             {autenticado
@@ -370,7 +370,7 @@ export default function MisSolicitudesPage() {
             {!autenticado && (
                 <div className="otp-card">
                     <div className="otp-header">
-                        <h2 className="otp-titulo">🔑 Verificación de Identidad</h2>
+                        <h2 className="otp-titulo"> Verificación de Identidad</h2>
                         <p className="otp-subtitulo">
                             {!otpSolicitado
                                 ? 'Ingresa tu cédula para recibir un código de verificación'
@@ -390,19 +390,20 @@ export default function MisSolicitudesPage() {
                                         type="text"
                                         id="cedula"
                                         className="otp-input"
-                                        placeholder="1234567890"
+                                        placeholder="12345678"
                                         value={cedula}
                                         onChange={(e) =>
                                             setCedula(e.target.value.replace(/\D/g, '').slice(0, 10))
                                         }
                                         maxLength={10}
+                                        minLength={8}
                                         disabled={cargando}
                                     />
                                 </div>
                                 <button
                                     className="otp-btn primary"
                                     onClick={handleSolicitarOtp}
-                                    disabled={cargando || cedula.length !== 10}
+                                    disabled={cargando || cedula.length < 8 || cedula.length > 10}
                                 >
                                     {cargando ? (
                                         <>⏳ Enviando...</>
@@ -423,7 +424,7 @@ export default function MisSolicitudesPage() {
                                 )}
 
                                 <div className="otp-intentos">
-                                    🔢 Intentos restantes: <strong>{intentosRestantes}</strong>
+                                     Intentos restantes: <strong>{intentosRestantes}</strong>
                                 </div>
 
                                 <div className="otp-form-group">
@@ -451,9 +452,9 @@ export default function MisSolicitudesPage() {
                                     disabled={cargando || codigoOtp.length !== 6 || tiempoRestante === 0}
                                 >
                                     {cargando ? (
-                                        <>⏳ Verificando...</>
+                                        <>Verificando...</>
                                     ) : (
-                                        <>✅ Verificar Código</>
+                                        <>Verificar Código</>
                                     )}
                                 </button>
 
@@ -466,7 +467,7 @@ export default function MisSolicitudesPage() {
                                     }}
                                     disabled={cargando}
                                 >
-                                    🔄 Solicitar Nuevo Código
+                                    Solicitar Nuevo Código
                                 </button>
                             </>
                         )}
@@ -489,7 +490,7 @@ export default function MisSolicitudesPage() {
             {autenticado && (
                 <div className="solicitud-seccion">
                     <div className="seccion-header">
-                        <h2 className="seccion-titulo">📦 Tus Solicitudes</h2>
+                        <h2 className="seccion-titulo">Tus Solicitudes</h2>
                         <p className="seccion-descripcion">
                             {solicitudes.length > 0
                                 ? `Tienes ${solicitudes.length} solicitud(es) registrada(s)`
@@ -549,7 +550,7 @@ export default function MisSolicitudesPage() {
                                         </div>
 
                                         <div className="solicitud-info-item">
-                                            <span className="info-label">🔄 Modificaciones restantes:</span>
+                                            <span className="info-label"> Modificaciones restantes:</span>
                                             <span className="info-valor">
                                                 {solicitud.modificacionesRestantes}
                                             </span>
@@ -564,7 +565,7 @@ export default function MisSolicitudesPage() {
 
                                         {/* Productos */}
                                         <div className="solicitud-productos">
-                                            <strong className="productos-titulo">📦 Productos:</strong>
+                                            <strong className="productos-titulo">Productos:</strong>
                                             <ul className="productos-lista">
                                                 {solicitud.productos.map((producto) => (
                                                     <li key={producto.idProducto} className="producto-item">
@@ -587,13 +588,13 @@ export default function MisSolicitudesPage() {
                                                 className="btn-editar-solicitud"
                                                 onClick={() => handleEditarSolicitud(solicitud)}
                                             >
-                                                ✏️ Modificar
+                                                Modificar
                                             </button>
                                             <button
                                                 className="btn-cancelar-solicitud"
                                                 onClick={() => confirmarCancelar(solicitud.idSolicitud)}
                                             >
-                                                ❌ Cancelar
+                                                Cancelar
                                             </button>
                                         </div>
                                     )}

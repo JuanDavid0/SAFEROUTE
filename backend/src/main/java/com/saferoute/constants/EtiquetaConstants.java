@@ -12,7 +12,7 @@ public final class EtiquetaConstants {
     }
 
     // ========== MENSAJES DE LOG ==========
-    public static final String LOG_GENERANDO_ETIQUETAS_JSON = "🏷️ Generando etiquetas JSON para pedido ID: {}";
+    public static final String LOG_GENERANDO_ETIQUETAS_JSON = " Generando etiquetas JSON para pedido ID: {}";
     public static final String LOG_ETIQUETAS_GENERADAS = " Generadas {} etiquetas para pedido #{}";
     public static final String LOG_GENERANDO_ETIQUETAS_PDF = "📄 Generando PDF de etiquetas para pedido ID: {}";
     public static final String LOG_PDF_GENERADO = " PDF de etiquetas generado exitosamente - {} bytes";

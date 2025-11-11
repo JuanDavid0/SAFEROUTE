@@ -31,16 +31,16 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({
         <div className="modal-overlay">
             <div className="modal-container modal-privacidad">
                 <div className="modal-header">
-                    <h2 className="modal-titulo">🔒 Políticas de Privacidad y Términos</h2>
+                    <h2 className="modal-titulo">Políticas de Privacidad y Términos</h2>
                     <button onClick={onClose} className="modal-close-btn">
-                        ✕
+                        ×
                     </button>
                 </div>
 
                 <div className="modal-body modal-scrollable">
                     {/* Políticas de Privacidad */}
                     <section className="privacy-section">
-                        <h3 className="privacy-title">📋 Políticas de Privacidad</h3>
+                        <h3 className="privacy-title">Políticas de Privacidad</h3>
                         
                         <div className="privacy-content">
                             <h4>1. Marco Legal</h4>
@@ -106,7 +106,7 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({
 
                     {/* Términos y Condiciones */}
                     <section className="privacy-section">
-                        <h3 className="privacy-title">📜 Términos y Condiciones</h3>
+                        <h3 className="privacy-title">Términos y Condiciones</h3>
                         
                         <div className="privacy-content">
                             <h4>1. Uso del Servicio</h4>

@@ -12,7 +12,7 @@ public final class ConsolidacionConstants {
     // ========== MENSAJES DE LOG ==========
     public static final String LOG_CONSOLIDANDO_PEDIDO = "📦 Consolidando pedido ID: {}";
     public static final String LOG_PEDIDO_CONSOLIDADO = " Pedido consolidado exitosamente - ID: {}, Total solicitudes: {}, Monto total: {}";
-    public static final String LOG_CAMBIO_ESTADO_PEDIDO = "🔄 Cambio de estado del pedido {} de {} a {}";
+    public static final String LOG_CAMBIO_ESTADO_PEDIDO = " Cambio de estado del pedido {} de {} a {}";
 
     // ========== MENSAJES DE ERROR ==========
     public static final String ERROR_PEDIDO_NO_ENCONTRADO = "Pedido no encontrado";

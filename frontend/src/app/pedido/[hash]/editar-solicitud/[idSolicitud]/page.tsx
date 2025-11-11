@@ -398,7 +398,7 @@ export default function EditarSolicitudPage() {
         <div className="solicitud-publica-container">
             {/* Header */}
             <div className="solicitud-publica-header">
-                <h1 className="solicitud-publica-titulo">✏️ Editar Solicitud #{idSolicitud}</h1>
+                <h1 className="solicitud-publica-titulo"> Editar Solicitud #{idSolicitud}</h1>
                 <p className="solicitud-publica-descripcion">
                     Modificaciones restantes: <strong>{modificacionesRestantes}</strong>
                 </p>
@@ -420,29 +420,7 @@ export default function EditarSolicitudPage() {
                 </button>
             </div>
 
-            {/* Mensajes */}
-            {/* Los mensajes ahora se muestran mediante el Toast system */}
-
-            {/* Información de ayuda */}
-            <div className="info-ayuda" style={{
-                background: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
-                padding: '16px',
-                borderRadius: '8px',
-                marginBottom: '24px',
-                border: '2px solid #2196f3',
-            }}>
-                <h3 style={{ margin: '0 0 8px 0', color: '#1976d2', fontSize: '16px' }}>
-                    ℹ️ Cómo editar tu solicitud:
-                </h3>
-                <ul style={{ margin: '0', paddingLeft: '20px', lineHeight: '1.8' }}>
-                    <ul style={{ margin: '0', paddingLeft: '20px', lineHeight: '1.8' }}>
-                        <li><strong>Cantidades:</strong> Modifica la cantidad y presiona Enter o haz clic fuera del campo para guardar automáticamente</li>
-                        <li><strong>Dirección:</strong> Actualiza la dirección y haz clic en {`"💾 Guardar Dirección"`}</li>
-                        <li><strong>Agregar productos:</strong> Usa el botón {`"➕ Agregar Producto"`}</li>
-                        <li><strong>Eliminar productos:</strong> Haz clic en el icono 🗑️</li>
-                    </ul>
-                </ul>
-            </div>
+        
 
             {/* Sección: Modificar Dirección */}
             <div className="solicitud-seccion">
@@ -469,20 +447,20 @@ export default function EditarSolicitudPage() {
                     onClick={handleGuardarDireccion}
                     disabled={guardando || modificacionesRestantes === 0}
                 >
-                    {guardando ? '⏳ Guardando...' : '💾 Guardar Dirección'}
+                    {guardando ? 'Guardando...' : 'Guardar Dirección'}
                 </button>
             </div>
 
             {/* Sección: Productos Actuales */}
             <div className="solicitud-seccion">
                 <div className="seccion-header">
-                    <h2 className="seccion-titulo">📦 Productos de la Solicitud</h2>
+                    <h2 className="seccion-titulo">Productos de la Solicitud</h2>
                     <button
                         className="btn-agregar-producto-header"
                         onClick={() => setMostrarAgregarProducto(!mostrarAgregarProducto)}
                         disabled={modificacionesRestantes === 0 || productosParaAgregar.length === 0}
                     >
-                        {mostrarAgregarProducto ? '✖️ Cancelar' : '➕ Agregar Producto'}
+                        {mostrarAgregarProducto ? 'Cancelar' : 'Agregar Producto'}
                     </button>
                 </div>
 
@@ -529,7 +507,7 @@ export default function EditarSolicitudPage() {
                                         <p className="producto-precio">${producto.precioUnitario.toLocaleString()}</p>
                                         {restricciones && (
                                             <p className="producto-rango">
-                                                📦 Cantidad: {restricciones.cantidadMin}
+                                                Cantidad: {restricciones.cantidadMin}
                                                 {restricciones.cantidadMax !== null ? ` - ${restricciones.cantidadMax}` : '+'} unidades
                                             </p>
                                         )}
@@ -561,14 +539,14 @@ export default function EditarSolicitudPage() {
                                 if (cantidadNueva < restricciones.cantidadMin) {
                                     return (
                                         <div className="cantidad-alerta cantidad-alerta-error">
-                                            ⚠️ La cantidad debe ser al menos {restricciones.cantidadMin}
+                                            La cantidad debe ser al menos {restricciones.cantidadMin}
                                         </div>
                                     );
                                 }
                                 if (restricciones.cantidadMax !== null && cantidadNueva > restricciones.cantidadMax) {
                                     return (
                                         <div className="cantidad-alerta cantidad-alerta-error">
-                                            ⚠️ La cantidad no puede exceder {restricciones.cantidadMax}
+                                            La cantidad no puede exceder {restricciones.cantidadMax}
                                         </div>
                                     );
                                 }
@@ -577,7 +555,7 @@ export default function EditarSolicitudPage() {
                                 if (cantidadNueva >= restricciones.cantidadMin) {
                                     return (
                                         <div className="cantidad-alerta cantidad-alerta-success">
-                                            ✅ Cantidad válida
+                                            Cantidad válida
                                         </div>
                                     );
                                 }
@@ -591,7 +569,7 @@ export default function EditarSolicitudPage() {
                             onClick={handleAgregarProducto}
                             disabled={!productoSeleccionado || cantidadNueva < 1 || guardando}
                         >
-                            {guardando ? '⏳ Agregando...' : '✅ Confirmar'}
+                            {guardando ? 'Agregando...' : 'Confirmar'}
                         </button>
                     </div>
                 )}

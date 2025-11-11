@@ -338,7 +338,7 @@ export default function PedidosPage() {
 
                         {/* Fecha de Cierre */}
                         <div className="pedidos-fecha-section">
-                            <label className="form-label">📅 Fecha de Cierre del Pedido *</label>
+                            <label className="form-label">Fecha de Cierre del Pedido *</label>
                             <Input
                                 type="date"
                                 value={fechaCierre}
@@ -349,7 +349,7 @@ export default function PedidosPage() {
 
                         {/* Sección de Productos */}
                         <div className="pedidos-productos-section">
-                            <h3 className="pedidos-section-title">🛒 Productos Disponibles</h3>
+                            <h3 className="pedidos-section-title"> Productos Disponibles</h3>
 
                             {/* Barra de búsqueda */}
                             <div className="pedidos-search-bar">
@@ -468,7 +468,7 @@ export default function PedidosPage() {
 
                         {/* Resumen */}
                         <div className="pedidos-resumen">
-                            <span className="pedidos-resumen-icon">📊</span>
+                            <span className="pedidos-resumen-icon"></span>
                             <span className="pedidos-resumen-text">
                                 {productosSeleccionados} producto{productosSeleccionados !== 1 ? 's' : ''} seleccionado{productosSeleccionados !== 1 ? 's' : ''}
                             </span>
@@ -488,7 +488,7 @@ export default function PedidosPage() {
                                 onClick={handleCrearPedido}
                                 disabled={cargando}
                             >
-                                {cargando ? '⏳ Creando...' : '✓ Crear Pedido'}
+                                {cargando ? 'Creando...' : 'Crear Pedido'}
                             </Button>
                         </div>
                     </div>
@@ -502,7 +502,7 @@ export default function PedidosPage() {
 
                     {cargando && !mostrarFormulario ? (
                         <div className="pedidos-empty-state">
-                            <p>⏳ Cargando pedidos...</p>
+                            <p>Cargando pedidos...</p>
                         </div>
                     ) : pedidosCreados.length === 0 ? (
                         <div className="pedidos-empty-state">
@@ -716,14 +716,14 @@ function ModalEdicionPedido({
                                                         })}
                                                         disabled={cargando}
                                                     >
-                                                        ✏️
+                                                        Editar
                                                     </button>
                                                     <button
                                                         className="btn-sm btn-delete"
                                                         onClick={() => onEliminarProducto(prod.idProducto)}
                                                         disabled={cargando}
                                                     >
-                                                        🗑️
+                                                        Eliminar
                                                     </button>
                                                 </div>
                                             </>
@@ -767,7 +767,7 @@ function ModalEdicionPedido({
                                     disabled={cargando}
                                 />
                                 <button className="btn-action btn-primary" onClick={handleAgregar} disabled={cargando}>
-                                    {cargando ? '⏳' : '+ Agregar'}
+                                    {cargando ? 'Agregando...' : '+ Agregar'}
                                 </button>
                             </div>
                         </div>

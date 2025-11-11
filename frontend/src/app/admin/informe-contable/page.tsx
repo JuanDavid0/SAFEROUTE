@@ -138,13 +138,13 @@ export default function InformeContablePage() {
                         className={`tipo-btn ${tipoInforme === 'cliente' ? 'active' : ''}`}
                         onClick={() => setTipoInforme('cliente')}
                     >
-                        👤 Informe por Cliente
+                        Informe por Cliente
                     </button>
                     <button
                         className={`tipo-btn ${tipoInforme === 'pedido' ? 'active' : ''}`}
                         onClick={() => setTipoInforme('pedido')}
                     >
-                        📦 Informe por Pedido
+                        Informe por Pedido
                     </button>
                 </div>
 
@@ -153,7 +153,7 @@ export default function InformeContablePage() {
                     <div className="informe-seccion">
                         <h2 className="informe-subtitulo">Seleccionar Cliente</h2>
                         {cargando ? (
-                            <div className="informe-loading">⏳ Cargando clientes...</div>
+                            <div className="informe-loading">Cargando clientes...</div>
                         ) : clientes.length === 0 ? (
                             <div className="informe-empty">No hay clientes disponibles</div>
                         ) : (
@@ -227,7 +227,6 @@ export default function InformeContablePage() {
                                             onClick={() => handleSeleccionarPedido(pedido.idPedido)}
                                         >
                                             <div className="informe-card-header">
-                                                <span className="informe-icon">📦</span>
                                                 <h3>Pedido #{pedido.idPedido}</h3>
                                             </div>
                                             <div className="informe-card-body">

@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Pattern;
 public class SolicitarOtpRequest {
 
     @NotBlank(message = "La cédula es obligatoria")
-    @Pattern(regexp = "^[0-9]{10}$", message = "La cédula debe contener exactamente 10 dígitos numéricos")
+    @Pattern(regexp = "^[0-9]{8,10}$", message = "La cédula debe contener entre 8 y 10 dígitos numéricos")
     private String cedula;
 
     // Getters y Setters

@@ -1086,7 +1086,7 @@ Elimina un producto de una solicitud.
 
 ---
 
-## 🔄 Consolidación
+##  Consolidación
 
 ### Cancelar Solicitudes Vencidas de un Pedido
 

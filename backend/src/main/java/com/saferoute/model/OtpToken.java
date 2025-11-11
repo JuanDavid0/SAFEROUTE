@@ -17,7 +17,7 @@ public class OtpToken {
     @Column(name = "id_otp")
     private Integer idOtp;
 
-    @Column(name = "cedula", nullable = false, length = 10)
+    @Column(name = "cedula", nullable = false, length = 20)
     private String cedula;
 
     @Column(name = "telefono", nullable = false, length = 10)

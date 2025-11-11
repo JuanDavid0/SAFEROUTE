@@ -58,7 +58,7 @@ export interface OtpErrorResponse {
 /**
  * Solicita un código OTP para la cédula especificada
  * El código es enviado al teléfono registrado del cliente
- * @param cedula - Cédula del cliente (10 dígitos)
+ * @param cedula - Cédula del cliente (8-10 dígitos)
  * @returns Respuesta con confirmación del envío
  */
 export const solicitarOtp = async (

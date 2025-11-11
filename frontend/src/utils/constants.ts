@@ -21,7 +21,7 @@ export const ROLES = {
 
 // Validaciones
 export const VALIDACIONES = {
-  CEDULA_LENGTH: 10,
+  CEDULA_LENGTH: 8,
   TELEFONO_LENGTH: 10,
   OTP_LENGTH: 6,
   PASSWORD_MIN_LENGTH: 6,
@@ -41,7 +41,7 @@ export const FORMATOS_FECHA = {
 // Mensajes de Error Comunes
 export const MENSAJES_ERROR = {
   REQUIRED: 'Este campo es requerido',
-  INVALID_CEDULA: 'La cédula debe tener exactamente 10 dígitos',
+  INVALID_CEDULA: 'La cédula debe tener entre 8 y 10 dígitos',
   INVALID_TELEFONO: 'El teléfono debe tener exactamente 10 dígitos',
   INVALID_OTP: 'El código OTP debe tener 6 dígitos',
   PASSWORD_MISMATCH: 'Las contraseñas no coinciden',

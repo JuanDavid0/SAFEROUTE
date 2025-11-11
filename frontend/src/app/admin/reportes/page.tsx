@@ -44,31 +44,31 @@ export default function ReportesPage() {
                     className={`reporte-tab ${reporteActivo === 'resumen' ? 'active' : ''}`}
                     onClick={() => setReporteActivo('resumen')}
                 >
-                    📊 Resumen General
+                    Resumen General
                 </button>
                 <button
                     className={`reporte-tab ${reporteActivo === 'mas-vendidos' ? 'active' : ''}`}
                     onClick={() => setReporteActivo('mas-vendidos')}
                 >
-                    🏆 Más Vendidos
+                    Más Vendidos
                 </button>
                 <button
                     className={`reporte-tab ${reporteActivo === 'ingresos' ? 'active' : ''}`}
                     onClick={() => setReporteActivo('ingresos')}
                 >
-                    💰 Ingresos
+                    Ingresos
                 </button>
                 <button
                     className={`reporte-tab ${reporteActivo === 'mayor-ganancia' ? 'active' : ''}`}
                     onClick={() => setReporteActivo('mayor-ganancia')}
                 >
-                    💎 Mayor Ganancia
+                    Mayor Ganancia
                 </button>
                 <button
                     className={`reporte-tab ${reporteActivo === 'clientes' ? 'active' : ''}`}
                     onClick={() => setReporteActivo('clientes')}
                 >
-                    👥 Clientes Frecuentes
+                    Clientes Frecuentes
                 </button>
             </div>
 
@@ -143,7 +143,7 @@ function ReporteResumen({ cargando, setCargando, showError }: ReporteProps) {
         }
     };
 
-    if (cargando) return <div className="reportes-loading">⏳ Cargando datos...</div>;
+    if (cargando) return <div className="reportes-loading">Cargando datos...</div>;
     if (!datos) return <div className="reportes-empty">No hay datos disponibles</div>;
 
     const datosPedidos = [
@@ -170,28 +170,24 @@ function ReporteResumen({ cargando, setCargando, showError }: ReporteProps) {
             {/* Cards de métricas principales */}
             <div className="metricas-grid">
                 <div className="metrica-card metrica-ingresos">
-                    <div className="metrica-icon">💰</div>
                     <div className="metrica-info">
                         <h3>Ingresos Totales</h3>
                         <p className="metrica-valor">${datos.ingresosTotales.toLocaleString()}</p>
                     </div>
                 </div>
                 <div className="metrica-card metrica-costos">
-                    <div className="metrica-icon">📉</div>
                     <div className="metrica-info">
                         <h3>Costos Totales</h3>
                         <p className="metrica-valor">${datos.costosTotales.toLocaleString()}</p>
                     </div>
                 </div>
                 <div className="metrica-card metrica-ganancia">
-                    <div className="metrica-icon">💎</div>
                     <div className="metrica-info">
                         <h3>Ganancia Neta</h3>
                         <p className="metrica-valor">${datos.gananciaNeta.toLocaleString()}</p>
                     </div>
                 </div>
                 <div className="metrica-card metrica-clientes">
-                    <div className="metrica-icon">👥</div>
                     <div className="metrica-info">
                         <h3>Clientes Frecuentes</h3>
                         <p className="metrica-valor">{datos.clientesActivos} / {datos.totalClientes}</p>
@@ -295,7 +291,7 @@ function ReporteProductosMasVendidos({ cargando, setCargando, showError }: Repor
         }
     };
 
-    if (cargando) return <div className="reportes-loading">⏳ Cargando datos...</div>;
+    if (cargando) return <div className="reportes-loading">Cargando datos...</div>;
 
     return (
         <div className="reporte-container">
@@ -392,7 +388,7 @@ function ReporteIngresos({ cargando, setCargando, showError }: ReporteProps) {
         }
     };
 
-    if (cargando) return <div className="reportes-loading">⏳ Cargando datos...</div>;
+    if (cargando) return <div className="reportes-loading">Cargando datos...</div>;
     if (!datos) return <div className="reportes-empty">No hay datos disponibles</div>;
 
     return (
@@ -485,7 +481,7 @@ function ReporteMayorGanancia({ cargando, setCargando, showError }: ReporteProps
         }
     };
 
-    if (cargando) return <div className="reportes-loading">⏳ Cargando datos...</div>;
+    if (cargando) return <div className="reportes-loading">Cargando datos...</div>;
 
     return (
         <div className="reporte-container">
@@ -576,7 +572,7 @@ function ReporteClientesFrecuentes({ cargando, setCargando, showError }: Reporte
         }
     };
 
-    if (cargando) return <div className="reportes-loading">⏳ Cargando datos...</div>;
+    if (cargando) return <div className="reportes-loading">Cargando datos...</div>;
 
     return (
         <div className="reporte-container">

@@ -138,7 +138,7 @@ export default function EtiquetasPage() {
             <div className="etiquetas-container">
                 {/* Header */}
                 <div className="etiquetas-header">
-                    <h1 className="etiquetas-titulo">🏷️ Gestión de Etiquetas</h1>
+                    <h1 className="etiquetas-titulo"> Gestión de Etiquetas</h1>
                     <p className="etiquetas-descripcion">
                         Selecciona un pedido para ver y descargar sus etiquetas
                     </p>

@@ -98,7 +98,7 @@ public class FirebaseTestController {
                         @RequestParam("idProducto") Integer idProducto,
                         @RequestParam(value = "urlAnterior", required = false) String urlAnterior) {
 
-                log.info("🔄 Solicitud de actualización de imagen para producto ID: {}", idProducto);
+                log.info(" Solicitud de actualización de imagen para producto ID: {}", idProducto);
 
                 String urlNueva = firebaseStorageService.actualizarImagenProducto(imagen, idProducto, urlAnterior);
 

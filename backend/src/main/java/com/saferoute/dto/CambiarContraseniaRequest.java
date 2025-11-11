@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Size;
 public class CambiarContraseniaRequest {
 
     @NotBlank(message = "La cédula es requerida")
-    @Pattern(regexp = "^[0-9]{10}$", message = "La cédula debe contener exactamente 10 dígitos numéricos")
+    @Pattern(regexp = "^[0-9]{8,10}$", message = "La cédula debe contener entre 8 y 10 dígitos numéricos")
     private String cedula;
 
     @NotBlank(message = "La contraseña actual es requerida")

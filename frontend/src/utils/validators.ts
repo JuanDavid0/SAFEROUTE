@@ -6,10 +6,10 @@
 import { VALIDACIONES } from './constants';
 
 /**
- * Valida que la cédula tenga exactamente 10 dígitos
+ * Valida que la cédula tenga entre 8 y 10 dígitos
  */
 export const validarCedula = (cedula: string): boolean => {
-  const regex = /^\d{10}$/;
+  const regex = /^\d{8,10}$/;
   return regex.test(cedula);
 };
 

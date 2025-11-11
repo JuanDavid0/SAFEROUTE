@@ -107,7 +107,7 @@ export default function ConfiguracionPage() {
             <div className="configuracion-container">
                 {/* Header */}
                 <div className="configuracion-header">
-                    <h1 className="configuracion-titulo">⚙️ Configuración</h1>
+                    <h1 className="configuracion-titulo"> Configuración</h1>
                     <p className="configuracion-descripcion">
                         Gestiona la configuración de tu cuenta
                     </p>
@@ -118,7 +118,7 @@ export default function ConfiguracionPage() {
                 {/* Formulario de Cambio de Contraseña */}
                 <div className="configuracion-seccion">
                     <div className="seccion-header">
-                        <h2 className="seccion-titulo">🔐 Cambiar Contraseña</h2>
+                        <h2 className="seccion-titulo"> Cambiar Contraseña</h2>
                         <p className="seccion-descripcion">
                             Actualiza tu contraseña para mantener tu cuenta segura
                         </p>
@@ -228,7 +228,7 @@ export default function ConfiguracionPage() {
                                 className="btn-cambiar-contrasenia"
                                 disabled={cargando}
                             >
-                                {cargando ? '⏳ Cambiando...' : '🔐 Cambiar Contraseña'}
+                                {cargando ? '⏳ Cambiando...' : ' Cambiar Contraseña'}
                             </button>
                         </div>
                     </form>

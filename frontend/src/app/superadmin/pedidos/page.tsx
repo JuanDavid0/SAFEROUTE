@@ -360,7 +360,7 @@ export default function PedidosPage() {
 
                         {/* Sección de Productos */}
                         <div className="pedidos-productos-section">
-                            <h3 className="pedidos-section-title">🛒 Productos Disponibles</h3>
+                            <h3 className="pedidos-section-title"> Productos Disponibles</h3>
 
                             {/* Barra de búsqueda */}
                             <div className="pedidos-search-bar">
@@ -479,7 +479,7 @@ export default function PedidosPage() {
 
                         {/* Resumen */}
                         <div className="pedidos-resumen">
-                            <span className="pedidos-resumen-icon">📊</span>
+                            <span className="pedidos-resumen-icon"></span>
                             <span className="pedidos-resumen-text">
                                 {productosSeleccionados} producto{productosSeleccionados !== 1 ? 's' : ''} seleccionado{productosSeleccionados !== 1 ? 's' : ''}
                             </span>

@@ -107,7 +107,7 @@ export default function LogsPage() {
         <DashboardLayout role="SAD">
             {/* Encabezado */}
             <div className="dashboard-page-header">
-                <h1 className="dashboard-page-title">📋 Logs del Sistema</h1>
+                <h1 className="dashboard-page-title">Logs del Sistema</h1>
                 <p className="dashboard-page-subtitle">
                     Auditoría completa de todas las acciones realizadas en el sistema
                 </p>
@@ -158,14 +158,14 @@ export default function LogsPage() {
                                 className="btn-secondary"
                                 disabled={!filtroUsuario && !filtroAccion && !filtroFecha}
                             >
-                                🔄 Limpiar Filtros
+                                 Limpiar Filtros
                             </button>
                             <button
                                 onClick={cargarLogs}
                                 className="btn-primary"
                                 disabled={cargando}
                             >
-                                {cargando ? '⏳ Cargando...' : '🔍 Actualizar'}
+                                {cargando ? 'Cargando...' : ' Actualizar'}
                             </button>
                         </div>
                     </div>
@@ -219,12 +219,12 @@ export default function LogsPage() {
                                         <td className="log-fecha">{formatearFecha(log.fechaLog)}</td>
                                         <td>
                                             <span className={`badge-log badge-log-${getTipoAccion(log.accion)}`}>
-                                                {getTipoAccion(log.accion) === 'login' && '🔐 Login'}
-                                                {getTipoAccion(log.accion) === 'create' && '➕ Creación'}
+                                                {getTipoAccion(log.accion) === 'login' && ' Login'}
+                                                {getTipoAccion(log.accion) === 'create' && ' Creación'}
                                                 {getTipoAccion(log.accion) === 'update' && '✏️ Actualización'}
                                                 {getTipoAccion(log.accion) === 'delete' && '🗑️ Eliminación'}
-                                                {getTipoAccion(log.accion) === 'status' && '🔄 Cambio Estado'}
-                                                {getTipoAccion(log.accion) === 'other' && '📝 Otro'}
+                                                {getTipoAccion(log.accion) === 'status' && ' Cambio Estado'}
+                                                {getTipoAccion(log.accion) === 'other' && ' Otro'}
                                             </span>
                                         </td>
                                     </tr>

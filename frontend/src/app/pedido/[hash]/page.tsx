@@ -103,7 +103,7 @@ export default function PedidoPublicoPage() {
                 setProductos(productosConInfo);
             }
         } catch (error: unknown) {
-            console.error('❌ Error:', error);
+            console.error('Error:', error);
             const errorInfo = extractErrorInfo(error);
             showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
@@ -190,8 +190,8 @@ export default function PedidoPublicoPage() {
      * Validar formulario
      */
     const validarFormulario = (): boolean => {
-        if (!cedula.trim() || cedula.length !== 10) {
-            showError('Cédula Inválida', 'La cédula debe tener 10 dígitos');
+        if (!cedula.trim() || cedula.length < 8 || cedula.length > 10) {
+            showError('Cédula Inválida', 'La cédula debe tener entre 8 y 10 dígitos');
             return false;
         }
 
@@ -291,7 +291,7 @@ export default function PedidoPublicoPage() {
                 showWarning('Atención', response.mensaje || 'La solicitud se procesó pero verifique el resultado');
             }
         } catch (error: unknown) {
-            console.error('❌ Error:', error);
+            console.error('Error:', error);
             const errorInfo = extractErrorInfo(error);
             showError(errorInfo.message, errorInfo.details, errorInfo.errorCode);
         } finally {
@@ -346,7 +346,7 @@ export default function PedidoPublicoPage() {
                 <div className="modal-overlay">
                     <div className="modal-container">
                         <div className="modal-header-inicial">
-                            <h2 className="modal-titulo">📦 Bienvenido</h2>
+                            <h2 className="modal-titulo">Bienvenido</h2>
                             <p className="modal-descripcion">
                                 ¿Qué deseas hacer?
                             </p>
@@ -357,7 +357,6 @@ export default function PedidoPublicoPage() {
                                 className="modal-opcion-btn opcion-crear"
                                 onClick={manejarHacerSolicitud}
                             >
-                                <div className="opcion-icono">📝</div>
                                 <div className="opcion-contenido">
                                     <h3>Hacer Solicitud</h3>
                                     <p>Crea una nueva solicitud para este pedido</p>
@@ -368,7 +367,6 @@ export default function PedidoPublicoPage() {
                                 className="modal-opcion-btn opcion-editar"
                                 onClick={manejarEditarSolicitudes}
                             >
-                                <div className="opcion-icono">✏️</div>
                                 <div className="opcion-contenido">
                                     <h3>Editar Solicitudes</h3>
                                     <p>Ver y modificar tus solicitudes existentes</p>
@@ -381,13 +379,13 @@ export default function PedidoPublicoPage() {
 
             {/* Header */}
             <div className="solicitud-publica-header">
-                <h1 className="solicitud-publica-titulo">📦 Realizar Solicitud</h1>
+                <h1 className="solicitud-publica-titulo">Realizar Solicitud</h1>
                 <p className="solicitud-publica-descripcion">
                     Completa el formulario y selecciona los productos que deseas solicitar
                 </p>
                 {fechaCierre && (
                     <p className="solicitud-publica-fecha">
-                        📅 Fecha límite: <strong>{new Date(fechaCierre).toLocaleDateString('es-EC')}</strong>
+                        Fecha límite: <strong>{new Date(fechaCierre).toLocaleDateString('es-EC')}</strong>
                     </p>
                 )}
             </div>
@@ -398,7 +396,7 @@ export default function PedidoPublicoPage() {
             {/* Sección 1: Datos del Cliente */}
             <div className="solicitud-seccion">
                 <div className="seccion-header">
-                    <h2 className="seccion-titulo">👤 Información Personal</h2>
+                    <h2 className="seccion-titulo">Información Personal</h2>
                     <p className="seccion-descripcion">
                         Ingresa tus datos para procesar la solicitud
                     </p>
@@ -414,10 +412,11 @@ export default function PedidoPublicoPage() {
                                 type="text"
                                 id="cedula"
                                 className="form-input"
-                                placeholder="1234567890"
+                                placeholder="12345678"
                                 value={cedula}
                                 onChange={(e) => setCedula(e.target.value.replace(/\D/g, '').slice(0, 10))}
                                 maxLength={10}
+                                minLength={8}
                                 disabled={enviando}
                             />
                         </div>
@@ -491,7 +490,7 @@ export default function PedidoPublicoPage() {
             {/* Sección 2: Productos Disponibles */}
             <div className="solicitud-seccion">
                 <div className="seccion-header">
-                    <h2 className="seccion-titulo">🛍️ Productos Disponibles</h2>
+                    <h2 className="seccion-titulo">Productos Disponibles</h2>
                     <p className="seccion-descripcion">
                         Selecciona los productos y la cantidad que deseas
                     </p>
@@ -513,7 +512,7 @@ export default function PedidoPublicoPage() {
                                 />
                             ) : (
                                 <div className="producto-sin-imagen">
-                                    <span>📦</span>
+                                    <span>Sin imagen</span>
                                 </div>
                             )}
 
@@ -555,7 +554,7 @@ export default function PedidoPublicoPage() {
                                     }}
                                     disabled={item.cantidadSeleccionada === 0}
                                 >
-                                    ➕ Agregar
+                                    Agregar
                                 </button>
                             </div>
                         </div>
@@ -567,7 +566,7 @@ export default function PedidoPublicoPage() {
             {productosEnSolicitud.length > 0 && (
                 <div className="solicitud-seccion">
                     <div className="seccion-header">
-                        <h2 className="seccion-titulo">📋 Resumen de la Solicitud</h2>
+                        <h2 className="seccion-titulo">Resumen de la Solicitud</h2>
                         <p className="seccion-descripcion">
                             Revisa los productos antes de confirmar
                         </p>
@@ -599,7 +598,7 @@ export default function PedidoPublicoPage() {
                                                 onClick={() => eliminarProducto(item.idProducto)}
                                                 title="Eliminar producto"
                                             >
-                                                🗑️
+                                                Eliminar
                                             </button>
                                         </td>
                                     </tr>
@@ -625,7 +624,7 @@ export default function PedidoPublicoPage() {
                             onClick={iniciarCreacionSolicitud}
                             disabled={enviando}
                         >
-                            {enviando ? '⏳ Creando solicitud...' : '✅ Crear Solicitud'}
+                            {enviando ? 'Creando solicitud...' : 'Crear Solicitud'}
                         </button>
                     </div>
                 </div>

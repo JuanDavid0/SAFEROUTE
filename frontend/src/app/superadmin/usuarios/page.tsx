@@ -159,8 +159,8 @@ export default function UsuariosPage() {
             return false;
         }
 
-        if (cedulaAdmin.length !== 10) {
-            showError('Cédula inválida', 'La cédula debe tener exactamente 10 dígitos');
+        if (cedulaAdmin.length < 8 || cedulaAdmin.length > 10) {
+            showError('Cédula inválida', 'La cédula debe tener entre 8 y 10 dígitos');
             return false;
         }
 
@@ -267,7 +267,7 @@ export default function UsuariosPage() {
                             className="btn-nuevo-admin"
                             onClick={() => setMostrarFormulario(!mostrarFormulario)}
                         >
-                            ➕ Nuevo Administrador
+                             Nuevo Administrador
                         </button>
                     </div>
                 </div>
@@ -277,7 +277,7 @@ export default function UsuariosPage() {
                 {/* Formulario de Crear Administrador */}
                 {mostrarFormulario && (
                     <div className="crear-admin-section">
-                        <h3 className="section-subtitle">➕ Crear Nuevo Administrador</h3>
+                        <h3 className="section-subtitle"> Crear Nuevo Administrador</h3>
                         <form onSubmit={handleCrearAdministrador} className="form-crear-admin">
                             <div className="form-grid">
                                 {/* Nombres */}
@@ -323,7 +323,7 @@ export default function UsuariosPage() {
                                         type="text"
                                         id="cedulaAdmin"
                                         className="form-input"
-                                        placeholder="1234567890"
+                                        placeholder="12345678"
                                         value={cedulaAdmin}
                                         onChange={(e) => {
                                             const valor = e.target.value.replace(/\D/g, '');
@@ -333,9 +333,10 @@ export default function UsuariosPage() {
                                         }}
                                         disabled={cargandoAdmin}
                                         maxLength={10}
+                                        minLength={8}
                                         required
                                     />
-                                    <small className="form-help">10 dígitos sin guiones</small>
+                                    <small className="form-help">8 a 10 dígitos sin guiones</small>
                                 </div>
 
                                 {/* Teléfono */}
@@ -442,14 +443,14 @@ export default function UsuariosPage() {
                                     onClick={handleCancelarCreacion}
                                     disabled={cargandoAdmin}
                                 >
-                                    ❌ Cancelar
+                                    Cancelar
                                 </button>
                                 <button
                                     type="submit"
                                     className="btn-crear-admin"
                                     disabled={cargandoAdmin}
                                 >
-                                    {cargandoAdmin ? '⏳ Creando...' : '➕ Crear Administrador'}
+                                    {cargandoAdmin ? 'Creando...' : 'Crear Administrador'}
                                 </button>
                             </div>
                         </form>

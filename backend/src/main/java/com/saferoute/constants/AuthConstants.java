@@ -10,7 +10,7 @@ public final class AuthConstants {
     }
 
     // ========== MENSAJES DE LOG ==========
-    public static final String LOG_LOGIN_EXITOSO = "🔐 Inicio de sesión exitoso - Rol: {}";
+    public static final String LOG_LOGIN_EXITOSO = " Inicio de sesión exitoso - Rol: {}";
     public static final String LOG_REGISTRO_USUARIO = "👤 Registro de nuevo usuario - Cédula: {}, Rol: {}";
     public static final String LOG_CAMBIO_CONTRASENIA = "🔑 Cambio de contraseña exitoso - Cédula: {}";
     public static final String LOG_CREACION_ADMINISTRADOR = "👨‍💼 Creación de nuevo administrador - Cédula: {}, Nombres: {} {}";

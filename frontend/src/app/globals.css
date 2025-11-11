@@ -4551,7 +4551,7 @@ p,
 }
 
 /* ============================================================
-   🔐 MÓDULO DE CONFIGURACIÓN - CAMBIO DE CONTRASEÑA
+    MÓDULO DE CONFIGURACIÓN - CAMBIO DE CONTRASEÑA
    ============================================================ */
 
 /* ============================
@@ -5404,6 +5404,7 @@ p,
   font-weight: 600;
   color: var(--azul-petroleo);
   cursor: pointer;
+  margin: 10px;
   transition: all 0.3s ease;
 }
 
@@ -6471,6 +6472,7 @@ p,
 .filtro-actions {
   display: flex;
   gap: 12px;
+  margin: 10px;
   align-items: flex-end;
 }
 
@@ -7121,4 +7123,9 @@ p,
   .checkbox-label span {
     font-size: 14px;
   }
+}
+
+.solicitud-card-acciones {
+    display: flex;
+    justify-content: space-around;
 }
